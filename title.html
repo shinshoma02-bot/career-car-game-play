@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>僕らは陸送屋(仮)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   /* スマホ操作: 長押しの選択・コピー・画像メニュー・ダブルタップ拡大・タップ時の青い枠を出さない */
   html, body, button, img, canvas, div, span { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
@@ -111,6 +111,156 @@
     .layer, .lane, .rig .body, .rig .wheel img { animation: none; }
     .rig.depart { transition: none; }
   }
+
+  /* ---- D28 背景(時間帯・雨) assets/ui/scenery/title_scenery_example.css ---- */
+/* メイン画面(title.html)の新しい背景の組み込み例。DEV_HANDOFF_MEMO.md の D28・D29 を参照。make_example_css.py で作った。
+   .scene に時間帯 t-dusk / t-sunrise / t-day / t-night のどれか1つと、雨なら w-rain を付ける(付け方は title_scenery_example.js) */
+:root { --road-h: 26vh; --rd-ph: 50vh; --rd-p: 83.3vh; --rd-oy: 24.1vh; --rd-dur: 3.23s; }
+@media (max-aspect-ratio: 4/5) { :root { --road-h: 18vh; --rd-ph: 36vh; --rd-p: 117.8vh; --rd-oy: 18vh; --rd-dur: 3.84s; } }
+/* 景色の層: 1枚の幅 --tw = 高さ x 絵の縦横比。横に並べて translateX(-tw) → 0 でずらす(車は左へ進むので景色は右へ) */
+.sl { position: absolute; left: 0; width: calc(100% + var(--tw)); background-repeat: repeat-x; background-size: var(--tw) 100%;
+  animation: slide linear infinite; will-change: transform; }
+@keyframes slide { from { transform: translateX(calc(-1 * var(--tw))); } to { transform: translateX(0); } }
+.far   { bottom: calc(100% - var(--road-top) + 9vh);   height: 24vh;  --tw: calc(24vh * 4096 / 384);  animation-duration: 256s; }
+.mid   { bottom: calc(100% - var(--road-top) + 6vh);   height: 16vh;  --tw: calc(16vh * 6144 / 320);  animation-duration: 88s; }
+.near  { bottom: calc(100% - var(--road-top) + 1.2vh); height: 19vh;  --tw: calc(19vh * 8192 / 256);  animation-duration: 60s; }
+.grail { bottom: calc(100% - var(--road-top) - .6vh);  height: 3.4vh; --tw: calc(3.4vh * 1024 / 96); animation-duration: .79s; }
+/* 道路: 真上から見た絵(road_*.webp 3072x1280 = 横20m x 奥行き8.33m)を、奥へ60度傾けて置く。奥は小さくゆっくり、手前は大きく速く流れる。
+   消える線(地平線)は路面の上端から 24vh 上(縦長画面は 50vh)。トレーラーのタイヤ(路面の上端から7vh下)は絵の上から約43%の行=第1車線の手前寄りに乗る。
+   数値の出し方: R=路面の高さ, V=地平線までの高さ, 傾き60度, ph=絵の高さ → perspective = ph*sin60*(R+V)/R, origin = perspective*cot60 - V。速さはタイヤの回転(.55秒)に合わせた */
+.road3d { position: absolute; left: 0; right: 0; top: var(--road-top); height: var(--road-h); overflow: hidden;
+  perspective: var(--rd-p); perspective-origin: 50% var(--rd-oy); }
+.road3d .strip { position: absolute; left: 0; top: 0; height: var(--rd-ph); --tw: calc(var(--rd-ph) * 2.4); width: calc(100% + var(--tw));
+  background-repeat: repeat-x; background-size: var(--tw) 100%; transform-origin: 0 0; animation: road3d var(--rd-dur) linear infinite; will-change: transform; }
+@keyframes road3d { from { transform: rotateX(60deg) translateX(calc(-1 * var(--tw))); } to { transform: rotateX(60deg) translateX(0); } }
+.stars { position: absolute; left: 0; right: 0; top: 0; height: 60%; background: url(assets/ui/scenery/stars.webp?v=1) repeat; background-size: 512px 256px; opacity: 0; }
+.rain { position: absolute; inset: -10% 0 0 0; pointer-events: none; background: url(assets/ui/scenery/rain.webp?v=1) repeat; display: none; z-index: 1;
+  animation: rainfall .5s linear infinite; }
+.rain.r2 { background-size: 340px 340px; opacity: .55; animation-duration: .8s; }
+@keyframes rainfall { from { background-position: 0 0; } to { background-position: -90px 512px; } }
+.scene.w-rain .rain { display: block; }
+.scene.w-rain .sun { display: none; }
+.scene.w-rain .far { opacity: .35; filter: saturate(.5); }
+.scene.w-rain .mid { filter: saturate(.6) brightness(.85); opacity: .85; }
+.scene.w-rain .near { filter: saturate(.75) brightness(.88); }
+.scene.t-night .stars { opacity: .9; } .scene.t-night.w-rain .stars { opacity: 0; }
+.scene.fast .sl { animation-duration: .4s; } .scene.fast .far { animation-duration: 60s; } .scene.fast .mid { animation-duration: 18s; } .scene.fast .near { animation-duration: 8s; }
+.scene.fast .road3d .strip { animation-duration: 1s; }
+/* トラック(rig.png は昼の明るさ)を時間帯・雨に合わせて暗くする。夜はヘッドライトの光 */
+.scene.t-sunrise .rig .body, .scene.t-sunrise .rig .wheel img { filter: brightness(.93); }
+.scene.w-rain .rig .body, .scene.w-rain .rig .wheel img { filter: brightness(.82) saturate(.85); }
+.scene.t-night .rig .body, .scene.t-night .rig .wheel img { filter: brightness(.5) saturate(.8); }
+.scene.t-night .rig::before { content: ""; position: absolute; right: 96.5%; top: 74%; width: 55vh; height: 20%; pointer-events: none;
+  background: linear-gradient(to left, rgba(255, 236, 190, .55), rgba(255, 236, 190, 0)); clip-path: polygon(0 0, 100% 42%, 100% 58%, 0 100%); filter: blur(3px); }
+.scene.t-night .rig::after { content: ""; position: absolute; right: 88%; top: 90%; width: 60vh; height: 16%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255, 230, 170, .30), rgba(255, 230, 170, 0)); }
+@media (prefers-reduced-motion: reduce) { .sl, .road3d .strip, .rain { animation: none; } }
+/* dusk */
+.scene.t-dusk { background: linear-gradient(#22324a 0%, #3d4f6b 28%, #c98a6b 58%, #f0c27f 70%, #f6d9a0 74%); }
+.scene.t-dusk.w-rain { background: linear-gradient(#2a2f3a 0%, #4a4f5c 35%, #7d7470 62%, #9a8c80 74%); }
+.scene.t-dusk .sun { left: 58%; top: 41%; width: 15vh; height: 15vh; background: radial-gradient(#fff3cf 0 40%, #ffd98a 60%, rgba(255, 200, 120, 0) 72%); }
+.scene.t-dusk .far { background-image: url(assets/ui/scenery/far_mountains_dusk.webp?v=1); }
+.scene.t-dusk .mid { background-image: url(assets/ui/scenery/mid_town_dusk.webp?v=1); }
+.scene.t-dusk .near { background-image: url(assets/ui/scenery/near_houses_dusk.webp?v=1); }
+.scene.t-dusk .grail { background-image: url(assets/ui/scenery/guardrail_dusk.webp?v=1); }
+.scene.t-dusk .road3d .strip { background-image: url(assets/ui/scenery/road_dusk.webp?v=1); }
+.scene.t-dusk.w-rain .road3d .strip { background-image: url(assets/ui/scenery/road_dusk_wet.webp?v=1); }
+/* sunrise */
+.scene.t-sunrise { background: linear-gradient(#34436a 0%, #6f7aa3 30%, #d6a3aa 58%, #f3c8a6 70%, #f8e2c4 74%); }
+.scene.t-sunrise.w-rain { background: linear-gradient(#3b4150 0%, #5d6272 35%, #8f8890 62%, #ab9f9e 74%); }
+.scene.t-sunrise .sun { left: 50%; top: 42%; width: 14vh; height: 14vh; background: radial-gradient(#fff6e6 0 38%, #ffd2b0 58%, rgba(255, 190, 170, 0) 72%); }
+.scene.t-sunrise .far { background-image: url(assets/ui/scenery/far_mountains_sunrise.webp?v=1); }
+.scene.t-sunrise .mid { background-image: url(assets/ui/scenery/mid_town_sunrise.webp?v=1); }
+.scene.t-sunrise .near { background-image: url(assets/ui/scenery/near_houses_sunrise.webp?v=1); }
+.scene.t-sunrise .grail { background-image: url(assets/ui/scenery/guardrail_sunrise.webp?v=1); }
+.scene.t-sunrise .road3d .strip { background-image: url(assets/ui/scenery/road_sunrise.webp?v=1); }
+.scene.t-sunrise.w-rain .road3d .strip { background-image: url(assets/ui/scenery/road_sunrise_wet.webp?v=1); }
+/* day */
+.scene.t-day { background: linear-gradient(#3f78bd 0%, #6fa3d6 32%, #a9cae6 60%, #d3e3f0 74%); }
+.scene.t-day.w-rain { background: linear-gradient(#5d6873 0%, #7f8a95 35%, #a4adb5 62%, #bcc3c9 74%); }
+.scene.t-day .sun { left: 72%; top: 9%; width: 11vh; height: 11vh; background: radial-gradient(#ffffff 0 34%, rgba(255, 252, 235, .7) 50%, rgba(255, 255, 255, 0) 72%); }
+.scene.t-day .far { background-image: url(assets/ui/scenery/far_mountains_day.webp?v=1); }
+.scene.t-day .mid { background-image: url(assets/ui/scenery/mid_town_day.webp?v=1); }
+.scene.t-day .near { background-image: url(assets/ui/scenery/near_houses_day.webp?v=1); }
+.scene.t-day .grail { background-image: url(assets/ui/scenery/guardrail_day.webp?v=1); }
+.scene.t-day .road3d .strip { background-image: url(assets/ui/scenery/road_day.webp?v=1); }
+.scene.t-day.w-rain .road3d .strip { background-image: url(assets/ui/scenery/road_day_wet.webp?v=1); }
+/* night */
+.scene.t-night { background: linear-gradient(#050913 0%, #0b1428 40%, #1a2541 62%, #2b3655 74%); }
+.scene.t-night.w-rain { background: linear-gradient(#07090f 0%, #0f141d 40%, #1b212c 62%, #262d3a 74%); }
+.scene.t-night .sun { left: 70%; top: 12%; width: 7vh; height: 7vh; background: radial-gradient(circle at 42% 40%, #fbf6e4 0 52%, #e9e2c8 62%, rgba(240, 235, 210, 0) 72%); box-shadow: 0 0 6vh rgba(220, 225, 255, .25); }
+.scene.t-night .far { background-image: url(assets/ui/scenery/far_mountains_night.webp?v=1); }
+.scene.t-night .mid { background-image: url(assets/ui/scenery/mid_town_night.webp?v=1); }
+.scene.t-night .near { background-image: url(assets/ui/scenery/near_houses_night.webp?v=1); }
+.scene.t-night .grail { background-image: url(assets/ui/scenery/guardrail_night.webp?v=1); }
+.scene.t-night .road3d .strip { background-image: url(assets/ui/scenery/road_night.webp?v=1); }
+.scene.t-night.w-rain .road3d .strip { background-image: url(assets/ui/scenery/road_night_wet.webp?v=1); }
+
+  /* ---- D29 枠なしメニュー assets/ui/title_menu_example.css ---- */
+/* メイン画面(title.html)のタイトル・メニューを、背景に溶けこむ「枠なし」のデザインにする例。DEV_HANDOFF_MEMO.md の D29 を参照。
+   title.html の <style> の最後(背景の例 title_scenery_example.css の後)に足すだけで効く。HTML の変更は1か所だけ:
+   Google Fonts の Noto Sans JP に太さ 900 を足す(wght@500;700 → wght@500;700;900)。
+   読みやすさ: 黒い箱の代わりに、画面の左側だけを背景になじむ暗いグラデーションで沈め、文字に影を付ける。 */
+
+/* ---- 文字の後ろの暗がり(メニューと一緒に消える。時間帯で色味を変える) ---- */
+.menu::before { content: ""; position: fixed; z-index: -1; left: 0; top: 0; bottom: 0; width: 62vw; pointer-events: none;
+  background: linear-gradient(90deg, rgba(6, 10, 18, .66) 0%, rgba(6, 10, 18, .44) 32%, rgba(6, 10, 18, .14) 50%, rgba(6, 10, 18, 0) 62%); }
+.scene.t-day ~ .menu::before { background: linear-gradient(90deg, rgba(10, 28, 52, .62) 0%, rgba(10, 28, 52, .40) 32%, rgba(10, 28, 52, .12) 50%, rgba(10, 28, 52, 0) 62%); }
+.scene.t-sunrise ~ .menu::before { background: linear-gradient(90deg, rgba(24, 18, 40, .62) 0%, rgba(24, 18, 40, .40) 32%, rgba(24, 18, 40, .12) 50%, rgba(24, 18, 40, 0) 62%); }
+
+/* ---- タイトル ---- */
+.menu { top: 7vh; gap: 0; width: min(460px, 42vw); }
+.logo { white-space: nowrap; font-family: "Noto Sans JP", sans-serif; font-weight: 900; font-size: clamp(24px, min(6.4vh, 9.4vw), 62px); line-height: 1.05; letter-spacing: .06em;
+  color: #fff; text-shadow: 0 2px 14px rgba(0, 0, 0, .45), 0 1px 2px rgba(0, 0, 0, .35); }
+.logo .kari { font-size: .38em; font-weight: 700; letter-spacing: .12em; color: #7fe0c0; margin-left: .35em; text-shadow: 0 1px 8px rgba(0, 0, 0, .5); }
+.sub { display: flex; align-items: center; gap: .9em; margin: 1.4vh 0 4.2vh; font-size: clamp(11px, 1.75vh, 14px); font-weight: 500; letter-spacing: .2em;
+  color: rgba(255, 255, 255, .88); text-shadow: 0 1px 6px rgba(0, 0, 0, .65); }
+.sub::before { content: ""; flex: none; width: 2.6em; height: 2px; background: var(--accent); box-shadow: 0 0 6px rgba(51, 184, 145, .6); }
+
+/* ---- モード・難易度の一覧(箱をなくし、細い線で区切る) ---- */
+.panel { background: none; border: none; border-radius: 0; padding: 0; gap: 0; backdrop-filter: none; -webkit-backdrop-filter: none; overflow: visible; counter-reset: item; }
+.panel h2 { margin: 0 0 1.2vh; font-size: clamp(10px, 1.5vh, 12px); font-weight: 700; letter-spacing: .38em; color: rgba(255, 255, 255, .72); text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
+.card { counter-increment: item; position: relative; gap: clamp(12px, 2.2vh, 20px); padding: clamp(10px, 1.8vh, 18px) 4px clamp(10px, 1.8vh, 18px) 16px;
+  border: none; border-top: 1px solid rgba(255, 255, 255, .20); border-radius: 0; background: none;
+  transition: background .22s ease; }
+.card > span { transition: transform .22s ease; }
+.card:last-child { border-bottom: 1px solid rgba(255, 255, 255, .20); }
+.card::before { content: ""; position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px; border-radius: 2px; background: var(--accent);
+  transform: scaleY(0); transition: transform .22s ease; }
+.card:hover, .card:focus-visible { border-color: rgba(255, 255, 255, .20); background: linear-gradient(90deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0) 85%); }
+.card:hover > span, .card:focus-visible > span { transform: translateX(6px); }   /* 区切り線は動かさず、中の文字だけ右へ */
+.card:hover::before, .card:focus-visible::before { transform: scaleY(1); }
+.card:active { background: linear-gradient(90deg, rgba(51, 184, 145, .22), rgba(51, 184, 145, 0) 85%); }
+/* 絵文字のアイコンをやめて、細い番号(01 02 03)にする */
+.card .ico { width: auto; height: auto; border-radius: 0; background: none; font-size: 0; display: block; align-self: start; padding-top: .35em; }
+.card .ico::before { content: counter(item, decimal-leading-zero); font-size: clamp(12px, 1.9vh, 16px); font-weight: 700; letter-spacing: .08em; color: #7fe0c0; text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
+.card.easy .ico, .card.normal .ico, .card.hard .ico { background: none; }
+.card.easy .ico::before { color: #79dc9c; } .card.normal .ico::before { color: #f2c060; } .card.hard .ico::before { color: #f08a78; }
+.card b { font-size: clamp(16px, 3vh, 25px); font-weight: 700; letter-spacing: .06em; color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, .6); }
+.card small { margin-top: 4px; font-size: clamp(10px, 1.6vh, 13px); color: rgba(255, 255, 255, .8); text-shadow: 0 1px 6px rgba(0, 0, 0, .75); }
+.card .go { color: rgba(255, 255, 255, .45); font-size: 1.4em; transition: transform .22s ease, color .22s ease; }
+.card:hover .go, .card:focus-visible .go { color: #7fe0c0; transform: translateX(10px); }
+.back { margin-bottom: 1.6vh; padding: 0; border: none; background: none; border-radius: 0; letter-spacing: .2em;
+  color: rgba(255, 255, 255, .82); text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
+.back:hover, .back:focus-visible { color: #7fe0c0; }
+
+/* ---- 縦長の画面: 暗がりは上から ---- */
+@media (max-aspect-ratio: 4/5) {
+  .menu { top: 5vh; width: auto; }
+  .menu::before, .scene.t-day ~ .menu::before, .scene.t-sunrise ~ .menu::before { width: 100vw; height: 78vh; bottom: auto;
+    background: linear-gradient(180deg, rgba(6, 10, 18, .66) 0%, rgba(6, 10, 18, .58) 62%, rgba(6, 10, 18, 0) 100%); }
+  .sub { margin-bottom: 3.2vh; }
+}
+
+/* ---- 高さの低い画面(スマホ横向き): 余白を詰めて、道路にかからないようにする ---- */
+@media (max-height: 480px) and (min-aspect-ratio: 4/5) {
+  .menu { top: 4vh; }
+  .sub { margin: .8vh 0 2.4vh; }
+  .panel h2 { margin-bottom: .6vh; }
+  .card { padding-top: 1.1vh; padding-bottom: 1.1vh; }
+  .card small { margin-top: 1px; }
+}
+
 </style>
 <script>
   // 長押しメニュー(画像を保存/コピー)・ピンチ/ダブルタップ拡大を無効化
@@ -124,16 +274,24 @@
 <body>
 <div class="scene" id="scene" aria-hidden="true">
   <div class="sun"></div>
-  <div class="layer mountains"></div>
-  <div class="layer buildings"></div>
-  <div class="layer houses"></div>
-  <div class="road"><div class="edge"></div><div class="lane"></div></div>
-  <div class="layer rail"></div>
+  <div class="stars"></div><div class="sl far"></div><div class="sl mid"></div><div class="sl near"></div><div class="road3d"><div class="strip"></div></div><div class="sl grail"></div>
   <div class="rig" id="rig">
     <div class="shadow"></div>
     <img class="body" src="assets/ui/rig.png?v=120" alt="">
   </div>
+  <div class="rain"></div><div class="rain r2"></div>
 </div>
+<script>
+// メイン画面の時間帯と天気を、開くたびにランダムに決める例(DEV_HANDOFF_MEMO.md D28)。
+// title.html の <body> の中、.scene の後で読む。.scene に t-<時間帯> と、雨なら w-rain を付けるだけ。
+(function () {
+  var scene = document.getElementById('scene'); if (!scene) return;
+  // 出やすさ: 夕焼け3・昼3・夜2・朝日2。雨は4回に1回くらい
+  var times = ['dusk', 'dusk', 'dusk', 'day', 'day', 'day', 'night', 'night', 'sunrise', 'sunrise'];
+  scene.classList.add('t-' + times[Math.floor(Math.random() * times.length)]);
+  if (Math.random() < 0.25) scene.classList.add('w-rain');
+})();
+</script>
 
 <main class="menu" id="menu">
   <h1 class="logo disp">僕らは陸送屋<span class="kari">(仮)</span></h1>
