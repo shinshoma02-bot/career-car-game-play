@@ -123,7 +123,7 @@
   var SP_CFG = (cfg.hangFloor && cfg.hangFloor.stopPin) || null;
   var SP = { hole: SP_CFG ? SP_CFG.hole : 1, inserted: true };   // pts=[x,y]の5つ(前→後ろ。斜めの柱に沿って並ぶ)
   function initPins() {
-    SP.inserted = false;   // 格納位置はピンの穴より下なので、ピンは抜いた状態から始まる(棚と同じく、ピンを差せるのはフロアが穴の高さ以上にある時だけ)
+    SP.inserted = true;   // 固定ピンは赤い板に最初から差してある(フロアの位置に関係なく抜き差しできる)
     Object.keys(floorsCfg.ends).forEach(function (k) {
       ENDS[k].off = ENDS[k].travel;
       if (k === 'F7' && typeof MECH !== 'undefined' && MECH) { MECH.hang = 0; MECH.lockR = MECH.lockL = true; }   // サイクルのリセットで宙段も格納に戻し、車軸のロックも掛かった状態にする
@@ -379,10 +379,10 @@
     if (dt <= 0) { hangRaf = requestAnimationFrame(hangStep); return; }   // 最初のフレームは時間が進んでいない
     var stuck = hangStuck();
     var nu = Math.max(hangLow(), Math.min(2, MECH.hang + h.dir * HANG.speed * dt));
-    var onPin = SP_CFG && SP.inserted && h.dir < 0 && MECH.hang >= HANG.loadU - 1e-6;   // 固定ピンが刺さっていて、フロアがピンの高さより上にある → 下げるとピンに当たって止まる
-    if (onPin) nu = Math.max(nu, HANG.loadU);
+    var onPin = SP_CFG && SP.inserted && h.dir > 0 && MECH.hang <= HANG.loadU + 1e-6;   // 固定ピンが刺さっていて、フロアがピンの高さより下にある → 上げるとピンに当たって、それより奥(上)へは動かない(下げる=来た道を戻る方向は止めない)
+    if (onPin) nu = Math.min(nu, HANG.loadU);
     var gs = window.GAME_STATE;
-    var p = stuck || (nu === MECH.hang ? (h.dir < 0 && hangLow() > 0 && MECH.hang <= hangLow() + 1e-6 ? 'セットピンでこれ以上下がらない' : (onPin && MECH.hang <= HANG.loadU + 1e-6 ? 'フロアが固定ピンに当たって止まりました(ピンを抜くと下がります)' : '宙段は可動範囲いっぱい')) : null);
+    var p = stuck || (nu === MECH.hang ? (h.dir < 0 && hangLow() > 0 && MECH.hang <= hangLow() + 1e-6 ? 'セットピンでこれ以上下がらない' : (onPin && MECH.hang >= HANG.loadU - 1e-6 ? 'フロアが固定ピンに当たって止まりました(ピンを抜くと奥へ動きます。戻る方向は動きます)' : '宙段は可動範囲いっぱい')) : null);
     var hits = [];
     if (!p && nu !== MECH.hang) {
       // 載せた車が当たらない、フロア同士の干渉は構造上の制限(上げる時だけ。動かせない)
@@ -599,8 +599,8 @@
   }
   function holdStop() {
     if (hangHold) {   // 宙段は離した時、各段階(格納・スロープ・全上げ)の近くならぴたっとその位置に合わせる(格納位置(0番)より上にセットピンが入っている間は合わせない: ピンに載った位置から、段階の位置へ引き戻されてしまうため)
-      var onStopPin = SP_CFG && SP.inserted && MECH.hang >= HANG.loadU - 0.001;   // 固定ピンに載って止まっている間は、段階の位置(0・1・2)へは吸い付かせない(ピンの高さと2の間で行き来して引っかかる)
-      if (!onStopPin) [0, 1, 2].forEach(function (s) { if (Math.abs(MECH.hang - s) < 0.08 && s >= hangLow() && !hangStuck() && !(s > MECH.hang && hangProblem(s))) MECH.hang = s; });
+      var onStopPin = SP_CFG && SP.inserted && MECH.hang >= HANG.loadU - 0.001;   // ピンに当たって止まっている間は、ピンより奥(上)の段階の位置(2)へは吸い付かせない
+      [0, 1, 2].forEach(function (s) { if (!(onStopPin && s > HANG.loadU + 1e-6) && Math.abs(MECH.hang - s) < 0.08 && s >= hangLow() && !hangStuck() && !(s > MECH.hang && hangProblem(s))) MECH.hang = s; });
       syncHangEnd(); autoPinTarget('F7');
     }
     hangHold = null;
@@ -751,11 +751,8 @@
   function toggleStopPin() {
     if (!SP_CFG) return;
     if (SP.inserted) { SP.inserted = false; onInfo('固定ピンを抜いた'); return; }
-    // 棚のセットピンと同じ: ピンの穴の高さ以上に上げてからでないと刺せない(ピンは「その位置より先へ進まなくする」もの)。
-    // 穴より下にあるフロアに刺せると、ピンが刺さったまま上げた後、来た道(下)へ戻れなくなる
-    if (MECH.hang < HANG.loadU - 0.03) { onWarn('宙段を固定ピンの穴の高さより上に上げてから、ピンを刺してください'); return; }
-    SP.inserted = true;
-    onInfo(MECH.hang > HANG.loadU + 0.001 ? '固定ピンを刺した(フロアを下げるとピンに当たって止まります)' : '固定ピンを刺した');
+    SP.inserted = true;   // フロアの位置に関係なく刺せる。ピンは赤い板に差しておく止め具で、上がってきたフロアがピンに当たると、それより奥(上)へは動かなくなる(戻る方向は止めない)
+    onInfo('固定ピンを刺した(宙段を上げるとピンに当たって止まります)');
   }
   function setRearPinHole(n) {
     n = Math.max(1, Math.min(RP_CFG.holes || 1, Math.round(n)));
