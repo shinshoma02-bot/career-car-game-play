@@ -107,11 +107,11 @@ window.TRAILER_CONFIG = {
     "jackMax": 44, "jackContact": 32,
     "kingpin": [790, 472],
     "wheel": { "cx": 1867, "cy": 525, "r": 59, "fenderR": 72 },
-    "tireOutScale": 1.07, "airSusDrop": 6,
+    "tireOutScale": 1.07, "airSusDrop": 10,
     "note": "ジャッキ: タイヤ後方の台車フレーム内(jackX)にシリンダー(cylTop〜frameBottom)、下の梁から足が出る。足先は格納時footStowedY、jack=jackContactで地面(ground)に接地し、それ以上伸ばすとキングピンを支点にトレーラーが持ち上がる。wheelは台車タイヤの中心・半径(下端=groundで接地。描画はmain.jsのdrawTrailerWheel)。airSusDrop: タイヤ突出+ジャッキ格納で接地すると、エアサスで台車の車高がこの量(px)だけ下がる"
   },
 
-  "pinMarks": { "F1f": [480, 299], "F1r": [838, 281], "F2f": [912, 314], "MID": [1520, 318], "F3r": [1795, 312] },
+  "pinMarks": { "F1f": [572, 299], "F1r": [838, 281], "F2f": [912, 314], "MID": [1520, 318], "F3r": [1795, 312] },
 
   "drive": {
     "speed": 800, "accel": 1500, "brakeDist": 220, "settle": 0.9,

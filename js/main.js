@@ -876,24 +876,27 @@
     var cx = w.cx, cy = w.cy + (w.r - r);
     ctx.save();
     ctx.translate(ox, oy);
-    if (e < 0.5) { drawTire(cx, cy, r); drawFender(w); }
-    else { drawFender(w); drawTire(cx, cy, r); }
+    // フェンダー(黄黒の縞・泥よけ)もタイヤと一緒に突出する: タイヤと同じ倍率・同じ中心で拡大して描く(タイヤだけが大きくなって、フェンダーが取り残されないように)
+    var sc = r / w.r;
+    if (e < 0.5) { drawTire(cx, cy, r); drawFender(w, cx, cy, sc); }
+    else { drawFender(w, cx, cy, sc); drawTire(cx, cy, r); }
     ctx.restore();
   }
-  function drawFender(w) {
+  function drawFender(w, cx, cy, sc) {
     if (NA && images.fender) {   // 新素材: 実車どおり前側に黄黒の縞、後ろに黒い泥よけ。pivot(82,82)=タイヤ中心
-      ctx.drawImage(images.fender, w.cx - 82, w.cy - 82);
+      ctx.drawImage(images.fender, cx - 82 * sc, cy - 82 * sc, 164 * sc, 122 * sc);
       return;
     }
+    var fr = w.fenderR * sc;
     ctx.save();
     ctx.lineCap = 'butt';
-    ctx.beginPath(); ctx.arc(w.cx, w.cy, w.fenderR, Math.PI * 1.02, Math.PI * 1.98);
+    ctx.beginPath(); ctx.arc(cx, cy, fr, Math.PI * 1.02, Math.PI * 1.98);
     ctx.strokeStyle = '#11181a'; ctx.lineWidth = 13; ctx.stroke();
-    ctx.beginPath(); ctx.arc(w.cx, w.cy, w.fenderR, Math.PI * 1.02, Math.PI * 1.98);
+    ctx.beginPath(); ctx.arc(cx, cy, fr, Math.PI * 1.02, Math.PI * 1.98);
     ctx.strokeStyle = '#2cc9b0'; ctx.lineWidth = 9; ctx.stroke();
     // 後ろ側の泥よけ
     ctx.fillStyle = '#16191b';
-    ctx.fillRect(w.cx + w.fenderR - 5, w.cy - 4, 7, 36);
+    ctx.fillRect(cx + fr - 5, cy - 4, 7, 36);
     ctx.restore();
   }
   function drawTire(cx, cy, r) {

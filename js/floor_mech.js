@@ -140,14 +140,15 @@
     if (e.noTravelPin) return e.off >= e.travel - 1.5 || (PINS[k] !== null && e.off >= PINS[k] - 1.5);
     // 支柱の短い棚(2番前): ピンを一番上の穴に差して昇降させた(伸ばした)状態は、ピンより上でも固定されている
     if (e.freeTop !== undefined && PINS[k] !== null && PINS[k] <= pinLimitOff(k) + 0.5) return true;
-    return PINS[k] !== null && e.off >= PINS[k] - 1.5;
+    // 棚が走行位置まで下がっていなくても、棚の少し下(最大2穴分)にピンが差してあれば固定されているとみなす(下段の車を積む間は棚を上げたままにするので、ピンは棚の位置付近に差せばよい。棚をそのピンまで下げ切っている必要はない。2026-10-06 ユーザー指示)
+    return PINS[k] !== null && e.off >= PINS[k] - 2 * pitchUp(k) - 0.5;
   }
   function floorPinsOk(id) { var f = FLOORS[id]; return rested(f.front.end) && rested(f.rear.end); }
   function pinned(k) {
     if (k === 'F7') return rested('F7');
     if (ENDS[k].noTravelPin) return true;
     if (ENDS[k].freeTop !== undefined && PINS[k] !== null && PINS[k] <= pinLimitOff(k) + 0.5) return true;
-    return PINS[k] !== null && ENDS[k].off >= PINS[k] - pitchUp(k) - 0.5;
+    return PINS[k] !== null && ENDS[k].off >= PINS[k] - 2 * pitchUp(k) - 0.5;
   }
   initPins();
 
@@ -592,9 +593,14 @@
     }
     return null;
   }
+  // 2番前のシリンダーが5番フロアを持ち上げられる量は、2番前(ピン)の位置で変わる。走行位置(ピン9番)の低い位置では、シリンダーの長さが足りず
+  // 4番の高さ(スロープ)まで届かない(4番と5番がつながらない)。ピンを上の穴に差すほど持ち上がる量が増える(ピン18番で上限 LIFT_MAX)
+  var LIFT_PER_PX = 1.98;
+  function liftMaxAt(f2off) { return Math.max(0, Math.min(LIFT_MAX, LIFT_MAX - LIFT_PER_PX * (f2off - offOfHole('F2f', ENDS.F2f.holeMax)))); }
   function liftProblem(nl) {
     if (nl < 0) return MECH.lift > 0 ? null : '5番フロアは下がりきってる';
     if (nl > LIFT_MAX) return '可動範囲いっぱい';
+    if (nl > liftMaxAt(ENDS.F2f.off) && nl > MECH.lift) return 'シリンダーが伸びきりました。2番前のセットピンを上の穴に差し直すと、もっと持ち上がります';
     if (nl > MECH.lift) {
       var f2b = onFloor('F2', 980, 347)[1], top5 = 510 - nl - 22;
       if (top5 < f2b + 2) return '2番フロアに当たる(2番を上げた位置でセットピンを入れて)';
@@ -609,6 +615,7 @@
 
   // ---- 押している間だけ動く操作 ----
   var RATE = 70; // px/秒
+  var LIFT_DELAY_SEC = 0.8;   // 下ボタン長押しで、シリンダーが5番を押し上げ始めるまでの待ち(秒)
   var holding = null;
   var jackHoldUnused = null;
   function holdStart(endKey, dir) {
@@ -656,6 +663,9 @@
     if (h.end === 'F2f' && h.dir < 0 && h.liftUsed && MECH.lift <= 0) { holdRafId = requestAnimationFrame(holdStep); return; }
     if (h.end === 'F2f' && ((h.dir > 0 && ENDS.F2f.off >= f2Low() - 1.5) || (h.dir < 0 && MECH.lift > 0))) {
       if (h.dir < 0) h.liftUsed = true;
+      // 床がピンに載ったところで下ボタンを押し続けても、すぐには5番を持ち上げ始めない(ワンテンポ待つ)。走行位置で下を押した瞬間に5番が浮いて、平らを保つのが大変だったため。
+      // 押し直す必要はなく、長押しのまま待てば動き出す
+      if (h.dir > 0) { h.liftWait = (h.liftWait || 0) + dt; if (h.liftWait < LIFT_DELAY_SEC) { holdRafId = requestAnimationFrame(holdStep); return; } }
       // 2番前シリンダーの余力で5番フロアを昇降
       var nl = Math.min(LIFT_MAX, Math.round((MECH.lift + h.dir * RATE * dt) * 10) / 10);
       var p5 = nl === MECH.lift ? '可動範囲いっぱい' : liftProblem(nl);
