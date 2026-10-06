@@ -296,6 +296,7 @@
 
   <section class="panel" id="modePanel" aria-labelledby="modeTitle">
     <h2 id="modeTitle">ゲームモード</h2>
+    <button class="card" data-mode="tutorial"><span class="ico">学</span><span><b>チュートリアル</b><small>操作とルールを順番に覚える</small></span><span class="go">›</span></button>
     <button class="card" data-mode="time"><span class="ico">⏱</span><span><b>タイムアタック</b><small>制限時間内に何サイクルこなせるか(6分)</small></span><span class="go">›</span></button>
     <button class="card" data-mode="real"><span class="ico">⚠</span><span><b>リアルモード</b><small>ミスした時点で終了。何がダメだったかを表示</small></span><span class="go">›</span></button>
     <button class="card" data-mode="sim"><span class="ico">🛠</span><span><b>シミュレーション</b><small>自由に操作できる練習用。時間制限・終了なし</small></span><span class="go">›</span></button>
@@ -318,7 +319,7 @@
     { k: 'drive', cx: 328.0, cy: 170.0, size: 60 },
     { k: 'trailer', cx: 933.5, cy: 168.5, size: 60 } ] };
   var GAME_URL = 'index.html';
-  var NAMES = { time: 'タイムアタック', real: 'リアルモード', sim: 'シミュレーション' };
+  var NAMES = { tutorial: 'チュートリアル', time: 'タイムアタック', real: 'リアルモード', sim: 'シミュレーション' };
   var $ = function (id) { return document.getElementById(id); };
   var rig = $('rig'), menu = $('menu'), scene = $('scene');
 
@@ -360,7 +361,7 @@
   Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
     b.addEventListener('click', function () {
       mode = b.getAttribute('data-mode');
-      if (mode === 'sim') { go('sim'); return; }             // シミュレーションは難易度なし(ゲーム側の仕様: 全部見えて解説あり)
+      if (mode === 'sim' || mode === 'tutorial') { go(mode); return; }   // シミュレーション・チュートリアルは難易度なし(ゲーム側の仕様: 全部見えて解説あり)
       $('diffTitle').textContent = NAMES[mode] + ' の難易度';
       show('diff');
     });

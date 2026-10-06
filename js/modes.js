@@ -32,6 +32,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var diff = 'easy';
   var mode = null, startedAt = 0, timerId = null, ended = false;
+  var isTut = false;   // チュートリアル(#mode=tutorial): 中身は sim(難易度なし・時間制限なし)。js/tutorial.js がガイドを重ねる。得点・サイクル完了の表示は出さない
   var stats = { docks: 0, cycles: 0, heightPenalty: 0, penalty: 0, minors: 0, majors: 0, carPoints: 0, bonus: 0, dispatchFound: 0, dispatchFalse: 0, dispatchMissed: 0 };
   var turn = { startedAt: Date.now(), snap: { carPoints: 0, docks: 0 } };   // 今のターン(今の荷物)の開始時刻と、その時の積込み点・台数(連絡・時間切れで巻き戻す)
   // 難易度による加点・減点の倍率(積込み・ミス・高さ超過の全てに掛ける。シミュレーションは1倍)
@@ -57,7 +58,7 @@
   function refreshBar() {
     if (!mode) return;
     var t = mode === 'time' ? '残り ' + fmtTime(TIME_ATTACK_SEC - elapsed()) : '経過 ' + fmtTime(elapsed());
-    $('modeBarName').textContent = MODES[mode].name + (mode === 'sim' ? '' : '・' + DIFFS[diff] + '(×' + mult() + ')');
+    $('modeBarName').textContent = (isTut ? 'チュートリアル' : MODES[mode].name) + (mode === 'sim' ? '' : '・' + DIFFS[diff] + '(×' + mult() + ')');
     $('modeBarTime').textContent = t;
     $('modeBarCycles').textContent = 'サイクル ' + stats.cycles;
     $('modeBarCars').textContent = '積込 ' + stats.docks + '台' + (state.deckSize >= 7 ? '(今回7台・宙段あり)' : '');
@@ -116,7 +117,8 @@
     stats.heightPenalty += pen;
     var msg = 'サイクル完了! 荷姿の高さ ' + h.toFixed(2) + 'm' + (pen ? '(' + lim.toFixed(1) + 'mを超過 -' + pen + '点)' : '(満点)');
     if (mode === 'real') { finish(true, msg); return; }
-    banner(msg);
+    if (isTut) { if (window.TUTORIAL && window.TUTORIAL.onCycleComplete) window.TUTORIAL.onCycleComplete(); }
+    else banner(msg);
     fm.initPins && fm.initPins();
     state.resetTrailer();
     refreshBar();
@@ -164,6 +166,7 @@
     limitM: limitM,   // (確認用)
     onAccident: function (reason) { if (!mode || ended) return; finish(false, reason, true); },
     get mode() { return mode; },
+    get tutorial() { return isTut; },
     score: score,
     stats: stats,
     loadHeightM: loadHeightM,
@@ -199,7 +202,7 @@
         else if (stats.minors >= SCORE.minorLimit) finish(false, reason + '(軽いミスが' + SCORE.minorLimit + '回)');
         else banner('軽いミス ' + stats.minors + '/' + SCORE.minorLimit + (state.hints ? ': ' + reason : '') + '(-' + pen + '点)');
       } else {
-        banner((major ? '重いミス' : '軽いミス') + (state.hints ? ': ' + reason : '') + '(-' + pen + '点)');   // 解説なしの難易度では理由を出さない
+        banner(isTut ? 'うまくいきませんでした: ' + reason : (major ? '重いミス' : '軽いミス') + (state.hints ? ': ' + reason : '') + '(-' + pen + '点)');   // 解説なしの難易度では理由を出さない。チュートリアルは点数を出さない
       }
       refreshBar();
     },
@@ -217,7 +220,8 @@
     }
   };
 
-  function start(m, d) {
+  function start(m, d, tut) {
+    isTut = !!tut; if (isTut) document.body.classList.add('tutorial');
     mode = m; diff = m === 'sim' ? 'easy' : (d || 'easy'); turn.startedAt = Date.now(); turn.snap = { carPoints: stats.carPoints, docks: stats.docks };
     state.setDifficulty && state.setDifficulty(diff); ended = false; startedAt = Date.now();
     $('modeOverlay').style.display = 'none';
@@ -258,8 +262,9 @@
   $('btnRetry').addEventListener('click', function () { location.reload(); });
   $('btnModeSelect').addEventListener('click', function () { location.href = 'title.html'; });   // メイン画面(title.html)へ戻る
 
-  var m = /mode=(time|real|sim)(?:&diff=(easy|normal|hard))?/.exec(location.hash);
-  if (m && (m[1] === 'sim' || m[2])) start(m[1], m[2]);
+  var m = /mode=(time|real|sim|tutorial)(?:&diff=(easy|normal|hard))?/.exec(location.hash);
+  if (m && m[1] === 'tutorial') start('sim', null, true);   // チュートリアルは内部では sim(難易度なし・全部見えて解説あり)
+  else if (m && (m[1] === 'sim' || m[2])) start(m[1], m[2]);
   else if (m) pickDiff(m[1]);
   else location.replace('title.html');   // モードの指定が無い(index.htmlを直接開いた)時は、メイン画面(title.html)へ。モード・難易度の選択はメイン画面で行う
 })();

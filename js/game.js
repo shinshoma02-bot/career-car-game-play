@@ -347,6 +347,9 @@
   // イージー/ノーマル: 6台全部を並べて表示し、タップした車が入場する。ハード: 1台ずつ表示し、◀▶で別の車を選ぶ。
   // 道板の手前で待機中の車・載せ終えた車は、リストの中で暗く表示する(退場した車はリストに戻る)。
   state.deckSize = 6;   // 今のサイクルの台数(6か7。newDeckで決める)
+  // チュートリアル(#mode=tutorial): 常に7台(宙段あり)で、積めない荷物は出さない(js/tutorial.js)
+  state.forceDeckSize = /mode=tutorial/.test(location.hash) ? 7 : 0;
+  if (state.forceDeckSize) state.impossibleChance = 0;
   var deckAllEl = document.getElementById('deckAll'), deckHardEl = document.getElementById('deckHard');
   var btnPrevCar = document.getElementById('btnPrevCar'), btnNextCar = document.getElementById('btnNextCar');
   var deckCountEl = document.getElementById('deckCount'), btnOrient = document.getElementById('btnOrient'), btnOrientCar = document.getElementById('btnOrientCar');
@@ -516,7 +519,7 @@
     var token = ++deckToken;
     state.deck = []; state.sel = 0; state.pendingEntry = null;
     renderDeck();
-    var size = Math.random() < 0.5 ? 6 : 7;
+    var size = state.forceDeckSize || (Math.random() < 0.5 ? 6 : 7);
     setStatus('車を準備しています...');
     var chance = state.impossibleChance !== undefined ? state.impossibleChance : IMPOSSIBLE_CHANCE;
     var impossible = state.deckDrawn > 0 && Math.random() < chance;
