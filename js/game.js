@@ -588,6 +588,7 @@
   function canEditStops(num) {
     if (state.occupied[num]) return false;
     var car = state.car;
+    if (car && (car.seated || car.locked)) return true;   // もう止まった(OK)車・固定した車は、輪止めの範囲に近づいている車ではない。7番の車は、6番の場所を通って宙段へ行くので、止まった後も「6番の輪止めに近づいている」と誤判定していた
     if (!car || !car.route || !car.arc || car.arc[num] === undefined) return true;
     if (car.phase !== 'ready' && car.phase !== 'moving' && car.phase !== 'entering') return true;
     var lim = chockLimits(num);
