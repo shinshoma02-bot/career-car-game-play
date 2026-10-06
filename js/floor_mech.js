@@ -335,10 +335,13 @@
   }
   // ---- 宙段を使う7台の組み合わせが、物理的に積めるかの判定(デッキを引く時に使う)----
   // c5=5番(バックで積む)・c6=6番・c7=宙段に載せる車。それぞれ {img, w, h, leftTireX}(画像は車の向きに合わせたもの)。
-  // 2・3番フロアは、宙段を使う時に、セットピンで固定できる上限の高さ(2番前 -60=ピン18番で昇降した上限・3番前 -72=ピン最大28番(赤テープ付近。-78 は可動範囲の端でピンが届かない)・3番後ろ -60=ピン最大33番付近)まで上げた状態とする。
+  // 2・3番フロアは、宙段を使う時に、セットピンで固定できる上限の高さ(下の FIT_OFFS。2番前 -60・3番前=ピン最大28番・3番後ろ=ピン最大33番)まで上げた状態とする。
   // (2026-10-03: ユーザーが案2を選んだ。写真の測定で、ゲームの2番の床は実車より約26〜48px低いため。前の値は 2番前 -46・3番前 -72・3番後ろ -24)
   // 前半(u=0.5〜1.5。スロープで7番を積む間)は5番と7番だけ、全上げ(u=1.9〜2)の時は6番も居る
-  var FIT_OFFS = { F2f: -60, MID: -72, F3r: -60 };
+  // 実際に棚をピンで固定できる、一番高い位置(ピン最大の穴の高さ)。判定(LOADABLE・hangFit)は、実際に届かない高さを前提にすると、
+  // 判定は通るのに本物では2・3番の棚に当たって宙段が上がり切らない組み合わせが出るので、この値で行う(2026-10-06。3番後ろは -60 でなく -58.5、3番前は -72 でなく -71.7)。
+  // 2番前は、ピンを刺さずに(freeTop)可動域の上限まで上げて、5番フロアを持ち上げる時の固定位置にできるので、上限の -60
+  var FIT_OFFS = { F2f: -60, MID: offOfHole('MID', ENDS.MID.holeMax), F3r: offOfHole('F3r', ENDS.F3r.holeMax) };
   function hangFit(c5, c6, c7) {
     var S5 = cfg.slots['5'], S6 = cfg.slots['6'], S7 = cfg.slots['7'];
     var offs = curOffs(); offs.F2f = FIT_OFFS.F2f; offs.MID = FIT_OFFS.MID; offs.F3r = FIT_OFFS.F3r;
@@ -346,7 +349,8 @@
     var o6 = { img: c6.img, prof: c6.prof, w: c6.w, h: c6.h, leftTireX: c6.leftTireX, localX: S6.tireX + 8, localY: S6.deckY };
     var o7 = { img: c7.img, prof: c7.prof, w: c7.w, h: c7.h, leftTireX: c7.leftTireX, localX: S7.tireX, localY: S7.deckY };
     function hits(o, u) { var x0 = o.localX - o.leftTireX; return hangHits(x0, x0 + o.w, carTopY(o, [o.localX, o.localY]), u); }
-    var us = [0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2];   // 動きの途中も細かく調べる(持ち上げ始めの前端が、5番のボンネットの先に当たらないか)。6番の車は、宙段を上げ切って(ピンは1.9付近)から積む
+    var us = [0.05, 0.1, 0.15, 0.2];
+    for (var ui = 0.24; ui <= 2 + 1e-9; ui += 0.04) us.push(Math.round(ui * 100) / 100);   // 全体を 0.04 刻みで調べる   // 0.1 刻みでは、間(例 u=1.85)で当たる組み合わせを見逃し、判定は通るのに実際は宙段が途中で止まった(2026-10-06)   // 動きの途中も細かく調べる(持ち上げ始めの前端が、5番のボンネットの先に当たらないか)。6番の車は、宙段を上げ切って(ピンは1.9付近)から積む
     // 7台目を載せた宙段は、一番上(u=2)まで上げず、セットピンで loadU(HANG.loadU。無ければ2)の穴に止めて、6番を積む。loadU までの動きだけを調べる
     var loadU = (HANG && HANG.loadU) || 2;
     us = us.filter(function (x) { return x < loadU - 1e-9; }); us.push(loadU);
@@ -554,20 +558,37 @@
       var hv = hangVsUpper(MECH.hang, offs, ids);
       if (hv) return hv;
     }
-    var spans = [4, 5, 6].map(lowerCarSpan);
-    for (var q = 0; q < ids.length; q++) {
-      var f = FLOORS[ids[q]];
-      for (var x = f.x0; x <= f.x1; x += 15) {
-        if (MECH.f2Flap && flapT() >= 1 && inF2Flap(ids[q], x)) continue; // 開いた2番扇動板の範囲は車に当たらない
-        var p = onFloor(ids[q], x, f.bottom(x), offs);
-        for (var j = 0; j < 3; j++) {
-          var sp = spans[j]; if (!sp) continue;
-          // 5番の車が載っていても、2番前の棚を「ピン位置(赤ラインの1穴下)」まで下げるのは許可する。
-          // 5番フロアを持ち上げる時の定位置で、これを許さないと5番の車が載った状態で5番フロアを上げられない
-          if (j === 1 && ids[q] === 'F2' && offs.F2f <= 8 && offs.MID <= 8) continue;
-          if (p[0] >= sp[0] && p[0] <= sp[1] && p[1] > f.bottom(x) + 2 + FRAME_GAP_PX) return (j + 4) + '番の車に当たる';
+    // 下段(4〜6番)の車の屋根に、上のフロアの下面が当たらないか。車の屋根の実際の形(ボンネット・トランクは低い)で判定する。
+    // 実車は、フロアの枠の内側に約5cmの隙間があるので、屋根が描画の床の下面より FRAME_GAP_PX(5cm)上に入り込むまでは当たらない
+    // (横から見るとフロアと屋根が重なって見えるが、実際は当たっていない。2026-10-06 ユーザー指示)。
+    // 下げる動きだけを止める: すでに重なっている状態(昔の判定で入った状態)からでも、上げる動きは必ずできる(重なりが増える動きだけ止める)
+    var gsn = window.GAME_STATE, cars = [];
+    [4, 5, 6].forEach(function (n) {
+      var o = gsn && gsn.occupied[n]; if (!o) return;
+      var pos = o.floor ? onFloor(o.floor, o.localX, o.localY) : [o.localX, o.localY], x0 = pos[0] - o.leftTireX;
+      cars.push({ n: n, x0: x0, x1: x0 + o.w, top: carTopY(o, pos, 0) });
+    });
+    function worstOverlap(of) {   // 床の下面が、車の屋根より下に入り込む量(px)の最大。正=入り込んでいる。戻り値 { v, n }
+      var worst = { v: -1e9, n: 0 };
+      ids.forEach(function (id) {
+        var f = FLOORS[id];
+        for (var x = f.x0; x <= f.x1; x += 15) {
+          if (MECH.f2Flap && flapT() >= 1 && inF2Flap(id, x)) continue;   // 開いた2番扇動板の範囲は車に当たらない
+          var p = onFloor(id, x, f.bottom(x), of);
+          cars.forEach(function (c) {
+            if (p[0] < c.x0 || p[0] > c.x1) return;
+            // 5番の車が載っていても、2番前の棚を「ピン位置(赤ラインの1穴下)」まで下げるのは許可する。5番フロアを持ち上げる時の定位置で、これを許さないと5番の車が載った状態で5番フロアを上げられない
+            if (c.n === 5 && id === 'F2' && of.F2f <= 8 && of.MID <= 8) return;
+            var ov = p[1] - c.top(p[0]);
+            if (ov > worst.v) worst = { v: ov, n: c.n };
+          });
         }
-      }
+      });
+      return worst;
+    }
+    if (cars.length) {
+      var wc = worstOverlap(offs);
+      if (wc.v > FRAME_GAP_PX && wc.v > worstOverlap(curOffs()).v + 0.01) return wc.n + '番の車に当たる';
     }
     return null;
   }

@@ -10,7 +10,7 @@
   var PX = cfg.pxPerMeter, GAP = fm.FRAME_GAP_PX;
   var SLACK_M = 0.45;   // 制限をこれだけ超えるまでは「積める」(抽選をほとんど弾かない範囲。実際に超えた分は、これまで通りスコアで減点)
   // 棚を積み込み後に置く標準の高さ(各棚がピンに載った位置。通しプレイで使った値)
-  var BASE = { F1f: -2.4, F1r: -3.6, F2f: 6.7, MID: -3.6, F3r: 3.6, F5f: 0, F5r: 0, F7: 0 };
+  var BASE = { F1f: -2.7, F1r: -3.6, F2f: 6.7, MID: -3.6, F3r: 3.6, F5f: 0, F5r: 0, F7: 0 };
 
   function dims(it, flip) {
     var e = it.entry, w = e.len * PX, h = w * e.aspect, tl = flip ? 1 - e.tr : e.tl;
@@ -19,7 +19,7 @@
   }
   // 下段の車(slot=4/5/6)の屋根にぶつからないために、上のフロアを標準の高さからどれだけ上げる必要があるか(px)。
   // 標準の高さのフロアは、下段の床から REF_CLEAR(約1.54m)の高さに下面がある(走行位置・ピンの標準位置)。それより高い車は、超えた分だけ上げる。車の絵の形(屋根の一番高い所)で測る
-  var REF_CLEAR = 176;
+  var REF_CLEAR = 176 + GAP;   // 標準の高さのフロアの下面は下段の床から 176px。実車は枠の内側に約5cm(GAP)の隙間があるので、車の屋根はその分(5cm)まで下面の中に入れる
   var COVER = { 4: ['F1', 'F2'], 5: ['F2'], 6: ['F3'] };   // その下段スロープの上にあるフロア
   function lowerNeed(d, slotNum) {
     var S = cfg.slots[slotNum], occ = { img: d.img, prof: d.prof, w: d.w, h: d.h, leftTireX: d.leftTireX };
