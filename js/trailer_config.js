@@ -5,7 +5,7 @@ window.TRAILER_CONFIG = {
   "pxPerMeter": 114,
 
   "newArt": {
-    "v": 119,
+    "v": 120,
     "note": "グラフィック制作チャットの新素材(assets/semi-6/...)。floors=棚(ステージ全面サイズ)",
     "switchScale": 0.27, "switchDir": "assets/common/switches/",
     "switchParts": ["sw_pendant2", "sw_pendant6", "sw_box2", "lamp_panel_lock", "btn_cap_ue_big", "btn_cap_ue_big_pressed", "btn_cap_shita_big", "btn_cap_shita_big_pressed", "btn_sq", "btn_sq_pressed", "btn_cap6_nobi_big", "btn_cap6_chiji_big", "btn_cap6_migi_oshi_big", "btn_cap6_migi_hiki_big", "btn_cap6_hidari_oshi_big", "btn_cap6_hidari_hiki_big", "btn_cap6_nobi_big_pressed", "btn_cap6_chiji_big_pressed", "btn_cap6_migi_oshi_big_pressed", "btn_cap6_migi_hiki_big_pressed", "btn_cap6_hidari_oshi_big_pressed", "btn_cap6_hidari_hiki_big_pressed", "hint_glow", "lamp_green", "lamp_green_off", "lamp_red", "lamp_red_off"],
@@ -64,7 +64,7 @@ window.TRAILER_CONFIG = {
       "F7": { "off": 0, "range": [-120, 0], "travel": 0, "hole": 0, "holeMax": 19, "noTravelPin": true, "label": "宙段", "note": "宙段フロアの支柱(柱の中)。実際の動きu(0〜2)を ×-60 した仮想の上下量。1穴=u0.1=6px(番号札 hole_scale_f7 と同じ)。ピンは宙段の支柱を受ける" }
     },
     "defs": {
-      "F1": { "name": "1番フロア", "frontPt": [356, 305], "frontEnd": "F1f", "rearPt": [850, 281], "rearEnd": "F1r", "slots": [1], "x0": 456, "x1": 850, "artX0": 456, "bottomAt380": 308, "bottomSlope": -0.03 },
+      "F1": { "name": "1番フロア", "frontPt": [356, 305], "frontEnd": "F1f", "rearPt": [850, 281], "rearEnd": "F1r", "slots": [1], "x0": 456, "x1": 850, "bottomAt380": 308, "bottomSlope": -0.03 },
       "F2": { "name": "2番フロア", "frontPt": [885, 314], "frontEnd": "F2f", "rearPt": "mid", "rearEnd": "MID", "slots": [2], "x0": 885, "x1": 1520, "bottomFlat": 336 },
       "F3": { "name": "3番フロア", "frontPt": "mid", "frontEnd": "MID", "rearPt": [2055, 312], "rearEnd": "F3r", "slots": [3], "x0": 1520, "x1": 2010, "bottomFlat": 334 },
       "F5": { "name": "5番フロア", "frontPt": [938, 510], "frontEnd": "F5f", "rearPt": [1505, 510], "rearEnd": "F5r", "slots": [], "x0": 938, "x1": 1505, "bottomFlat": 518 }
@@ -111,7 +111,7 @@ window.TRAILER_CONFIG = {
     "note": "ジャッキ: タイヤ後方の台車フレーム内(jackX)にシリンダー(cylTop〜frameBottom)、下の梁から足が出る。足先は格納時footStowedY、jack=jackContactで地面(ground)に接地し、それ以上伸ばすとキングピンを支点にトレーラーが持ち上がる。wheelは台車タイヤの中心・半径(下端=groundで接地。描画はmain.jsのdrawTrailerWheel)。airSusDrop: タイヤ突出+ジャッキ格納で接地すると、エアサスで台車の車高がこの量(px)だけ下がる"
   },
 
-  "pinMarks": { "F1f": [380, 305], "F1r": [838, 281], "F2f": [912, 314], "MID": [1520, 318], "F3r": [1795, 312] },
+  "pinMarks": { "F1f": [480, 305], "F1r": [838, 281], "F2f": [912, 314], "MID": [1520, 318], "F3r": [1795, 312] },
 
   "drive": {
     "speed": 800, "accel": 1500, "brakeDist": 220, "settle": 0.9,
