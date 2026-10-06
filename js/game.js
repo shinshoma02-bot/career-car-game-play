@@ -1145,12 +1145,13 @@
     lastHang = hg;
     // 道が分かれる前(道板の上にいる間)は、棚の今の状態で走れる道(上段/下段/5番スロープ経由)に選び直す。
     // 3番後ろのフロアが接地していれば上段、そうでなければ下段
-    if (car && car.route && !car.seated && !car.locked && (car.phase === 'entering' || car.phase === 'ready' || car.phase === 'moving') && !Object.keys(car.beyond).some(function (k) { return car.beyond[k]; })) {
+    if (car && car.route && !car.seated && !car.locked && (car.phase === 'entering' || car.phase === 'ready' || car.phase === 'moving')) {
       var want = chooseRoute();
+      var anyBeyond = Object.keys(car.beyond).some(function (k) { return car.beyond[k]; });
       if (want !== car.route.id) {
-        if (car.progress <= (car.rampArc || 1) + 6) attachRoute(car, want);
-        else if (lowRoute(want) && lowRoute(car.route.id) && car.arc && car.arc['5'] !== undefined && car.progress < car.arc['5'] - 30) {
-          // 下段の道(5番行き'L'と4番行き'4')は、道板を過ぎて6番付近まで進んでいても、5番に着く前なら切り替えられる
+        if (car.progress <= (car.rampArc || 1) + 6) { if (!anyBeyond) attachRoute(car, want); }
+        else if (lowRoute(want) && lowRoute(car.route.id) && car.arc && car.arc['5'] !== undefined && car.progress < car.arc['5'] + 120) {
+          // 下段の道(5番行き'L'と4番行き'4')は、道板を過ぎて6番・5番付近まで進んでいても(ノーマル・ハードは「平らでない」ミスを出しつつ5番まで進める)、5番を少し過ぎるまでは切り替えられる。輪止めを越えた印(beyond)があっても切り替える(6番の輪止めを越えただけで道が固定されるのを防ぐ)
           // (5番フロアを平らにして先へ進めた後でスロープ+扇動板にした時、車が通常の道のまま取り残されるため)。今いる位置を新しい道へ写して続ける
           var cx = car.x, cy = car.y;
           attachRoute(car, want);
