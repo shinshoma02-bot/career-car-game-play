@@ -358,9 +358,18 @@
 
   // 1サイクルの6台: ランダムに選ぶ(重複なし)。ただし6番に載せられる車(幅が上限以下)を必ず1台は入れる
   function fitsSlot6(e) { return (e.width || 0) <= (cfg.slots['6'].maxWidthM || Infinity); }
+  // 軽四(軽自動車・軽箱バン・軽トラ・軽クーペ。幅1.5m以下)は、本来3台あれば上段・下段のどちらにも3台並べて積めるが、その積み方は未実装。
+  // 3台以上の組み合わせは出さない(1デッキに最大2台。KEI_MAX)
+  var KEI_MAX = 2;
+  function isKei(e) { return (e.width || 0) <= 1.5; }
   function pickCars(n) {
     var pool = lib.slice(), out = [];
     while (out.length < n && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    // 軽四が多すぎたら、余った分を軽四以外の車(まだ選ばれていない車)に入れ替える
+    var spare = pool.filter(function (e) { return !isKei(e); });
+    for (var i = 0; i < out.length && out.filter(isKei).length > KEI_MAX && spare.length; i++) {
+      if (isKei(out[i])) out[i] = spare.splice(Math.floor(Math.random() * spare.length), 1)[0];
+    }
     if (!out.some(fitsSlot6)) {
       var narrow = lib.filter(fitsSlot6);
       if (narrow.length) out[Math.floor(Math.random() * out.length)] = narrow[Math.floor(Math.random() * narrow.length)];
