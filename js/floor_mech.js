@@ -123,7 +123,7 @@
   var SP_CFG = (cfg.hangFloor && cfg.hangFloor.stopPin) || null;
   var SP = { hole: SP_CFG ? SP_CFG.hole : 1, inserted: true };   // pts=[x,y]の5つ(前→後ろ。斜めの柱に沿って並ぶ)
   function initPins() {
-    SP.inserted = true;
+    SP.inserted = false;   // 格納位置はピンの穴より下なので、ピンは抜いた状態から始まる(棚と同じく、ピンを差せるのはフロアが穴の高さ以上にある時だけ)
     Object.keys(floorsCfg.ends).forEach(function (k) {
       ENDS[k].off = ENDS[k].travel;
       if (k === 'F7' && typeof MECH !== 'undefined' && MECH) { MECH.hang = 0; MECH.lockR = MECH.lockL = true; }   // サイクルのリセットで宙段も格納に戻し、車軸のロックも掛かった状態にする
@@ -740,7 +740,7 @@
   function onInfo(msg) { if (window.FLOOR_MECH_NOTIFY) window.FLOOR_MECH_NOTIFY(msg, 'info'); }
 
   // 後ろの柱のセットピン穴の変更(宙段が格納位置にある時だけ。上がっている間は柱に荷重が掛かっていて抜けない)
-  // フレームの固定ピン: 位置(穴)の変更・抜き差し。宙段がスロープ(u≦1.05)以下の時だけ位置を変えられる。差すのはフロアがピンの高さより下にある時だけ
+  // フレームの固定ピン: 位置(穴)の変更・抜き差し。宙段がスロープ(u≦1.05)以下の時だけ位置を変えられる。差せるのはフロアがピンの穴の高さ以上にある時だけ(棚のセットピンと同じ)
   function setStopPinHole(n) {
     if (!SP_CFG) return false;
     n = Math.max(1, Math.min(SP_CFG.pts.length, Math.round(n)));
@@ -751,7 +751,10 @@
   function toggleStopPin() {
     if (!SP_CFG) return;
     if (SP.inserted) { SP.inserted = false; onInfo('固定ピンを抜いた'); return; }
-    SP.inserted = true;   // フロアの位置に関係なく刺せる(ピンはフロアの下に入る。フロアがピンの高さより上にあれば、下げるとピンに当たって止まる)
+    // 棚のセットピンと同じ: ピンの穴の高さ以上に上げてからでないと刺せない(ピンは「その位置より先へ進まなくする」もの)。
+    // 穴より下にあるフロアに刺せると、ピンが刺さったまま上げた後、来た道(下)へ戻れなくなる
+    if (MECH.hang < HANG.loadU - 0.03) { onWarn('宙段を固定ピンの穴の高さより上に上げてから、ピンを刺してください'); return; }
+    SP.inserted = true;
     onInfo(MECH.hang > HANG.loadU + 0.001 ? '固定ピンを刺した(フロアを下げるとピンに当たって止まります)' : '固定ピンを刺した');
   }
   function setRearPinHole(n) {
