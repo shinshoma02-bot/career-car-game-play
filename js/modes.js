@@ -14,7 +14,12 @@
     heightLimitM: 4.1,    // これを超えた分だけ減点(第9.1章)
     minHOffsetM: 0.05,    // この組み合わせをいちばん低く積める高さ(積める判定で計算。実測とほぼ一致、1/3の組み合わせで0.2m高めに出る)+この余裕まで、減点しない(車の組み合わせで決まる高さは、積む人のせいではないので)
     hangExtraM: 0.7,      // 宙段を使う7台のサイクルは、宙段のために2・3番を高く上げるので、高さ制限をこの分だけ緩める(実測: 7台で約0.6m高くなる)
-    perMeterOver: 1000    // 高さ超過1mあたりの減点(=10cmで100点)
+    perMeterOver: 1000,   // 高さ超過1mあたりの減点(=10cmで100点)
+    // 配車担当への連絡(積めない荷物。第16章)
+    dispatchMaxBonus: 300,   // 積めない荷物に、出題の直後に気づいて連絡した時のボーナス(難易度の倍率を掛ける)
+    dispatchMinBonus: 50,    // 制限時間ぎりぎりで連絡した時のボーナス(その間は直線で減る)
+    dispatchFalsePenalty: 150,   // 積める荷物なのに「積めない」と連絡した時の減点(難易度の倍率を掛ける)
+    dispatchLimitSec: 90     // 積めない荷物に気づいて連絡するまでの制限時間(超えるとそのターンの稼ぎ(積込み点)が0点になる)
   };
   var TIME_ATTACK_SEC = 360;   // 6分(6台・7台のサイクルを含めて。2026-10-03 ユーザー決定)
   var MODES = {
@@ -27,7 +32,8 @@
   var $ = function (id) { return document.getElementById(id); };
   var diff = 'easy';
   var mode = null, startedAt = 0, timerId = null, ended = false;
-  var stats = { docks: 0, cycles: 0, heightPenalty: 0, penalty: 0, minors: 0, majors: 0, carPoints: 0 };
+  var stats = { docks: 0, cycles: 0, heightPenalty: 0, penalty: 0, minors: 0, majors: 0, carPoints: 0, bonus: 0, dispatchFound: 0, dispatchFalse: 0, dispatchMissed: 0 };
+  var turn = { startedAt: Date.now(), snap: { carPoints: 0, docks: 0 } };   // 今のターン(今の荷物)の開始時刻と、その時の積込み点・台数(連絡・時間切れで巻き戻す)
   // 難易度による加点・減点の倍率(積込み・ミス・高さ超過の全てに掛ける。シミュレーションは1倍)
   var DIFF_MULT = { easy: 1, normal: 1.5, hard: 2 };
   function mult() { return mode === 'sim' ? 1 : (DIFF_MULT[diff] || 1); }
@@ -40,7 +46,10 @@
     if (state.deckMinH && isFinite(state.deckMinH)) lim = Math.max(lim, state.deckMinH + SCORE.minHOffsetM);
     return lim;
   }
-  function score() { return Math.round(stats.carPoints - stats.penalty - stats.heightPenalty); }
+  function score() { return Math.round(stats.carPoints + stats.bonus - stats.penalty - stats.heightPenalty); }
+  function turnSec() { return (Date.now() - turn.startedAt) / 1000; }
+  // このターンの積込み点(と積込み台数)を、ターン開始時に巻き戻す(荷物を替える時。ミスの減点・ボーナスはそのまま)
+  function rollbackTurn() { stats.carPoints = turn.snap.carPoints; stats.docks = turn.snap.docks; }
 
   function elapsed() { return (Date.now() - startedAt) / 1000; }
   function fmtTime(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
@@ -115,7 +124,12 @@
 
   function tick() {
     if (ended || !mode) return;
-    if (mode === 'time' && elapsed() >= TIME_ATTACK_SEC) { finish(false, '時間切れ'); return; }
+    if (mode === 'time' && elapsed() >= TIME_ATTACK_SEC) {
+      if (state.deckImpossible && !state.dispatchDone) { stats.dispatchMissed++; rollbackTurn(); }   // 積めない荷物に気づかないまま時間切れ: そのターンの稼ぎは0点
+      finish(false, '時間切れ' + (state.deckImpossible && !state.dispatchDone ? '(積めない荷物に気づけませんでした。そのターンの積込み点は0点)' : '')); return;
+    }
+    // 積めない荷物に気づかず、制限時間を過ぎた(配車担当から連絡が来る。dispatch.js)
+    if (state.deckImpossible && !state.dispatchDone && state.deck && state.deck.length && turnSec() >= SCORE.dispatchLimitSec && window.DISPATCH) window.DISPATCH.onTimeout();
     if (cycleComplete()) onCycleComplete();
     refreshBar();
   }
@@ -136,6 +150,7 @@
     else if (mode === 'real' && !cleared) lines.push('何がダメだったか: ' + reason);
     else lines.push(reason);
     lines.push('積み込み ' + stats.docks + '台 / ミス 重' + stats.majors + '・軽' + stats.minors + ' / 完了サイクル ' + stats.cycles);
+    if (stats.dispatchFound || stats.dispatchFalse || stats.dispatchMissed) lines.push('配車連絡: 積めない荷物に気づけた ' + stats.dispatchFound + '回(ボーナス +' + stats.bonus + '点) / 積めるのに連絡 ' + stats.dispatchFalse + '回 / 気づけず ' + stats.dispatchMissed + '回');
     if (lastHeightM !== null) lines.push('荷姿の高さ ' + lastHeightM.toFixed(2) + 'm');
     lines.push('所要時間 ' + fmtTime(elapsed()));
     $('resultBody').innerHTML = '';
@@ -153,6 +168,27 @@
     stats: stats,
     loadHeightM: loadHeightM,
     SCORE: SCORE,
+    get ended() { return ended; },
+    turnSec: turnSec,
+    // 新しい荷物(デッキ)が届いた: ターンの開始時刻と、その時の積込み点を覚える
+    onTurnStart: function () { turn.startedAt = Date.now(); turn.snap = { carPoints: stats.carPoints, docks: stats.docks }; },
+    // 配車担当への連絡の結果をスコアに反映する。kind: 'found'(積めない荷物に気づいて連絡) / 'false'(積めるのに連絡) / 'timeout'(気づけず制限時間切れ)
+    // found: 早いほど高いボーナス(出題直後=dispatchMaxBonus → 制限時間ぎりぎり=dispatchMinBonus。難易度の倍率つき)。積んだ車は降ろすので、そのターンの積込み点は戻す
+    // false: 減点のみ(荷物はそのまま)。 timeout: そのターンの積込み点を0点に戻す
+    dispatchResult: function (kind) {
+      var sec = turnSec(), out = { sec: sec, bonus: 0, penalty: 0 };
+      if (kind === 'found') {
+        var frac = Math.max(0, Math.min(1, 1 - sec / SCORE.dispatchLimitSec));
+        out.bonus = Math.round((SCORE.dispatchMinBonus + (SCORE.dispatchMaxBonus - SCORE.dispatchMinBonus) * frac) * mult());
+        out.frac = frac; stats.bonus += out.bonus; stats.dispatchFound++; rollbackTurn();
+      } else if (kind === 'false') {
+        out.penalty = Math.round(SCORE.dispatchFalsePenalty * mult()); stats.penalty += out.penalty; stats.dispatchFalse++;
+      } else if (kind === 'timeout') {
+        stats.dispatchMissed++; rollbackTurn();
+      }
+      refreshBar();
+      return out;
+    },
     onMiss: function (reason, severity) {
       if (!mode || ended) return;
       var major = severity !== 'minor', pen = Math.round((major ? SCORE.perMajor : SCORE.perMinor) * mult());
@@ -182,7 +218,7 @@
   };
 
   function start(m, d) {
-    mode = m; diff = m === 'sim' ? 'easy' : (d || 'easy');
+    mode = m; diff = m === 'sim' ? 'easy' : (d || 'easy'); turn.startedAt = Date.now(); turn.snap = { carPoints: stats.carPoints, docks: stats.docks };
     state.setDifficulty && state.setDifficulty(diff); ended = false; startedAt = Date.now();
     $('modeOverlay').style.display = 'none';
     $('modeBar').style.display = 'flex';

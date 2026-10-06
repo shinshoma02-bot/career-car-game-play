@@ -494,15 +494,27 @@
     if (!r.ok && tries < MAX_REDRAW) return drawLoadableDeck(size, tries + 1);
     return Promise.all(entries.map(loadItem)).then(function (items) { items.drawTries = tries + 1; items.loadable = r; return items; });
   }
+  // わざと積めない荷物: 6番に載せられる車(幅1.755m以下)が1台も無い組み合わせ。6番が埋まらないので、どう並べても積み終わらない(確実に積めない)
+  var IMPOSSIBLE_CHANCE = 0.12;   // 新しい荷物が積めない荷物になる確率(最初の荷物は必ず積める。state.impossibleChance で上書きできる=確認用)
+  function drawImpossibleDeck(size) {
+    var pool = lib.filter(function (e) { return !fitsSlot6(e); }), out = [];
+    while (out.length < size && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    return Promise.all(out.map(loadItem)).then(function (items) { items.drawTries = 1; items.loadable = { ok: false, why: '6番に載せられる車が無い' }; items.impossible = true; return items; });
+  }
+  state.deckImpossible = false; state.dispatchDone = false; state.deckDrawn = 0;
   function newDeck() {
     var token = ++deckToken;
     state.deck = []; state.sel = 0; state.pendingEntry = null;
     renderDeck();
     var size = Math.random() < 0.5 ? 6 : 7;
     setStatus('車を準備しています...');
-    drawLoadableDeck(size, 0).then(function (items) {
+    var chance = state.impossibleChance !== undefined ? state.impossibleChance : IMPOSSIBLE_CHANCE;
+    var impossible = state.deckDrawn > 0 && Math.random() < chance;
+    (impossible ? drawImpossibleDeck(size) : drawLoadableDeck(size, 0)).then(function (items) {
       if (token !== deckToken) return;
+      state.deckDrawn++; state.deckImpossible = !!items.impossible; state.dispatchDone = false;
       state.deck = items; state.sel = 0; state.deckSize = size; state.deckTries = items.drawTries;
+      if (window.GAME_MODE && window.GAME_MODE.onTurnStart) window.GAME_MODE.onTurnStart();   // 新しい荷物が届いた(ターン開始)
       state.deckMinH = items.loadable && isFinite(items.loadable.H) ? items.loadable.H : null;   // この組み合わせをいちばん低く積める荷姿の高さ(6台。7台は無し)
       refreshDeck();
       idleHint();
@@ -1248,6 +1260,11 @@
     if (tapped) tapCar(tapped);
   });
   // 次のサイクルへ: 積んだ車・輪止め・落し蓋・選択を片付けて、新しい車を引き直す(ミス数は持ち越す)
+  // 荷物の変更(配車担当への連絡・時間切れ): トレーラーを積み始めの状態に戻して、新しい荷物を引く
+  state.changeCargo = function () {
+    if (window.FLOOR_MECH && window.FLOOR_MECH.resetAll) window.FLOOR_MECH.resetAll();
+    state.resetTrailer();
+  };
   state.resetTrailer = function () {
     Object.keys(state.occupied).forEach(function (k) { delete state.occupied[k]; });
     Object.keys(chocks).forEach(function (k) { delete chocks[k]; });

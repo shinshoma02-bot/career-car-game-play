@@ -762,7 +762,19 @@
     onInfo('後ろの柱のピン: ' + n + '番穴(柱の縮み幅 ' + Math.round(hangSolve(0).rear - RP.len) + 'px)');
     return true;
   }
+  // 荷物の変更(配車担当への連絡・時間切れ)で、トレーラーを積み始めの状態に戻す: 道板・扇動板・ジャッキ・タイヤ・ロック・5番フロア・宙段・セットピンを初期位置へ
+  function resetAll() {
+    holdStop(); if (typeof jackHoldStop === 'function') jackHoldStop();
+    MECH.ramp = false; RAMP.t = 0; RAMP.last = null;
+    MECH.bridge = false; MECH.f2Flap = false;
+    MECH.lift = 0; MECH.hook = false; MECH.stopper = true;
+    MECH.jack = 0; MECH.tireOut = false; MECH.lockR = MECH.lockL = true;
+    applyF5();
+    initPins();   // 棚を走行位置・ピンを初期状態へ。宙段も格納(hang=0)に戻る
+    syncHangEnd();
+  }
   window.FLOOR_MECH = {
+    resetAll: resetAll,
     stopPinResolve: stopPinSolve, stopPin: SP, stopPinHoles: SP_CFG ? SP_CFG.pts.length : 0, stopPinCfg: SP_CFG, setStopPinHole: setStopPinHole, toggleStopPin: toggleStopPin,
     rearPin: RP, rearPinHoles: RP_CFG.holes || 1, rearPinPitch: RP_CFG.pitch || 0, setRearPinHole: setRearPinHole, rearPinLen: function () { return RP.len; },
     FLOORS: FLOORS, FIDS: FIDS, ENDS: ENDS, PINS: PINS, MECH: MECH, CYLS: CYLS, initPins: initPins, FRAME_GAP_PX: FRAME_GAP_PX, hangPose: hangPose, hangSlope: hangSlope, hangReachable: hangReachable, hangHits: hangHits, carTopY: carTopY, hangFit: hangFit, hangVsUpperX: hangVsUpperX, FIT_OFFS: FIT_OFFS, hangProblem: hangProblem, hangStuck: hangStuck, hangEnds: hangEnds, hangSolve: hangSolve, hangRebuild: hangRebuild, pinned: pinned, rested: rested, floorPinsOk: floorPinsOk, offOfHole: offOfHole, poseProblem: poseProblem,
