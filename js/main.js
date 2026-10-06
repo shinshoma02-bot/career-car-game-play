@@ -528,6 +528,10 @@
     ctx.translate(p[0], p[1]);
     ctx.rotate(pose.ang * Math.PI / 180);
     ctx.translate(-p[0], -p[1]);
+    // 絵の先端を短く切る(floors.defs.<id>.artX0。1番フロアは実車に合わせて先端を後ろへ詰めた。絵の作り直し=GRAPHICS_REQUEST_MEMO.md R19 までの仮の対応)。
+    // フロアと一緒に回る座標(絵の座標)で、x が artX0 より前(キャビン側)の部分を描かない
+    var ax = cfg.floors && cfg.floors.defs && cfg.floors.defs[id] && cfg.floors.defs[id].artX0;
+    if (ax !== undefined) { ctx.beginPath(); ctx.rect(ax, -2000, 6000, 6000); ctx.clip(); }
     ctx.drawImage(img, 0, 0);
     ctx.restore();
   }

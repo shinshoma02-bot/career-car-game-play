@@ -82,7 +82,8 @@
     var r = cfg.slots[num].chockRange || {};
     var step = r.step || 1, front = Math.round((r.front || 0) / step);
     // 前方にも動かせないスロット(1〜4番)は、元のタイヤ止め/穴に重ならない後方1段目から
-    return { min: front ? -front : 1, max: Math.round((r.rear || 0) / step), stepCm: step };
+    // 輪止めを置ける最前の段: 前へ動かせる(front)なら負の段。動かせない時は、元の輪止め・穴・止め具がある所(2〜4番)は後方1段目から、何も無い所(1番。基準の輪止め=フロア先端)は基準位置(0)から
+    return { min: front ? -front : (cfg.slots[num].stopKind === 'none' ? 0 : 1), max: Math.round((r.rear || 0) / step), stepCm: step };
   }
   function stepsToPx(num, steps) { return steps * chockLimits(num).stepCm / 100 * cfg.pxPerMeter; }
   // 現在有効な障害物: { kind:'chock'|'stopper'|'hole', dx }(dxは基準位置から後方へのpx)。無ければnull

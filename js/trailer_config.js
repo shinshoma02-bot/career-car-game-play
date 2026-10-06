@@ -39,7 +39,7 @@ window.TRAILER_CONFIG = {
   },
 
   "slots": {
-    "1": { "tireX": 426.2, "deckY": 294.2, "rot": -1.8, "floor": "F1", "hit": [369, 87, 500, 203], "stopKind": "none", "chockRequired": true, "defaultChock": true, "chockRange": { "front": 60, "rear": 60, "divisions": 20, "step": 6 } },
+    "1": { "tireX": 480.2, "deckY": 294.2, "rot": -1.8, "floor": "F1", "hit": [450, 87, 419, 203], "stopKind": "none", "chockRequired": true, "defaultChock": true, "chockRange": { "front": 0, "rear": 120, "divisions": 20, "step": 6 }, "note": "基準の輪止め(tireX)は1番フロアの先端(floors.defs.F1.x0=456。タイヤの中心はそこから24px(約0.2m)後ろ)に置く。前(キャビン側)へは動かせない。後ろ(手前)へ120cm(2026-10-06 ユーザー指示)" },
     "2": { "tireX": 1031, "deckY": 316, "rot": 0,    "floor": "F2", "hit": [890, 87, 586, 225], "stopKind": "hole", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
     "3": { "tireX": 1650, "deckY": 312, "rot": 0,    "floor": "F3", "hit": [1560, 72, 591, 239], "stopKind": "hole", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
     "4": { "tireX": 474,  "deckY": 442, "rot": 0,    "floor": null, "hit": [434, 304, 500, 138], "stopKind": "stopper", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
@@ -64,7 +64,7 @@ window.TRAILER_CONFIG = {
       "F7": { "off": 0, "range": [-120, 0], "travel": 0, "hole": 0, "holeMax": 19, "noTravelPin": true, "label": "宙段", "note": "宙段フロアの支柱(柱の中)。実際の動きu(0〜2)を ×-60 した仮想の上下量。1穴=u0.1=6px(番号札 hole_scale_f7 と同じ)。ピンは宙段の支柱を受ける" }
     },
     "defs": {
-      "F1": { "name": "1番フロア", "frontPt": [356, 305], "frontEnd": "F1f", "rearPt": [850, 281], "rearEnd": "F1r", "slots": [1], "x0": 360, "x1": 850, "bottomAt380": 308, "bottomSlope": -0.03 },
+      "F1": { "name": "1番フロア", "frontPt": [356, 305], "frontEnd": "F1f", "rearPt": [850, 281], "rearEnd": "F1r", "slots": [1], "x0": 456, "x1": 850, "artX0": 456, "bottomAt380": 308, "bottomSlope": -0.03 },
       "F2": { "name": "2番フロア", "frontPt": [885, 314], "frontEnd": "F2f", "rearPt": "mid", "rearEnd": "MID", "slots": [2], "x0": 885, "x1": 1520, "bottomFlat": 336 },
       "F3": { "name": "3番フロア", "frontPt": "mid", "frontEnd": "MID", "rearPt": [2055, 312], "rearEnd": "F3r", "slots": [3], "x0": 1520, "x1": 2010, "bottomFlat": 334 },
       "F5": { "name": "5番フロア", "frontPt": [938, 510], "frontEnd": "F5f", "rearPt": [1505, 510], "rearEnd": "F5r", "slots": [], "x0": 938, "x1": 1505, "bottomFlat": 518 }
