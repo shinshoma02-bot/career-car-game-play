@@ -670,6 +670,9 @@
     // 2番前は可動域の上限(柱の赤テープ付近)までそのまま上げられる(以前の「赤ラインより上は5番をストッパーに掛けてから」は廃止)
     var hi = er[0];
     // 3番前のシーソー連動で、ピンより下まで引き下げられている棚(3番後ろ)も、押した瞬間にピンの高さへ飛ばず、上げる向きに普通の速さで動かす
+    // 棚がセットピンより下にいる間(3番前を上げた時のシーソー連動で、ピンより下へ引き下げられた3番後ろなど)は、ピンは下げる動きの邪魔をしない。
+    // ピンは「その上に載った棚」を受けるだけ。ピンより下の棚は、可動範囲の下限(接地)まで下げられる
+    if (PINS[h.end] !== null && ENDS[h.end].off > PINS[h.end] + 0.5) lo = ENDS[h.end].r[1];
     lo = Math.max(lo, ENDS[h.end].off);
     // 支柱の短い棚(2番前)は、ピン無しで上がるのは freeTop まで。ピンを一番上の穴に差した状態でだけ、赤テープ付近(range の上限)まで上がる。
     // ピンを抜いた時にすでに freeTop より上なら、そこより上へは上げられないだけで、下げるまでは位置はそのまま(押した瞬間に飛ばない)
@@ -683,7 +686,7 @@
       cand.F3r = Math.min(ENDS.F3r.r[1], Math.max(ENDS.F3r.r[0], ENDS.F3r.off - lever * d));
     }
     var prob = cand[h.end] === ENDS[h.end].off
-      ? (PINS[h.end] !== null && h.dir > 0 ? 'セットピンでこれ以上下がらない'
+      ? (PINS[h.end] !== null && h.dir > 0 && ENDS[h.end].off <= PINS[h.end] + 0.5 ? 'セットピンでこれ以上下がらない'
         : '可動範囲いっぱい')
       : poseProblem(h.ids, cand);
     if (prob) { if (h.warned !== prob) { onWarn(prob); h.warned = prob; } }
