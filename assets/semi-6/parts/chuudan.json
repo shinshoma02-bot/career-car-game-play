@@ -1,0 +1,367 @@
+{
+  "floor_chuudan": {
+    "file": "parts/floor_chuudan.png",
+    "kind": "floor",
+    "home": [
+      1457,
+      507
+    ],
+    "pivot": [
+      3,
+      3
+    ],
+    "pivot2": [
+      328,
+      3
+    ],
+    "hole": {
+      "x0": 28,
+      "x1": 72,
+      "depth": 9
+    },
+    "armPinF": [
+      19,
+      21
+    ],
+    "armPinR": [
+      312,
+      21
+    ],
+    "note": "宙段フロア本体(floor_mid の代わり)。格納時の水平姿勢: 前端(1460,510)〜後端(1785,510)。pivot=前端、pivot2=後端(床の上面)。hole=タイヤ落としの穴(上面が切れて深さ9pxの窪み)。armPinF/armPinR=前・後ろの柱の上端のピン(前端/後端から16px・上面から18px下)"
+  },
+  "chuudan_arm_front": {
+    "file": "parts/chuudan_arm_front.png",
+    "size": [
+      122,
+      22
+    ],
+    "pivot": [
+      10,
+      11
+    ],
+    "tile": [
+      22,
+      98
+    ],
+    "len": 100,
+    "thick": 14,
+    "tipAt": [
+      110,
+      11
+    ],
+    "kind": "arm",
+    "note": "前の柱(1本物)。pivot=下端のピン(車体側)、tipAt=上端のピン(宙段の armPinF)。長さは tile で合わせる(案では146px)"
+  },
+  "chuudan_post_outer": {
+    "file": "parts/chuudan_post_outer.png",
+    "size": [
+      122,
+      22
+    ],
+    "pivot": [
+      10,
+      11
+    ],
+    "tile": [
+      22,
+      104
+    ],
+    "len": 100,
+    "thick": 14,
+    "tipAt": [
+      110,
+      11
+    ],
+    "kind": "post-outer",
+    "note": "後ろの柱(長い角パイプ)。pivot=下端のピン(車体側)。長さは固定(下端ピン〜口 100px)",
+    "pinHole": {
+      "x": 100,
+      "y": 11,
+      "note": "外筒のピン穴の中心(画像座標)"
+    }
+  },
+  "chuudan_post_inner": {
+    "file": "parts/chuudan_post_inner.png",
+    "size": [
+      217,
+      33
+    ],
+    "pivot": [
+      8,
+      16
+    ],
+    "tile": [
+      32,
+      198
+    ],
+    "len": 200,
+    "thick": 9,
+    "tipAt": [
+      208,
+      16
+    ],
+    "kind": "post-inner",
+    "note": "後ろの柱から伸びる支柱(細い)。tipAt=上端のピン(宙段の armPinR)。左端は柱の口から8px奥に入れて始め、tile で長さを合わせる(tile の幅は穴の間隔8pxの倍数)。柱より先に描く。縮みきると先端の当て板だけが柱の口から出る。実車どおり側面に丸穴の列、先端の当て板に縦のロックピン(赤い輪)",
+    "holes": {
+      "count": 6,
+      "pitch": 3.0,
+      "x": [
+        21.0,
+        18.0,
+        15.0,
+        12.0,
+        9.0,
+        6.0
+      ],
+      "y": 16,
+      "note": "内筒のピン穴 n 番(1〜6)の中心 = 画像の x。pivot(左端)から x 番目。1番=先端寄り=外筒の穴に合わせると一番縮む。6番=縮まない(3px 刻み)"
+    }
+  },
+  "chuudan_base_front": {
+    "file": "parts/chuudan_base_front.png",
+    "size": [
+      30,
+      14
+    ],
+    "pivot": [
+      15,
+      9
+    ],
+    "floorDy": 2,
+    "note": "前の柱の付け根の台(回さない)。pivot=ピンの穴の中心を pivotF (1397,508) に置く。床の面は穴の 2px 下(足板が床に載る)。柱の後に描く"
+  },
+  "chuudan_base": {
+    "file": "parts/chuudan_base.png",
+    "kind": "fixed",
+    "size": [
+      28,
+      25
+    ],
+    "pivot": [
+      14,
+      11
+    ],
+    "note": "後ろの柱の下端の受け金具(車体側、回さない)。pivot=ピン。柱の後に描く"
+  },
+  "hang_pit_back": {
+    "file": "parts/hang_pit_back.png",
+    "kind": "fixed",
+    "home": [
+      1453,
+      507
+    ],
+    "note": "宙段がはまる窪みの奥。下段の床・フレームの上、宙段フロアより先に描く"
+  },
+  "hang_pit_front": {
+    "file": "parts/hang_pit_front.png",
+    "kind": "fixed",
+    "home": [
+      1453,
+      510
+    ],
+    "note": "窪みの手前の縁(下段の床の側面)。宙段フロアの後に描く。y513より下だけを覆う(網の縁は見える)ので、上げた宙段は隠れない"
+  },
+  "pin_rear": {
+    "file": "parts/pin_rear.png",
+    "kind": "small",
+    "size": [
+      12,
+      12
+    ],
+    "pivot": [
+      6,
+      6
+    ],
+    "note": "後ろの柱のセットピン。pivot=中心=差し込み位置(外筒のピン穴と内筒の n 番穴が重なる点)。回さない。外筒の後(上)に描く"
+  },
+  "hole_scale_f7": {
+    "file": "parts/hole_scale_f7.png",
+    "kind": "small",
+    "size": [
+      16,
+      128
+    ],
+    "pivot": [
+      1,
+      121
+    ],
+    "pitch": 6,
+    "count": 20,
+    "note": "宙段のセットピンの位置の番号札(0〜19、下から数える)。pivot=0番の高さ・左端。柱の側面に貼る。穴は前後方向に開いていて横からは見えない(ユーザー指摘)ので、穴は描かず目盛りと番号だけ"
+  },
+  "linkage": {
+    "pivotF": [
+      1350,
+      526
+    ],
+    "lenF": 126,
+    "pivotR": [
+      1445,
+      526
+    ],
+    "rearLenRange": [
+      140,
+      324
+    ],
+    "rearLenRetracted": 140,
+    "outerLen": 100,
+    "cylAnchor": [
+      1376,
+      530
+    ],
+    "cylOnArmF": 0.62,
+    "note": "動きの案(実車: 前の柱は1本物。後ろの柱は長い柱+中から伸びる支柱。格納時は2本とも後ろへ向かって寝ていて、支柱は伸びている)。u=0 格納 → u=0〜1 前の柱をシリンダーで起こす。後ろは接地のまま前へ滑り、支柱が縮む(スロープ状で車が積める) → u=1 支柱が縮みきる → u=1〜2 後ろの柱が1本の柱として起き上がり、後ろも上がる → u=2 全上げ。格納は hangFloor.states の最初と同じ。全上げは実車動画 v5 の実測(前端 FINAL_F・前上がり FINAL_ANG 度)。poses は途中の姿勢、rearLen は後ろの柱の長さ(下端ピン〜上端ピン)。数値の採用・調整は開発実装部で",
+    "poses": [
+      {
+        "u": 0,
+        "F": [
+          1460,
+          509
+        ],
+        "R": [
+          1785,
+          510
+        ],
+        "rearLen": 324
+      },
+      {
+        "u": 0.5,
+        "F": [
+          1399,
+          391
+        ],
+        "R": [
+          1699,
+          518
+        ],
+        "rearLen": 232
+      },
+      {
+        "u": 1,
+        "F": [
+          1313,
+          381
+        ],
+        "R": [
+          1607,
+          518
+        ],
+        "rearLen": 140
+      },
+      {
+        "u": 1.5,
+        "F": [
+          1288,
+          389
+        ],
+        "R": [
+          1601,
+          478
+        ],
+        "rearLen": 140
+      },
+      {
+        "u": 2,
+        "F": [
+          1262,
+          404
+        ],
+        "R": [
+          1585,
+          442
+        ],
+        "rearLen": 140
+      }
+    ]
+  },
+  "cyl_barrel_front": {
+    "file": "parts/cyl_barrel_front.png",
+    "size": [
+      125,
+      26
+    ],
+    "pivot": [
+      12,
+      13
+    ],
+    "tile": [
+      23,
+      97
+    ],
+    "len": 100,
+    "thick": 13,
+    "tipAt": [
+      112,
+      13
+    ],
+    "kind": "cylinder-barrel",
+    "note": "宙段の前のシリンダーの筒(普通の cyl_barrel より太い)。pivot=根元の取付穴"
+  },
+  "cyl_rod_front": {
+    "file": "parts/cyl_rod_front.png",
+    "size": [
+      112,
+      13
+    ],
+    "pivot": [
+      5,
+      6
+    ],
+    "tile": [
+      13,
+      95
+    ],
+    "len": 100,
+    "thick": 6,
+    "tipAt": [
+      105,
+      6
+    ],
+    "kind": "cylinder-rod",
+    "note": "宙段の前のシリンダーのロッド。左端は筒の口金の中、tipAt=先端の取付穴(ステーの先)"
+  },
+  "chuudan_stay": {
+    "file": "parts/chuudan_stay.png",
+    "size": [
+      23,
+      16
+    ],
+    "pivot": [
+      7,
+      8
+    ],
+    "tipAt": [
+      16,
+      8
+    ],
+    "len": 9,
+    "w": 12,
+    "note": "前の柱の取付耳(ステー)。pivot=柱側の端の中心(柱の中心線の上)、tipAt=先端の取付穴=シリンダーの先のピン。柱の向きから 90度回した向き(シリンダー側。格納時は柱の下側)に置く。長さ 9px"
+  },
+  "chuudan_cyl_base": {
+    "file": "parts/chuudan_cyl_base.png",
+    "size": [
+      18,
+      11
+    ],
+    "pivot": [
+      9,
+      6
+    ],
+    "floorDy": 3,
+    "note": "前のシリンダーの根元の取付耳(回さない)。pivot=穴の中心=シリンダーの根元。床の面は穴の 3px 下(足板が床にボルト留め)"
+  },
+  "chuudan_floor_ear": {
+    "file": "parts/chuudan_floor_ear.png",
+    "size": [
+      22,
+      16
+    ],
+    "pivot": [
+      6,
+      4
+    ],
+    "floorDy": 0,
+    "note": "フロア先端の柱の受け耳(R12)。pivot=穴の中心を、フロア座標 armPinF=(3,3) に置き、フロアの傾きに合わせて回す。板はフロア上面より下(フロア前端の内側)。柱は耳の後に描く"
+  }
+}

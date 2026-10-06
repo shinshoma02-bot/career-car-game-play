@@ -1,0 +1,543 @@
+{
+  "mid_link": {
+    "file": "parts/mid_link.png",
+    "kind": "link",
+    "size": [
+      58,
+      14
+    ],
+    "pivot": [
+      7,
+      7
+    ],
+    "tipAt": [
+      51,
+      7
+    ],
+    "len": 44,
+    "note": "リンク(長さ 44px)。pivot=柱の側面の金具のピン(シリンダーの先と同じピン)、tipAt=2番の棚の下の金具のピン(floor_f2 の linkPin)。ピン間の距離は姿勢で ±2px 以内しか変わらないので、今と同じく d/len で横に伸び縮みさせて描く。シリンダーの後、金具の前に描く"
+  },
+  "mid_slider": {
+    "file": "parts/mid_slider.png",
+    "kind": "slider",
+    "size": [
+      24,
+      32
+    ],
+    "pivot": [
+      7,
+      11
+    ],
+    "note": "柱の側面の金具(回さない)。pivot=ピン(シリンダーの先とリンクの下端)を (x=1500, 継ぎ目の y -6) に置く。棚と一緒に上下し、右の当て板は柱の左の縁 x1506〜1514 に重なる。シリンダー・リンクの後に描く"
+  },
+  "mid_inner": {
+    "file": "parts/mid_inner.png",
+    "kind": "inner-slider",
+    "size": [
+      16,
+      104
+    ],
+    "pivot": [
+      8,
+      4
+    ],
+    "x": 1515,
+    "pinHoleAt": [
+      12.5,
+      28
+    ],
+    "note": "柱の中の部材(回さない)。pivot=上端のヒンジを (x=1523, 継ぎ目の y) に置く(左上 = (1515, 継ぎ目の y -4))。mid_pillar_inside の後、手前のフレーム(fg)の前に描く → 柱の側面の穴から見える所だけが見える。pinHoleAt=セットピンの穴(継ぎ目の y + 24)"
+  },
+  "mid_pillar_inside": {
+    "file": "parts/mid_pillar_inside.png",
+    "kind": "fixed",
+    "home": [
+      1522,
+      261
+    ],
+    "size": [
+      11,
+      190
+    ],
+    "note": "柱の中の奥の暗がり(動かない)。home にそのまま置く。棚・車の後、柱の中の部材の前、手前のフレーム(fg)の前に描く"
+  },
+  "mid_pillar_scale": {
+    "file": "parts/mid_pillar_scale.png",
+    "kind": "fixed",
+    "home": [
+      1507,
+      242
+    ],
+    "size": [
+      26,
+      210
+    ],
+    "hole0Y": 446,
+    "pitch": 6,
+    "holeX": 1527.5,
+    "holeR": 1.8,
+    "holeCount": 31,
+    "tapeY": 250,
+    "note": "中央柱の側面の番号札(5番ごと、穴の列の左)と赤いテープ(home にそのまま置く。手前のフレームの後に描く)。穴は frame_front.png に開けた(透明。x=holeX、半径 holeR、n番の穴の y = hole0Y − 6n、0〜30番)。セットピン(継ぎ目の 24px 下)が n番にある時、継ぎ目の y = hole0Y − 6n − 24。0番 = 下限(オフセット +104)、28番 = 棚が赤テープの高さ(y=250)"
+  },
+  "mid_cyl_barrel": {
+    "file": "parts/mid_cyl_barrel.png",
+    "size": [
+      121,
+      24
+    ],
+    "pivot": [
+      11,
+      12
+    ],
+    "tile": [
+      22,
+      95
+    ],
+    "len": 98,
+    "thick": 12,
+    "tipAt": [
+      109,
+      12
+    ],
+    "kind": "cylinder-barrel"
+  },
+  "mid_cyl_stage1": {
+    "file": "parts/mid_cyl_stage1.png",
+    "size": [
+      105,
+      14
+    ],
+    "pivot": [
+      1,
+      7
+    ],
+    "tile": [
+      9,
+      91
+    ],
+    "len": 101,
+    "thick": 8,
+    "tipAt": [
+      102,
+      7
+    ],
+    "kind": "cylinder-stage1",
+    "note": "外筒の口から出る(伸び 0〜91)"
+  },
+  "mid_cyl_rod": {
+    "file": "parts/mid_cyl_rod.png",
+    "size": [
+      110,
+      11
+    ],
+    "pivot": [
+      4,
+      6
+    ],
+    "tile": [
+      11,
+      94
+    ],
+    "len": 99,
+    "thick": 5,
+    "tipAt": [
+      104,
+      6
+    ],
+    "kind": "cylinder-rod",
+    "note": "1段目が伸びきってから、1段目の口から出る(伸び 0〜91)。先端の目玉=柱の側面の金具のピン"
+  },
+  "geometry": {
+    "cylAnchor": [
+      1500,
+      518
+    ],
+    "cylX": 1500,
+    "sliderPinDy": -6,
+    "linkLen": 44,
+    "linkTopOnF2": [
+      1470,
+      340
+    ],
+    "cylMin": 102,
+    "stage1Max": 91,
+    "stage2Max": 91,
+    "cylMax": 284,
+    "barrelLen": 98,
+    "stage1Len": 101,
+    "rodLen": 99,
+    "innerX": 1515,
+    "innerTopDy": -4,
+    "innerLen": 104,
+    "pinDy": 24,
+    "offsetRange": [
+      104,
+      -78
+    ],
+    "poses": [
+      {
+        "offset": 104,
+        "midY": 422,
+        "f2Deg": 9.3,
+        "linkTop": [
+          1458.1,
+          434.2
+        ],
+        "sliderPinY": 416,
+        "linkDeg": 156.5,
+        "linkDist": 45.7,
+        "cylLen": 102,
+        "stage1": 0.0,
+        "stage2": 0.0,
+        "innerTopY": 418,
+        "innerPinY": 446,
+        "pinNo": 0.0
+      },
+      {
+        "offset": 94,
+        "midY": 412,
+        "f2Deg": 8.42,
+        "linkTop": [
+          1459.9,
+          425.4
+        ],
+        "sliderPinY": 406,
+        "linkDeg": 154.2,
+        "linkDist": 44.6,
+        "cylLen": 112,
+        "stage1": 10,
+        "stage2": 0,
+        "innerTopY": 408,
+        "innerPinY": 436,
+        "pinNo": 1.7
+      },
+      {
+        "offset": 84,
+        "midY": 402,
+        "f2Deg": 7.54,
+        "linkTop": [
+          1461.5,
+          416.5
+        ],
+        "sliderPinY": 396,
+        "linkDeg": 152.0,
+        "linkDist": 43.6,
+        "cylLen": 122,
+        "stage1": 20,
+        "stage2": 0,
+        "innerTopY": 398,
+        "innerPinY": 426,
+        "pinNo": 3.3
+      },
+      {
+        "offset": 74,
+        "midY": 392,
+        "f2Deg": 6.65,
+        "linkTop": [
+          1463.1,
+          407.5
+        ],
+        "sliderPinY": 386,
+        "linkDeg": 149.8,
+        "linkDist": 42.8,
+        "cylLen": 132,
+        "stage1": 30,
+        "stage2": 0,
+        "innerTopY": 388,
+        "innerPinY": 416,
+        "pinNo": 5.0
+      },
+      {
+        "offset": 64,
+        "midY": 382,
+        "f2Deg": 5.76,
+        "linkTop": [
+          1464.4,
+          398.5
+        ],
+        "sliderPinY": 376,
+        "linkDeg": 147.6,
+        "linkDist": 42.1,
+        "cylLen": 142,
+        "stage1": 40,
+        "stage2": 0,
+        "innerTopY": 378,
+        "innerPinY": 406,
+        "pinNo": 6.7
+      },
+      {
+        "offset": 54,
+        "midY": 372,
+        "f2Deg": 4.86,
+        "linkTop": [
+          1465.7,
+          389.5
+        ],
+        "sliderPinY": 366,
+        "linkDeg": 145.6,
+        "linkDist": 41.6,
+        "cylLen": 152,
+        "stage1": 50,
+        "stage2": 0,
+        "innerTopY": 368,
+        "innerPinY": 396,
+        "pinNo": 8.3
+      },
+      {
+        "offset": 44,
+        "midY": 362,
+        "f2Deg": 3.96,
+        "linkTop": [
+          1466.8,
+          380.4
+        ],
+        "sliderPinY": 356,
+        "linkDeg": 143.7,
+        "linkDist": 41.2,
+        "cylLen": 162,
+        "stage1": 60,
+        "stage2": 0,
+        "innerTopY": 358,
+        "innerPinY": 386,
+        "pinNo": 10.0
+      },
+      {
+        "offset": 34,
+        "midY": 352,
+        "f2Deg": 3.06,
+        "linkTop": [
+          1467.8,
+          371.2
+        ],
+        "sliderPinY": 346,
+        "linkDeg": 141.9,
+        "linkDist": 40.9,
+        "cylLen": 172,
+        "stage1": 70,
+        "stage2": 0,
+        "innerTopY": 348,
+        "innerPinY": 376,
+        "pinNo": 11.7
+      },
+      {
+        "offset": 24,
+        "midY": 342,
+        "f2Deg": 2.16,
+        "linkTop": [
+          1468.6,
+          362.1
+        ],
+        "sliderPinY": 336,
+        "linkDeg": 140.3,
+        "linkDist": 40.8,
+        "cylLen": 182,
+        "stage1": 80,
+        "stage2": 0,
+        "innerTopY": 338,
+        "innerPinY": 366,
+        "pinNo": 13.3
+      },
+      {
+        "offset": 14,
+        "midY": 332,
+        "f2Deg": 1.26,
+        "linkTop": [
+          1469.3,
+          352.9
+        ],
+        "sliderPinY": 326,
+        "linkDeg": 138.8,
+        "linkDist": 40.8,
+        "cylLen": 192,
+        "stage1": 90,
+        "stage2": 0,
+        "innerTopY": 328,
+        "innerPinY": 356,
+        "pinNo": 15.0
+      },
+      {
+        "offset": 4,
+        "midY": 322,
+        "f2Deg": 0.36,
+        "linkTop": [
+          1469.8,
+          343.7
+        ],
+        "sliderPinY": 316,
+        "linkDeg": 137.5,
+        "linkDist": 41.0,
+        "cylLen": 202,
+        "stage1": 91,
+        "stage2": 9,
+        "innerTopY": 318,
+        "innerPinY": 346,
+        "pinNo": 16.7
+      },
+      {
+        "offset": -6,
+        "midY": 312,
+        "f2Deg": -0.54,
+        "linkTop": [
+          1470.2,
+          334.5
+        ],
+        "sliderPinY": 306,
+        "linkDeg": 136.3,
+        "linkDist": 41.2,
+        "cylLen": 212,
+        "stage1": 91,
+        "stage2": 19,
+        "innerTopY": 308,
+        "innerPinY": 336,
+        "pinNo": 18.3
+      },
+      {
+        "offset": -16,
+        "midY": 302,
+        "f2Deg": -1.44,
+        "linkTop": [
+          1470.5,
+          325.3
+        ],
+        "sliderPinY": 296,
+        "linkDeg": 135.3,
+        "linkDist": 41.6,
+        "cylLen": 222,
+        "stage1": 91,
+        "stage2": 29,
+        "innerTopY": 298,
+        "innerPinY": 326,
+        "pinNo": 20.0
+      },
+      {
+        "offset": -26,
+        "midY": 292,
+        "f2Deg": -2.34,
+        "linkTop": [
+          1470.6,
+          316.0
+        ],
+        "sliderPinY": 286,
+        "linkDeg": 134.4,
+        "linkDist": 42.1,
+        "cylLen": 232,
+        "stage1": 91,
+        "stage2": 39,
+        "innerTopY": 288,
+        "innerPinY": 316,
+        "pinNo": 21.7
+      },
+      {
+        "offset": -36,
+        "midY": 282,
+        "f2Deg": -3.24,
+        "linkTop": [
+          1470.5,
+          306.8
+        ],
+        "sliderPinY": 276,
+        "linkDeg": 133.7,
+        "linkDist": 42.7,
+        "cylLen": 242,
+        "stage1": 91,
+        "stage2": 49,
+        "innerTopY": 278,
+        "innerPinY": 306,
+        "pinNo": 23.3
+      },
+      {
+        "offset": -46,
+        "midY": 272,
+        "f2Deg": -4.14,
+        "linkTop": [
+          1470.3,
+          297.7
+        ],
+        "sliderPinY": 266,
+        "linkDeg": 133.1,
+        "linkDist": 43.4,
+        "cylLen": 252,
+        "stage1": 91,
+        "stage2": 59,
+        "innerTopY": 268,
+        "innerPinY": 296,
+        "pinNo": 25.0
+      },
+      {
+        "offset": -56,
+        "midY": 262,
+        "f2Deg": -5.04,
+        "linkTop": [
+          1470.0,
+          288.5
+        ],
+        "sliderPinY": 256,
+        "linkDeg": 132.7,
+        "linkDist": 44.2,
+        "cylLen": 262,
+        "stage1": 91,
+        "stage2": 69,
+        "innerTopY": 258,
+        "innerPinY": 286,
+        "pinNo": 26.7
+      },
+      {
+        "offset": -66,
+        "midY": 252,
+        "f2Deg": -5.93,
+        "linkTop": [
+          1469.6,
+          279.4
+        ],
+        "sliderPinY": 246,
+        "linkDeg": 132.4,
+        "linkDist": 45.2,
+        "cylLen": 272,
+        "stage1": 91,
+        "stage2": 79,
+        "innerTopY": 248,
+        "innerPinY": 276,
+        "pinNo": 28.3
+      },
+      {
+        "offset": -76,
+        "midY": 242,
+        "f2Deg": -6.82,
+        "linkTop": [
+          1468.9,
+          270.3
+        ],
+        "sliderPinY": 236,
+        "linkDeg": 132.2,
+        "linkDist": 46.3,
+        "cylLen": 282,
+        "stage1": 91,
+        "stage2": 89,
+        "innerTopY": 238,
+        "innerPinY": 266,
+        "pinNo": 30.0
+      },
+      {
+        "offset": -78,
+        "midY": 240,
+        "f2Deg": -7.0,
+        "linkTop": [
+          1468.8,
+          268.5
+        ],
+        "sliderPinY": 234,
+        "linkDeg": 132.1,
+        "linkDist": 46.5,
+        "cylLen": 284,
+        "stage1": 91,
+        "stage2": 91,
+        "innerTopY": 236,
+        "innerPinY": 264,
+        "pinNo": 30.3
+      }
+    ],
+    "drawOrder": "棚・車 → mid_pillar_inside → mid_inner → 手前のフレーム(fg、穴が開いている)→ mid_pillar_scale → 二段シリンダー(ロッド → 1段目 → 外筒)→ mid_link → mid_slider",
+    "note": "R5(2026-10-02)。継ぎ目のオフセット(ゲームの y = 318 + オフセット)が +104(下限=走行位置。シリンダー縮みきり)〜 -78(上限=中央柱の赤テープ。伸びきり)。柱の側面の金具(mid_slider)と柱の中の部材(mid_inner)は継ぎ目と一緒に真上・真下へ動く: 金具のピン = (cylX, 継ぎ目の y + sliderPinDy)、部材の左上 = (innerX, 継ぎ目の y + innerTopDy)。シリンダーは x=cylX に真上へ立ち、長さ = cylAnchor の y − 金具のピンの y(102〜284)。伸びる順: 1段目(太いメッキ)が stage1Max まで伸びきってから、2段目(ロッド)が伸びる(切り替えはオフセット +13、ピン約15番)。リンクは金具のピン → 2番の棚の下の金具(linkTopOnF2、2番と一緒に回る)。距離は姿勢で linkDist のとおり少し変わるので、d/linkLen で伸び縮みさせて描く。poses は10px刻み: sliderPinY=金具のピンの y、linkDeg=金具のピン→リンク上端の角度(画面の右=0度、上=−90度)、innerTopY/innerPinY=部材の上端・セットピンの穴の y、pinNo=セットピンの穴の番号(下限=0、1穴6px)"
+  }
+}

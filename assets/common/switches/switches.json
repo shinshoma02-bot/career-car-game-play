@@ -1,0 +1,706 @@
+{
+  "sw_pendant2": {
+    "size": [
+      44,
+      105
+    ],
+    "slots": [
+      [
+        22,
+        26
+      ],
+      [
+        22,
+        44
+      ]
+    ],
+    "cap": "btn_cap*",
+    "cableEnd": [
+      25,
+      101
+    ]
+  },
+  "sw_pendant6": {
+    "size": [
+      54,
+      211
+    ],
+    "slots": [
+      [
+        27,
+        28
+      ],
+      [
+        27,
+        52
+      ],
+      [
+        27,
+        76
+      ],
+      [
+        27,
+        100
+      ],
+      [
+        27,
+        124
+      ],
+      [
+        27,
+        148
+      ]
+    ],
+    "cap": "btn_cap6_*",
+    "cableEnd": [
+      27,
+      207
+    ]
+  },
+  "sw_box2": {
+    "size": [
+      44,
+      70
+    ],
+    "slots": [
+      [
+        22,
+        28
+      ],
+      [
+        22,
+        46
+      ]
+    ],
+    "cap": "btn_sq*"
+  },
+  "lamp_panel": {
+    "size": [
+      38,
+      108
+    ],
+    "slots": [
+      [
+        16,
+        16
+      ],
+      [
+        16,
+        48
+      ],
+      [
+        16,
+        80
+      ]
+    ],
+    "labels": []
+  },
+  "lamp_panel_lock": {
+    "size": [
+      38,
+      108
+    ],
+    "slots": [
+      [
+        16,
+        16
+      ],
+      [
+        16,
+        48
+      ],
+      [
+        16,
+        80
+      ]
+    ],
+    "labels": [
+      "作業",
+      "右ロック",
+      "左ロック"
+    ]
+  },
+  "btn_cap": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ],
+    "label": ""
+  },
+  "btn_cap_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap6": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ],
+    "label": ""
+  },
+  "btn_cap6_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap_ue": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ],
+    "label": "上"
+  },
+  "btn_cap_ue_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_shita": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ],
+    "label": "下"
+  },
+  "btn_cap_shita_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_mae": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ],
+    "label": "前"
+  },
+  "btn_cap_mae_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_ato": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ],
+    "label": "後"
+  },
+  "btn_cap_ato_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_nobi": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ],
+    "label": "伸"
+  },
+  "btn_cap_nobi_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap6_nobi": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ],
+    "label": "伸"
+  },
+  "btn_cap6_nobi_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap_chiji": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ],
+    "label": "縮"
+  },
+  "btn_cap_chiji_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap6_chiji": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ],
+    "label": "縮"
+  },
+  "btn_cap6_chiji_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_migi_oshi": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ],
+    "label": "右押"
+  },
+  "btn_cap6_migi_oshi_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_migi_hiki": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ],
+    "label": "右引"
+  },
+  "btn_cap6_migi_hiki_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_hidari_oshi": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ],
+    "label": "左押"
+  },
+  "btn_cap6_hidari_oshi_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_hidari_hiki": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ],
+    "label": "左引"
+  },
+  "btn_cap6_hidari_hiki_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap_ue_big": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_ue_big_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_shita_big": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_shita_big_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_mae_big": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_mae_big_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_ato_big": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap_ato_big_pressed": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "btn_cap6_nobi_big": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_nobi_big_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_chiji_big": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_chiji_big_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_migi_oshi_big": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_migi_oshi_big_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_migi_hiki_big": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_migi_hiki_big_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_hidari_oshi_big": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_hidari_oshi_big_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_hidari_hiki_big": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "btn_cap6_hidari_hiki_big_pressed": {
+    "size": [
+      22,
+      22
+    ],
+    "pivot": [
+      11,
+      11
+    ]
+  },
+  "hint_glow": {
+    "size": [
+      48,
+      48
+    ],
+    "slice": 16,
+    "note": "9分割(四隅 slice px は伸ばさない)で、グループの範囲に合わせて伸ばす。点滅などはゲーム側で"
+  },
+  "hint_ring": {
+    "size": [
+      40,
+      40
+    ],
+    "pivot": [
+      20,
+      20
+    ]
+  },
+  "hint_finger": {
+    "size": [
+      30,
+      34
+    ],
+    "pivot": [
+      11,
+      6
+    ],
+    "note": "pivot=指先。スイッチのすぐ下に置くと、指が上を指して見える"
+  },
+  "btn_sq": {
+    "size": [
+      16,
+      14
+    ],
+    "pivot": [
+      8,
+      7
+    ]
+  },
+  "btn_sq_pressed": {
+    "size": [
+      16,
+      14
+    ],
+    "pivot": [
+      8,
+      7
+    ]
+  },
+  "lamp_green": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "lamp_green_off": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "lamp_red": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "lamp_red_off": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  }
+}

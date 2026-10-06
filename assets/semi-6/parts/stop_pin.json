@@ -1,0 +1,28 @@
+{
+  "stop_pin": {
+    "file": "parts/stop_pin.png",
+    "size": [
+      12,
+      12
+    ],
+    "pivot": [
+      5,
+      5
+    ],
+    "topFace": 2,
+    "radius": 3,
+    "note": "宙段の固定ピン(鋼のピンの頭)。pivot=頭の中心=赤い差し込み板の穴の中心(frame_front に描いた穴、make_semi6_fixes.stop_holes())。回さない。フロア下面はピンの上面(pivot の 3px 上=画像 y=2)に載る。左上に置く位置 = (穴 x − 5, 穴 y − 5)。frame_front の後(上)に描く"
+  },
+  "stop_pin_hole": {
+    "file": "parts/stop_pin_hole.png",
+    "size": [
+      9,
+      9
+    ],
+    "pivot": [
+      4,
+      4
+    ],
+    "note": "使わない(2026-10-05 D25: 穴は frame_front の赤い差し込み板に描いた)"
+  }
+}

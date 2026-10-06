@@ -1,0 +1,52 @@
+{
+  "chock_wedge": {
+    "size": [
+      28,
+      23
+    ],
+    "pivot": [
+      1,
+      17
+    ],
+    "tireSide": "left",
+    "deckY": 17,
+    "note": "pivot=タイヤ側の下端(フロア上面)。ピンはフロア面より下に5px"
+  },
+  "chock_wedge_flat": {
+    "size": [
+      30,
+      17
+    ],
+    "pivot": [
+      1,
+      11
+    ],
+    "tireSide": "left",
+    "deckY": 11,
+    "note": "pivot=タイヤ側の下端(フロア上面)。ピンはフロア面より下に5px"
+  },
+  "chock_plate": {
+    "size": [
+      10,
+      34
+    ],
+    "pivot": [
+      3,
+      26
+    ],
+    "tireSide": "left",
+    "deckY": 26,
+    "note": "pivot=板の下端のタイヤ側(フロア上面)。脚はフロア面より下に7px"
+  },
+  "chock_plate_stored": {
+    "size": [
+      56,
+      34
+    ],
+    "pivot": [
+      28,
+      2
+    ],
+    "note": "pivot=板の上端の中央(棚の横の掛け金の位置)"
+  }
+}

@@ -1,0 +1,209 @@
+[
+  {
+    "no": 1,
+    "at": [
+      600,
+      300
+    ],
+    "what": "1番フロア(前後別々に上下)",
+    "files": "semi-6/parts/floor_f1.png"
+  },
+  {
+    "no": 2,
+    "at": [
+      1200,
+      322
+    ],
+    "what": "2番フロア",
+    "files": "semi-6/parts/floor_f2.png"
+  },
+  {
+    "no": 3,
+    "at": [
+      1800,
+      320
+    ],
+    "what": "3番フロア(2番と別素材。継ぎ目 x≈1520)",
+    "files": "semi-6/parts/floor_f3.png"
+  },
+  {
+    "no": 4,
+    "at": [
+      1200,
+      514
+    ],
+    "what": "5番フロア(前端が上がってスロープ)",
+    "files": "semi-6/parts/floor_f5.png"
+  },
+  {
+    "no": 5,
+    "at": [
+      1620,
+      506
+    ],
+    "what": "宙段フロア(格納中)",
+    "files": "semi-6/parts/floor_chuudan.png"
+  },
+  {
+    "no": 6,
+    "at": [
+      1985,
+      470
+    ],
+    "what": "後ろ/手前のフレーム(後部35px詰め・3本目の柱を移動・台車の上はトラス)",
+    "files": "semi-6/frame_back.png, frame_front.png"
+  },
+  {
+    "no": 7,
+    "at": [
+      1827,
+      451
+    ],
+    "what": "台車タイヤ+フェンダー",
+    "files": "semi-6/wheel_alu.png, fender.png"
+  },
+  {
+    "no": 8,
+    "at": [
+      1448,
+      375
+    ],
+    "what": "2番のシリンダー f2mid(普通)",
+    "files": "parts/cyl_barrel + cyl_rod"
+  },
+  {
+    "no": 9,
+    "at": [
+      1499,
+      420
+    ],
+    "what": "継ぎ目の二段シリンダー midvert",
+    "files": "parts/cyl2_barrel + cyl2_stage1 + cyl2_rod"
+  },
+  {
+    "no": 10,
+    "at": [
+      1680,
+      420
+    ],
+    "what": "3番後ろのシリンダー f3rear(普通)",
+    "files": "parts/cyl_barrel + cyl_rod"
+  },
+  {
+    "no": 11,
+    "at": [
+      838,
+      313
+    ],
+    "what": "セットピン(柱の前の面に赤い取手。穴は横から見えない)",
+    "files": "common/pins/pin.png(抜いた時 pin_out.png)"
+  },
+  {
+    "no": 12,
+    "at": [
+      1071,
+      306
+    ],
+    "what": "輪止め(黄色。2・3・5・6番)",
+    "files": "common/chocks/chock_wedge.png"
+  },
+  {
+    "no": 13,
+    "at": [
+      514,
+      434
+    ],
+    "what": "4番の輪止め(平たい)",
+    "files": "common/chocks/chock_wedge_flat.png"
+  },
+  {
+    "no": 14,
+    "at": [
+      464.2,
+      274.2
+    ],
+    "what": "1番の輪止め(差した状態)",
+    "files": "common/chocks/chock_plate.png"
+  },
+  {
+    "no": 15,
+    "at": [
+      700,
+      322
+    ],
+    "what": "1番の輪止め(棚の横に掛けた状態)",
+    "files": "common/chocks/chock_plate_stored.png"
+  },
+  {
+    "no": 16,
+    "at": [
+      889,
+      392
+    ],
+    "what": "1前・1後の押ボタン(柱の間の上の板に横に2つ)",
+    "files": "sw_pendant2 + btn_cap_ue/shita"
+  },
+  {
+    "no": 17,
+    "at": [
+      958,
+      445
+    ],
+    "what": "2前の押ボタン(2前の柱の後ろに1つ)",
+    "files": "sw_pendant2 + btn_cap_ue/shita"
+  },
+  {
+    "no": 18,
+    "at": [
+      888,
+      508
+    ],
+    "what": "アイドリングストップ(灰色の箱。横梁の下)",
+    "files": "sw_box2 + btn_sq"
+  },
+  {
+    "no": 19,
+    "at": [
+      1545,
+      420
+    ],
+    "what": "3前・3後(上に2つ)・アウトリガー上下(下に1つ)の押ボタン(「3後」の板)",
+    "files": "sw_pendant2 + btn_cap_ue/shita"
+  },
+  {
+    "no": 20,
+    "at": [
+      1590,
+      388
+    ],
+    "what": "表示ランプ盤(作業/右ロック/左ロック。斜材の前の縁に沿う)",
+    "files": "lamp_panel_lock + lamp_*"
+  },
+  {
+    "no": 21,
+    "at": [
+      1628,
+      470
+    ],
+    "what": "6ボタン(伸/縮/右押/右引/左押/左引。斜材の後ろの縁に沿う)",
+    "files": "sw_pendant6 + btn_cap6_*"
+  },
+  {
+    "no": 22,
+    "at": [
+      1540,
+      520
+    ],
+    "what": "宙吊り(宙段)の押ボタン(板の下に1つだけ)",
+    "files": "sw_pendant2 + btn_cap_ue/shita"
+  },
+  {
+    "no": 23,
+    "at": [
+      380,
+      400
+    ],
+    "what": "トラクタ(線・前輪/後輪・スペアタイヤ・ホース・LED)",
+    "files": "semi-6/tractor.png"
+  }
+]

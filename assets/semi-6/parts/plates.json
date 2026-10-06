@@ -1,0 +1,76 @@
+{
+  "flap_f4_base": {
+    "size": [
+      15,
+      15
+    ],
+    "pivot": [
+      5,
+      10.5
+    ],
+    "note": "pivot=ヒンジ(BR_ANCHOR)。ここから右へ mid を繰り返し、最後に tip"
+  },
+  "flap_f4_mid": {
+    "size": [
+      20,
+      15
+    ],
+    "tile": "x方向に繰り返す(はみ出し分は切る)"
+  },
+  "flap_f4_tip": {
+    "size": [
+      29,
+      15
+    ],
+    "note": "右端=扇動板の先端"
+  },
+  "flap_f4": {
+    "assemble": "base(pivot=ヒンジ) → mid を (len - (base幅-HX) - tip幅) だけ繰り返し → tip。全体を deg 回転",
+    "pivotY": 10.5,
+    "stowLen": 62
+  },
+  "flap_f2_open": {
+    "size": [
+      68,
+      66
+    ],
+    "pivot": [
+      2,
+      64
+    ],
+    "note": "pivot=左下(2番フロア x0+6 の床面)。開き具合 ft に応じて縦だけ sin(ft*90°) 倍に縮めて描く(網の斜めの角度も縮む=見かけの傾きとして自然)"
+  },
+  "flap_f2_hinge": {
+    "size": [
+      14,
+      7
+    ],
+    "pivot": [
+      7,
+      5
+    ],
+    "at": "板の幅の 0.15 / 0.5 / 0.85 の位置、床面に。縮めない"
+  },
+  "lid_top": {
+    "size": [
+      48,
+      7
+    ],
+    "pivot": [
+      3,
+      3.0
+    ],
+    "note": "pivot=ヒンジ。板はヒンジから右へ44px。開く途中90度までは lid_top、過ぎたら lid_under"
+  },
+  "lid_under": {
+    "size": [
+      48,
+      7
+    ],
+    "pivot": [
+      3,
+      3.0
+    ],
+    "note": "pivot=ヒンジ。板はヒンジから右へ44px。開く途中90度までは lid_top、過ぎたら lid_under"
+  }
+}

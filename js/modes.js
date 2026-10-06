@@ -1,0 +1,229 @@
+// モード(タイムアタック / リアル / シミュレーション)とスコアリング(SPEC第3・9章)。
+// game.js のミス・積込み完了を GAME_MODE.onMiss / onDock で受け取り、サイクル完了を判定する。
+(function () {
+  var cfg = window.TRAILER_CONFIG;
+  var state = window.GAME_STATE;
+  var fm = window.FLOOR_MECH;
+
+  // スコアの調整値(第9.2章: 合算方法は単純な加減算で開始。実際に遊んで調整する)
+  var SCORE = {
+    perCar: 100,          // 1台の積み込み完了ごとに加点
+    perMinor: 30,         // 軽いミス(手順の不備: 道板未展開・棚を動かした・積めない車種等)1回の減点
+    perMajor: 80,         // 重いミス(ぶつかる・乗り越える・脱輪・ピン無しで下へ入る等)1回の減点
+    minorLimit: 3,        // リアルモード: 重いミスは即終了、軽いミスはこの回数で終了
+    heightLimitM: 4.1,    // これを超えた分だけ減点(第9.1章)
+    minHOffsetM: 0.05,    // この組み合わせをいちばん低く積める高さ(積める判定で計算。実測とほぼ一致、1/3の組み合わせで0.2m高めに出る)+この余裕まで、減点しない(車の組み合わせで決まる高さは、積む人のせいではないので)
+    hangExtraM: 0.7,      // 宙段を使う7台のサイクルは、宙段のために2・3番を高く上げるので、高さ制限をこの分だけ緩める(実測: 7台で約0.6m高くなる)
+    perMeterOver: 1000    // 高さ超過1mあたりの減点(=10cmで100点)
+  };
+  var TIME_ATTACK_SEC = 360;   // 6分(6台・7台のサイクルを含めて。2026-10-03 ユーザー決定)
+  var MODES = {
+    time: { name: 'タイムアタック', desc: '制限時間内に何サイクルこなせるか(' + TIME_ATTACK_SEC / 60 + '分)' },
+    real: { name: 'リアルモード', desc: 'ミスした時点で終了。何がダメだったかを表示' },
+    sim: { name: 'シミュレーション', desc: '自由に操作できる練習用。時間制限・終了なし' }
+  };
+
+  var DIFFS = { easy: 'イージー', normal: 'ノーマル', hard: 'ハード' };
+  var $ = function (id) { return document.getElementById(id); };
+  var diff = 'easy';
+  var mode = null, startedAt = 0, timerId = null, ended = false;
+  var stats = { docks: 0, cycles: 0, heightPenalty: 0, penalty: 0, minors: 0, majors: 0, carPoints: 0 };
+  // 難易度による加点・減点の倍率(積込み・ミス・高さ超過の全てに掛ける。シミュレーションは1倍)
+  var DIFF_MULT = { easy: 1, normal: 1.5, hard: 2 };
+  function mult() { return mode === 'sim' ? 1 : (DIFF_MULT[diff] || 1); }
+  var lastHeightM = null;
+
+  // 今のサイクルの高さ制限(7台サイクルは宙段の分だけ緩める)
+  function limitM() {
+    var lim = SCORE.heightLimitM + (state.deckSize >= 7 && !state.deckMinH ? SCORE.hangExtraM : 0);   // 7台も、基準が計算できれば、下の基準を使う
+    // 6台は、その組み合わせをいちばん低く積んでも届かない分(車が高い組み合わせ)は減点しない。減点するのは、並べ方や棚の上げ過ぎで、避けられた高さだけ
+    if (state.deckMinH && isFinite(state.deckMinH)) lim = Math.max(lim, state.deckMinH + SCORE.minHOffsetM);
+    return lim;
+  }
+  function score() { return Math.round(stats.carPoints - stats.penalty - stats.heightPenalty); }
+
+  function elapsed() { return (Date.now() - startedAt) / 1000; }
+  function fmtTime(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+
+  function refreshBar() {
+    if (!mode) return;
+    var t = mode === 'time' ? '残り ' + fmtTime(TIME_ATTACK_SEC - elapsed()) : '経過 ' + fmtTime(elapsed());
+    $('modeBarName').textContent = MODES[mode].name + (mode === 'sim' ? '' : '・' + DIFFS[diff] + '(×' + mult() + ')');
+    $('modeBarTime').textContent = t;
+    $('modeBarCycles').textContent = 'サイクル ' + stats.cycles;
+    $('modeBarCars').textContent = '積込 ' + stats.docks + '台' + (state.deckSize >= 7 ? '(今回7台・宙段あり)' : '');
+    // 積み込んだ状態の、地面から一番高い所の高さ(今のフロアの位置で計算。高さ制限を超えると赤)
+    var hm = Object.keys(state.occupied).length ? loadHeightM() : null;
+    $('modeBarHeight').textContent = hm === null ? '' : '荷姿の高さ ' + hm.toFixed(2) + 'm';
+    $('modeBarHeight').style.color = hm !== null && hm > limitM() ? '#ff8080' : '';
+    $('modeBarScore').textContent = 'スコア ' + score();
+    $('modeBarScore').style.color = score() < 0 ? '#ff8080' : '#ffe680';
+  }
+
+  // 積んだ車のうち一番高い所の地上高(m)。フロア上の車はフロアの現在位置で計算する
+  function loadHeightM() {
+    var top = Infinity;
+    Object.keys(state.occupied).forEach(function (n) {
+      var c = state.occupied[n], y = c.localY;
+      if (c.floor) y = fm.onFloor(c.floor, c.localX, c.localY)[1];
+      top = Math.min(top, y - c.h);
+    });
+    return top === Infinity ? 0 : (cfg.ramp.groundY - top) / cfg.pxPerMeter;
+  }
+
+  function banner(msg) {
+    var el = $('cycleBanner');
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(banner.t);
+    banner.t = setTimeout(function () { el.style.display = 'none'; }, 4000);
+  }
+
+  // ---- サイクル完了: 6台積込み済み + フロアが全て走行位置 + ジャッキ・扇動板を格納 ----
+  function cycleComplete() {
+    // 1〜6番がそろっている(宙段の7台目は任意。数だけで判定すると、宙段があるのに5番が空でも完了してしまう)
+    if (['1', '2', '3', '4', '5', '6'].some(function (n) { return !state.occupied[n]; })) return false;
+    if (state.deckSize >= 7 && !state.occupied['7']) return false;   // 7台のサイクルは、宙段の7台目も積む
+    if (state.car && !state.car.seated && state.car.phase !== 'docked') return false;   // 動作中の車がいない(全て輪止めに当たって止まっている)
+    // 上段の棚は全てセットピンに載って固定(下段に車がいると走行位置までは下げられないので、位置は問わない)。5番フロアは平ら
+    if (!Object.keys(state.occupied).every(function (n) { var c = state.occupied[n].live; return c && c.locked; })) return false;   // 全ての車をタップで固定してから完了
+    if (!['F1f', 'F1r', 'F2f', 'MID', 'F3r'].every(fm.rested) || !fm.atTravel('F5')) return false;   // 全ての棚がピン(3番前は下端)に載っている
+    // 宙段フロアは格納(平ら)に戻す。7台目が載っている間は、上げたまま(最後まで上がった状態)でよい。支柱はセットピンに載せて固定
+    // 7台目が載っている間は、セットピンで loadU(hangFloor.loadU)付近に止めた高さでよい(1穴=u0.1、ピンは穴の位置以下にしか載らないので0.15の余裕)
+    if (fm.MECH.hang > 0.01 && !(state.occupied['7'] && fm.MECH.hang >= (((window.TRAILER_CONFIG.hangFloor || {}).loadU) || 2) - 0.15)) return false;
+    if (!fm.rested('F7')) return false;
+    if (fm.MECH.tireOut) return false;
+    if (!fm.MECH.lockR || !fm.MECH.lockL) return false;   // 車軸の左右のロックを掛けて、走行できる状態に戻す   // タイヤは必ず格納してから次のサイクルへ(幅の広い車は6番に載せられない)
+    if (fm.MECH.jack > 0 || fm.MECH.bridge || fm.bridgeT() > 0) return false;
+    if (fm.MECH.ramp || fm.rampT() > 0) return false; // 道板をしまい終えてから完了
+    return true;
+  }
+
+  function onCycleComplete() {
+    var lim = limitM(), h = loadHeightM(), over = Math.max(0, h - lim);
+    var pen = Math.round(over * SCORE.perMeterOver * mult());
+    lastHeightM = h;
+    stats.cycles++;
+    stats.heightPenalty += pen;
+    var msg = 'サイクル完了! 荷姿の高さ ' + h.toFixed(2) + 'm' + (pen ? '(' + lim.toFixed(1) + 'mを超過 -' + pen + '点)' : '(満点)');
+    if (mode === 'real') { finish(true, msg); return; }
+    banner(msg);
+    fm.initPins && fm.initPins();
+    state.resetTrailer();
+    refreshBar();
+  }
+
+  function tick() {
+    if (ended || !mode) return;
+    if (mode === 'time' && elapsed() >= TIME_ATTACK_SEC) { finish(false, '時間切れ'); return; }
+    if (cycleComplete()) onCycleComplete();
+    refreshBar();
+  }
+
+  // ---- 終了・結果 ----
+  function finish(cleared, reason, accident) {
+    if (ended) return;
+    ended = true;
+    clearInterval(timerId);
+    state.frozen = true;
+    fm.holdStop && fm.holdStop();
+    fm.jackHoldStop && fm.jackHoldStop();
+    refreshBar();
+    var title = accident ? '事故で作業中止' : (cleared ? 'クリア!' : (mode === 'real' ? 'ミスで終了' : '終了'));
+    $('resultTitle').textContent = MODES[mode].name + (mode === 'sim' ? '' : '(' + DIFFS[diff] + ')') + ':' + title;
+    var lines = [];
+    if (accident) { lines.push('事故: ' + reason); lines.push('作業を中止します。一からやり直してください。'); }
+    else if (mode === 'real' && !cleared) lines.push('何がダメだったか: ' + reason);
+    else lines.push(reason);
+    lines.push('積み込み ' + stats.docks + '台 / ミス 重' + stats.majors + '・軽' + stats.minors + ' / 完了サイクル ' + stats.cycles);
+    if (lastHeightM !== null) lines.push('荷姿の高さ ' + lastHeightM.toFixed(2) + 'm');
+    lines.push('所要時間 ' + fmtTime(elapsed()));
+    $('resultBody').innerHTML = '';
+    lines.forEach(function (l) { var p = document.createElement('p'); p.textContent = l; $('resultBody').appendChild(p); });
+    $('resultScore').textContent = 'スコア ' + score();
+    $('resultOverlay').style.display = 'flex';
+  }
+
+  window.GAME_MODE = {
+    cycleComplete: cycleComplete,   // (確認用)
+    limitM: limitM,   // (確認用)
+    onAccident: function (reason) { if (!mode || ended) return; finish(false, reason, true); },
+    get mode() { return mode; },
+    score: score,
+    stats: stats,
+    loadHeightM: loadHeightM,
+    SCORE: SCORE,
+    onMiss: function (reason, severity) {
+      if (!mode || ended) return;
+      var major = severity !== 'minor', pen = Math.round((major ? SCORE.perMajor : SCORE.perMinor) * mult());
+      stats.penalty += pen;
+      if (major) stats.majors++; else stats.minors++;
+      if (mode === 'real') {
+        if (major) finish(false, reason + '(重いミス)');
+        else if (stats.minors >= SCORE.minorLimit) finish(false, reason + '(軽いミスが' + SCORE.minorLimit + '回)');
+        else banner('軽いミス ' + stats.minors + '/' + SCORE.minorLimit + (state.hints ? ': ' + reason : '') + '(-' + pen + '点)');
+      } else {
+        banner((major ? '重いミス' : '軽いミス') + (state.hints ? ': ' + reason : '') + '(-' + pen + '点)');   // 解説なしの難易度では理由を出さない
+      }
+      refreshBar();
+    },
+    onUndock: function () {
+      if (!mode || ended) return;
+      stats.docks = Math.max(0, stats.docks - 1);
+      stats.carPoints = Math.max(0, stats.carPoints - Math.round(SCORE.perCar * mult()));
+      refreshBar();
+    },
+    onDock: function () {
+      if (!mode || ended) return;
+      stats.docks++;
+      stats.carPoints += Math.round(SCORE.perCar * mult());
+      refreshBar();
+    }
+  };
+
+  function start(m, d) {
+    mode = m; diff = m === 'sim' ? 'easy' : (d || 'easy');
+    state.setDifficulty && state.setDifficulty(diff); ended = false; startedAt = Date.now();
+    $('modeOverlay').style.display = 'none';
+    $('modeBar').style.display = 'flex';
+    refreshBar();
+    timerId = setInterval(tick, 250);
+  }
+
+  // ---- 画面の配線 ----
+  Object.keys(MODES).forEach(function (k) {
+    var b = document.querySelector('[data-mode="' + k + '"]');
+    b.querySelector('small').textContent = MODES[k].desc;
+    b.addEventListener('click', function () {
+      if (k === 'sim') { location.hash = 'mode=sim'; start('sim'); return; }   // シミュレーションは難易度なし(全部見えて解説あり)
+      pickDiff(k);
+    });
+  });
+  // 難易度選択(タイムアタック・リアルのみ)
+  var diffMode = null;
+  function pickDiff(k) {
+    diffMode = k;
+    $('diffTitle').textContent = MODES[k].name + ':難易度';
+    $('modeOverlay').style.display = 'none';
+    $('diffOverlay').style.display = 'flex';
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-diff]'), function (b) {
+    b.addEventListener('click', function () {
+      var d = b.getAttribute('data-diff');
+      location.hash = 'mode=' + diffMode + '&diff=' + d;
+      $('diffOverlay').style.display = 'none';
+      start(diffMode, d);
+    });
+  });
+  $('btnDiffBack').addEventListener('click', function () {
+    $('diffOverlay').style.display = 'none';
+    $('modeOverlay').style.display = 'flex';
+  });
+  $('btnRetry').addEventListener('click', function () { location.reload(); });
+  $('btnModeSelect').addEventListener('click', function () { location.href = 'title.html'; });   // メイン画面(title.html)へ戻る
+
+  var m = /mode=(time|real|sim)(?:&diff=(easy|normal|hard))?/.exec(location.hash);
+  if (m && (m[1] === 'sim' || m[2])) start(m[1], m[2]);
+  else if (m) pickDiff(m[1]);
+  else location.replace('title.html');   // モードの指定が無い(index.htmlを直接開いた)時は、メイン画面(title.html)へ。モード・難易度の選択はメイン画面で行う
+})();

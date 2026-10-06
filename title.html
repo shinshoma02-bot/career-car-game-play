@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>僕らは陸送屋(仮)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* スマホ操作: 長押しの選択・コピー・画像メニュー・ダブルタップ拡大・タップ時の青い枠を出さない */
+  html, body, button, img, canvas, div, span { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+  img, canvas { -webkit-user-drag: none; }  /* メイン画面: 夕暮れの道を走るキャリアカー(ヘッドだけ右から見えている)+左にゲームモード。
+     モード → 難易度 → トレーラーが左へ走り去ってゲーム画面(index.html#mode=..&diff=..)へ */
+  :root {
+    --accent: #33b891;
+    --accent-deep: #1f8a6b;
+    --ink: #eef3f1;
+    --ink-dim: #a9b7b2;
+    --panel: rgba(14, 22, 24, .78);
+    --panel-hi: rgba(28, 44, 46, .92);
+    --line: rgba(255, 255, 255, .14);
+    --road: #2b3036;
+    --h: min(28vh, 24vw);                 /* トレーラーの高さ */
+    --rig-w: calc(var(--h) * 1034 / 201);  /* rig.png の縦横比 */
+    --road-top: 74%;                       /* 車輪が乗る路面の高さ */
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #10161c; color: var(--ink);
+    font-family: "Noto Sans JP", "Hiragino Sans", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+  .disp { font-family: "Mochiy Pop One", "Noto Sans JP", sans-serif; }
+
+  /* ---------- 背景 ---------- */
+  .scene { position: fixed; inset: 0; overflow: hidden;
+    background: linear-gradient(#22324a 0%, #3d4f6b 28%, #c98a6b 58%, #f0c27f 70%, #f6d9a0 74%); }
+  .sun { position: absolute; left: 58%; top: 50%; width: 15vh; height: 15vh; border-radius: 50%;
+    background: radial-gradient(#fff3cf 0 40%, #ffd98a 60%, rgba(255, 200, 120, 0) 72%); filter: blur(.5px); }
+  .layer { position: absolute; left: 0; width: 200%; background-repeat: repeat-x; background-size: 50% 100%;
+    animation: scroll linear infinite; }
+  .mountains { bottom: calc(100% - var(--road-top) + 6vh); height: 22vh; background-image: url(assets/ui/layer_mountains.svg); animation-duration: 90s; opacity: .9; }
+  .buildings { bottom: calc(100% - var(--road-top) + 3vh); height: 19vh; background-image: url(assets/ui/layer_buildings.svg); animation-duration: 40s; }
+  .houses    { bottom: calc(100% - var(--road-top) + 1.2vh); height: 9vh; background-image: url(assets/ui/layer_houses.svg); animation-duration: 22s; }
+  /* 中央分離帯のガードレール(手前・速い) */
+  .rail { bottom: calc(100% - var(--road-top) + .3vh); height: 2.6vh; animation-duration: 3.2s;
+    background-image:
+      linear-gradient(#cfd6db 0 22%, transparent 22% 48%, #aab3ba 48% 66%, transparent 66%),
+      linear-gradient(90deg, #7d868d 0 3px, transparent 3px);
+    background-size: 50% 100%, 6vh 100%; }
+  .road { position: absolute; left: 0; right: 0; top: var(--road-top); bottom: 0;
+    background: linear-gradient(#3a4047 0 4%, var(--road) 4% 100%); }
+  .road .lane { position: absolute; left: 0; width: 200%; top: 62%; height: 1.1vh; animation: scroll .9s linear infinite;
+    background: repeating-linear-gradient(90deg, #e9e3cf 0 7vh, transparent 7vh 16vh); }
+  .road .edge { position: absolute; left: 0; right: 0; top: 4%; height: .5vh; background: #e9e3cf; opacity: .8; }
+  @keyframes scroll { from { transform: translateX(-50%); } to { transform: translateX(0); } }   /* 車は左へ進むので景色は右へ */
+
+  /* ---------- トレーラー ---------- */
+  .rig { position: absolute; height: var(--h); width: var(--rig-w);
+    left: calc(100% - var(--rig-w) * .40);                 /* ヘッド(左の約4割)だけが右端から見える */
+    top: calc(var(--road-top) + 7vh - var(--h)); will-change: transform; }   /* 手前の車線を走る */
+  .rig .shadow { position: absolute; left: 1%; right: 0; bottom: -4%; height: 9%;
+    background: radial-gradient(closest-side, rgba(0, 0, 0, .45), transparent); }
+  .rig .body { position: absolute; inset: 0; width: 100%; height: 100%; animation: bob .42s ease-in-out infinite alternate; }
+  @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-.35%); } }
+  /* 車輪: 外枠(位置と大きさだけ。左上の角で置く)+中の画像(回すだけ)。
+     translate/rotate の個別プロパティや translate(-50%) は端末によって効き方が違い、車輪が車体からずれたため使わない */
+  .rig .wheel { position: absolute; }
+  .rig .wheel img { display: block; width: 100%; height: 100%; animation: spin .55s linear infinite; transform-origin: 50% 50%; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }   /* 左へ進む = 反時計回り */
+  .rig.depart { transition: transform 1.7s cubic-bezier(.55, 0, .85, .35); transform: translateX(calc(-100vw - var(--rig-w) * .65)); }
+  .rig.depart .wheel img { animation-duration: .18s; }
+  .scene.fast .layer, .scene.fast .lane { animation-duration: .5s; }
+  .scene.fast .mountains { animation-duration: 30s; }
+  .scene.fast .buildings { animation-duration: 12s; }
+  .scene.fast .houses { animation-duration: 5s; }
+
+  /* ---------- メニュー(左の空き枠) ---------- */
+  .menu { position: fixed; z-index: 2; left: max(3vw, env(safe-area-inset-left)); top: 4vh;
+    width: min(440px, 46vw); max-height: calc(var(--road-top) - 6vh); display: flex; flex-direction: column; gap: 1.6vh;
+    transition: opacity .45s, transform .45s; }
+  .menu.leave { opacity: 0; transform: translateX(-30px); pointer-events: none; }
+  .logo { margin: 0; font-size: clamp(22px, 5.4vh, 52px); line-height: 1.1; letter-spacing: .02em;
+    color: #fff; text-shadow: 0 3px 0 var(--accent-deep), 0 6px 18px rgba(0, 0, 0, .45); }
+  .logo .kari { font-size: .5em; color: #ffe2b0; text-shadow: none; }
+  .sub { margin: -.6vh 0 .4vh; font-size: clamp(11px, 1.8vh, 15px); color: #ffe9c8; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.6vh; backdrop-filter: blur(6px);
+    display: flex; flex-direction: column; gap: 1.1vh; overflow: auto; }
+  .panel[hidden] { display: none; }
+  .panel h2 { margin: 0 0 .2vh; font-size: clamp(13px, 2.2vh, 18px); color: var(--ink-dim); font-weight: 700; letter-spacing: .08em; }
+  .card { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+    padding: clamp(8px, 1.6vh, 16px) clamp(10px, 1.8vh, 18px); border-radius: 12px; background: var(--panel-hi);
+    border: 1px solid var(--line); transition: background .15s, border-color .15s, transform .1s; }
+  .card:hover, .card:focus-visible { border-color: var(--accent); background: rgba(40, 70, 64, .95); }
+  .card:active { transform: scale(.985); }
+  .card .ico { width: clamp(30px, 5vh, 44px); height: clamp(30px, 5vh, 44px); border-radius: 10px; display: grid; place-items: center;
+    background: var(--accent); color: #fff; font-size: clamp(15px, 2.6vh, 22px); }
+  .card b { display: block; font-size: clamp(14px, 2.6vh, 21px); }
+  .card small { display: block; margin-top: 2px; font-size: clamp(10px, 1.6vh, 13px); color: var(--ink-dim); line-height: 1.4; }
+  .card .go { color: var(--accent); font-size: 1.3em; }
+  .card.easy .ico { background: #3fae6a; } .card.normal .ico { background: #d79a2b; } .card.hard .ico { background: #d0533f; }
+  .back { all: unset; cursor: pointer; align-self: flex-start; padding: 6px 12px; border-radius: 999px; font-size: clamp(12px, 1.9vh, 15px);
+    color: var(--ink); border: 1px solid var(--line); background: rgba(255, 255, 255, .06); }
+  .back:hover, .back:focus-visible { border-color: var(--accent); }
+
+  /* 縦長の画面: メニューを広げ、トレーラーは下に */
+  @media (max-aspect-ratio: 4/5) {
+    :root { --h: 15vh; --road-top: 82%; }
+    .menu { width: auto; right: max(4vw, env(safe-area-inset-right)); }
+    .rig { left: calc(100% - var(--rig-w) * .34); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .layer, .lane, .rig .body, .rig .wheel img { animation: none; }
+    .rig.depart { transition: none; }
+  }
+</style>
+<script>
+  // 長押しメニュー(画像を保存/コピー)・ピンチ/ダブルタップ拡大を無効化
+  document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); }); });
+  document.addEventListener('selectstart', function (e) { e.preventDefault(); });
+  // 画像の読み込みに失敗したら、間隔を空けて最大4回やり直す(回線が不安定でもトレーラーが出るように)
+  window.addEventListener('error', function (e) { var i = e.target; if (!i || i.tagName !== 'IMG') return; var n = (+i.dataset.retry || 0) + 1; if (n > 4) return; i.dataset.retry = n; var s = i.getAttribute('src').replace(/[?&]r=\d+$/, ''); setTimeout(function () { i.src = s + (s.indexOf('?') < 0 ? '?' : '&') + 'r=' + n; }, 400 * n); }, true);
+  document.addEventListener('dragstart', function (e) { e.preventDefault(); });
+</script></head>
+<body>
+<div class="scene" id="scene" aria-hidden="true">
+  <div class="sun"></div>
+  <div class="layer mountains"></div>
+  <div class="layer buildings"></div>
+  <div class="layer houses"></div>
+  <div class="road"><div class="edge"></div><div class="lane"></div></div>
+  <div class="layer rail"></div>
+  <div class="rig" id="rig">
+    <div class="shadow"></div>
+    <img class="body" src="assets/ui/rig.png" alt="">
+  </div>
+</div>
+
+<main class="menu" id="menu">
+  <h1 class="logo disp">僕らは陸送屋<span class="kari">(仮)</span></h1>
+  <p class="sub">キャリアカーに車を積み込もう</p>
+
+  <section class="panel" id="modePanel" aria-labelledby="modeTitle">
+    <h2 id="modeTitle">ゲームモード</h2>
+    <button class="card" data-mode="time"><span class="ico">⏱</span><span><b>タイムアタック</b><small>制限時間内に何サイクルこなせるか(6分)</small></span><span class="go">›</span></button>
+    <button class="card" data-mode="real"><span class="ico">⚠</span><span><b>リアルモード</b><small>ミスした時点で終了。何がダメだったかを表示</small></span><span class="go">›</span></button>
+    <button class="card" data-mode="sim"><span class="ico">🛠</span><span><b>シミュレーション</b><small>自由に操作できる練習用。時間制限・終了なし</small></span><span class="go">›</span></button>
+  </section>
+
+  <section class="panel" id="diffPanel" aria-labelledby="diffTitle" hidden>
+    <button class="back" id="btnBack">‹ 戻る</button>
+    <h2 id="diffTitle">難易度</h2>
+    <button class="card easy" data-diff="easy"><span class="ico">E</span><span><b>イージー</b><small>積む車が全部見える・解説あり</small></span><span class="go">›</span></button>
+    <button class="card normal" data-diff="normal"><span class="ico">N</span><span><b>ノーマル</b><small>積む車が全部見える・解説なし</small></span><span class="go">›</span></button>
+    <button class="card hard" data-diff="hard"><span class="ico">H</span><span><b>ハード</b><small>車は1台ずつ(◀▶で選ぶ)・解説なし</small></span><span class="go">›</span></button>
+  </section>
+</main>
+
+<script>
+(function () {
+  // 車輪の位置は assets/ui/rig.json(make_title_assets.py が出力)と同じ値
+  var RIG = { w: 1034, h: 201, wheels: [
+    { k: 'front', cx: 109.0, cy: 170.0, size: 60 },
+    { k: 'drive', cx: 328.0, cy: 170.0, size: 60 },
+    { k: 'trailer', cx: 933.5, cy: 168.5, size: 60 } ] };
+  var GAME_URL = 'index.html';
+  var NAMES = { time: 'タイムアタック', real: 'リアルモード', sim: 'シミュレーション' };
+  var $ = function (id) { return document.getElementById(id); };
+  var rig = $('rig'), menu = $('menu'), scene = $('scene');
+
+  RIG.wheels.forEach(function (w) {
+    var box = document.createElement('div');
+    box.className = 'wheel';
+    box.style.left = ((w.cx - w.size / 2) / RIG.w * 100) + '%';
+    box.style.top = ((w.cy - w.size / 2) / RIG.h * 100) + '%';
+    box.style.width = (w.size / RIG.w * 100) + '%';
+    box.style.height = (w.size / RIG.h * 100) + '%';
+    var img = document.createElement('img');
+    img.alt = ''; img.src = 'assets/ui/wheel_' + w.k + '.png';
+    box.appendChild(img);
+    rig.appendChild(box);
+  });
+
+  var mode = null, leaving = false;
+  function show(panel) {
+    $('modePanel').hidden = panel !== 'mode';
+    $('diffPanel').hidden = panel !== 'diff';
+    var first = document.querySelector('#' + panel + 'Panel .card, #' + panel + 'Panel .back');
+    if (first) first.focus({ preventScroll: true });
+  }
+  function go(m, d) {
+    if (leaving) return;
+    leaving = true;
+    var url = GAME_URL + '#mode=' + m + (d ? '&diff=' + d : '');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { location.href = url; return; }
+    menu.classList.add('leave');
+    scene.classList.add('fast');
+    rig.classList.add('depart');
+    var done = false;
+    function next() { if (!done) { done = true; location.href = url; } }
+    rig.addEventListener('transitionend', next, { once: true });
+    setTimeout(next, 2200);                                  // 念のため
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
+    b.addEventListener('click', function () {
+      mode = b.getAttribute('data-mode');
+      if (mode === 'sim') { go('sim'); return; }             // シミュレーションは難易度なし(ゲーム側の仕様: 全部見えて解説あり)
+      $('diffTitle').textContent = NAMES[mode] + ' の難易度';
+      show('diff');
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-diff]'), function (b) {
+    b.addEventListener('click', function () { go(mode, b.getAttribute('data-diff')); });
+  });
+  $('btnBack').addEventListener('click', function () { show('mode'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('diffPanel').hidden) show('mode'); });
+
+  // ゲームから「戻る」で帰ってきた時(ページが保存されていた場合)は元の状態に戻す
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    leaving = false;
+    menu.classList.remove('leave'); scene.classList.remove('fast'); rig.classList.remove('depart');
+    show('mode');
+  });
+})();
+</script>
+</body>
+</html>

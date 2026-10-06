@@ -1,0 +1,121 @@
+{
+ "sw_mount_front_pair": {
+  "file": "parts/sw_mount_front_pair.png",
+  "size": [
+   42,
+   45
+  ],
+  "pivot": [
+   12.94,
+   7
+  ],
+  "at": [
+   881,
+   408
+  ],
+  "rot": 0,
+  "note": "1番前・1番後ろの2個並び。柱に付いた箱形の台。pivot を at(最初のスイッチの at)に置く。スイッチより先に描く"
+ },
+ "sw_mount_front_f2": {
+  "file": "parts/sw_mount_front_f2.png",
+  "size": [
+   28,
+   45
+  ],
+  "pivot": [
+   12.94,
+   7
+  ],
+  "at": [
+   938,
+   440
+  ],
+  "rot": 0,
+  "note": "2番前の1個。pivot を at(最初のスイッチの at)に置く。スイッチより先に描く"
+ },
+ "sw_mount_front_box": {
+  "file": "parts/sw_mount_front_box.png",
+  "size": [
+   28,
+   35
+  ],
+  "pivot": [
+   12.94,
+   7
+  ],
+  "at": [
+   906,
+   495
+  ],
+  "rot": 0,
+  "note": "アイドリングストップの灰色の箱。pivot を at(最初のスイッチの at)に置く。スイッチより先に描く"
+ },
+ "sw_mount_rear_three": {
+  "file": "parts/sw_mount_rear_three.png",
+  "size": [
+   38,
+   60
+  ],
+  "pivot": [
+   10.62,
+   6
+  ],
+  "at": [
+   1556,
+   418
+  ],
+  "rot": 0,
+  "note": "3番前・3番後ろ(上に横2つ)と宙段(3番前の下)の板。中央の柱と斜めの柱の間。pivot を at(最初のスイッチの at)に置く。スイッチより先に描く"
+ },
+ "sw_mount_jack": {
+  "file": "parts/sw_mount_jack.png",
+  "size": [
+   24,
+   37
+  ],
+  "pivot": [
+   10.62,
+   6
+  ],
+  "at": [
+   1549,
+   474
+  ],
+  "rot": 0,
+  "note": "アウトリガーの1個(横の柱の下にぶら下げる)。pivot を at(最初のスイッチの at)に置く。スイッチより先に描く"
+ },
+ "sw_mount_lamps": {
+  "file": "parts/sw_mount_lamps.png",
+  "size": [
+   27,
+   46
+  ],
+  "pivot": [
+   12.13,
+   7
+  ],
+  "at": [
+   1613,
+   405
+  ],
+  "rot": 30,
+  "note": "斜めの柱に沿う板。pivot をスイッチの at に置き、スイッチと同じ 30 度回す。スイッチより先に描く"
+ },
+ "sw_mount_six": {
+  "file": "parts/sw_mount_six.png",
+  "size": [
+   31,
+   73
+  ],
+  "pivot": [
+   14.29,
+   7
+  ],
+  "at": [
+   1620,
+   445
+  ],
+  "rot": 30,
+  "note": "斜めの柱に沿う板。pivot をスイッチの at に置き、スイッチと同じ 30 度回す。スイッチより先に描く"
+ }
+}
