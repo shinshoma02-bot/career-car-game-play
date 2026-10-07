@@ -226,6 +226,7 @@
     var fm = window.FLOOR_MECH, x0 = car.x - car.leftTireX;
     return fm.hangHits(x0, x0 + car.w, fm.carTopY({ img: car.img, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), fm.MECH.hang);
   }
+  var TIRE_PASS_MARGIN_PX = 30;   // 6番のタイヤ基準点からこれ以上通り過ぎたら「通過」とみなす(6番に止まる車は輪止めの手前で止まる)
   function routeProblems(car) {
     var fm = window.FLOOR_MECH, out = [], id = car.route.id;
     if (!fm.rampReady()) out.push({ key: 'ramp', msg: '道板が出ていません。フロア昇降パネルの「道板を出す」で出してから進めてください。' });
@@ -239,6 +240,11 @@
       if (hb) out.push({ key: 'hang', msg: '宙段フロアが上がっていて通れません。宙段を下げてから(格納してから)通ってください。' });
       var lf = lowFloorBlocked(car);
       if (lf) out.push({ key: 'lowfloor', msg: lf + 'が下がっていて通れません。下段の車が入れる高さまで棚を上げてください。' });
+      // 台車のタイヤを突出させていないと、6番の横を通れるのは軽自動車(幅1.48m以下)だけ。それ以外(5ナンバー・3ナンバー)は、6番に止まる(積む)分には従来どおりだが、6番を通り過ぎて5・4・7番へは行けない(2026-10-07 ユーザー指示)
+      var s6 = cfg.slots['6'];
+      if (s6.maxWidthNoTireM && !fm.MECH.tireOut && (car.entry.width || 0) > s6.maxWidthNoTireM && car.arc && car.arc['6'] !== undefined && car.progress > car.arc['6'] + TIRE_PASS_MARGIN_PX) {
+        out.push({ key: 'tirepass', msg: '台車のタイヤを突出させていないので、6番の横は軽自動車しか通れません。アウトリガーでタイヤを浮かせて突出させてください。' });
+      }
       if (id === 'L' && !fm.atTravel('F5') && car.arc['6'] !== undefined && car.progress > car.arc['6'] - 20) out.push({ key: 'f5flat', msg: fm.f5Slope() && !fm.bridgeReady() ? '5番フロアがスロープのままです。4番へ積むなら扇動板を出して、5番へ積むなら5番フロアを平らに戻してください。' : '5番フロアが平らになっていません。' });
     }
     return out;
@@ -428,7 +434,7 @@
           state.sel = i; syncPending(); beginEntry();
         });
         var tag = document.createElement('div');
-        tag.className = 'deckTag'; tag.textContent = (DECK_TAG[it.status] ? DECK_TAG[it.status] + ' ' : '') + '幅' + (it.entry.width || 0).toFixed(2) + 'm';
+        tag.className = 'deckTag'; tag.textContent = (state.deck.tutorialFixed ? ['1番用', '2番用', '3番用', '4番用', '5番用', '7番用(宙段)', '6番用'][i] + ' ' : '') + (DECK_TAG[it.status] ? DECK_TAG[it.status] + ' ' : '') + '幅' + (it.entry.width || 0).toFixed(2) + 'm';
         var b = document.createElement('button');
         b.type = 'button'; b.textContent = it.flip ? '後ろ向き(バック)' : '前向き(頭から)';
         if (it.status === 'road' && !carFlippable()) b.style.visibility = 'hidden';
@@ -514,6 +520,19 @@
     while (out.length < size && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     return Promise.all(out.map(loadItem)).then(function (items) { items.drawTries = 1; items.loadable = { ok: false, why: '6番に載せられる車が無い' }; items.impossible = true; return items; });
   }
+  // チュートリアルの最初の荷物: 車を厳選した固定デッキ(ガイドの順 = 1番・2番・3番・4番・5番・7番(宙段)・6番)。js/tutorial.js が車名つきで案内する
+  //  選び方(2026-10-07。LOADABLE.check で全ての組み合わせを実際の高さ計算で比べた結果):
+  //   ・7台サイクルは、宙段を上げる時に2番前・3番前・3番後ろを一番上まで上げる → 2番・3番の棚が一番高くなる。ここに背の高い車(ミニバン・SUV)を入れると荷姿が約4.47m、いちばん低い2台を入れると約4.17m。よって2番=スポーツクーペ(1.28m)・3番=スポーツタイプ(1.24m)
+  //   ・1番・4番は、4番の車の屋根が1番の棚を押し上げる → 背の低いセダン(1.43m)
+  //   ・5番(バック)と宙段(7番)は、宙段が動く間にぶつからない小さい車 = 長さ3.4mの軽自動車(kei-5・kei-6)。6番は幅1.755m以下の5ナンバー(コンパクトカー、幅1.695m)
+  var TUTORIAL_DECK = ['sedan-0', 'sports-6', 'sports-5', 'sedan-4', 'kei-5', 'kei-6', 'compact-0'];
+  function drawTutorialDeck() {
+    var entries = TUTORIAL_DECK.map(function (id) { return lib.filter(function (e) { return e.id === id; })[0]; });
+    var r = null;
+    if (window.LOADABLE && entries.every(Boolean)) r = window.LOADABLE.check(entries.map(function (en) { return { entry: en }; }), { fixed: { order: [0, 1, 2, 3], assign: [4, 6, 5] } });   // assign = [5番, 6番, 7番]のデッキの番号
+    if (!r || !r.ok) return drawLoadableDeck(7, 0);   // ライブラリが変わって成立しなくなった時は、ふつうの7台に戻す
+    return Promise.all(entries.map(loadItem)).then(function (items) { items.drawTries = 1; items.loadable = r; items.tutorialFixed = true; return items; });
+  }
   state.deckImpossible = false; state.dispatchDone = false; state.deckDrawn = 0;
   function newDeck() {
     var token = ++deckToken;
@@ -523,7 +542,7 @@
     setStatus('車を準備しています...');
     var chance = state.impossibleChance !== undefined ? state.impossibleChance : IMPOSSIBLE_CHANCE;
     var impossible = state.deckDrawn > 0 && Math.random() < chance;
-    (impossible ? drawImpossibleDeck(size) : drawLoadableDeck(size, 0)).then(function (items) {
+    (impossible ? drawImpossibleDeck(size) : (state.forceDeckSize && state.deckDrawn === 0 ? drawTutorialDeck() : drawLoadableDeck(size, 0))).then(function (items) {
       if (token !== deckToken) return;
       state.deckDrawn++; state.deckImpossible = !!items.impossible; state.dispatchDone = false;
       state.deck = items; state.sel = 0; state.deckSize = size; state.deckTries = items.drawTries;

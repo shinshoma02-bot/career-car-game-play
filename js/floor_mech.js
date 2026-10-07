@@ -684,10 +684,11 @@
     // ピンは「その上に載った棚」を受けるだけ。ピンより下の棚は、可動範囲の下限(接地)まで下げられる
     if (PINS[h.end] !== null && ENDS[h.end].off > PINS[h.end] + 0.5) lo = ENDS[h.end].r[1];
     lo = Math.max(lo, ENDS[h.end].off);
-    // 支柱の短い棚(2番前)は、ピン無しで上がるのは freeTop まで。ピンを一番上の穴に差した状態でだけ、赤テープ付近(range の上限)まで上がる。
+    // 支柱の短い棚(2番前)は、ピン無しで上がるのは freeTop まで。ピンを一番上の穴に差し、かつ5番フロアがスロープ(ストッパーに乗った状態)の時だけ、赤テープ付近(range の上限)まで上がる。
+    // 5番フロアを平らに戻したら、ピンが上限の穴のままでも freeTop まで(2026-10-07 ユーザー指示)。
     // ピンを抜いた時にすでに freeTop より上なら、そこより上へは上げられないだけで、下げるまでは位置はそのまま(押した瞬間に飛ばない)
     var topOff = er[0];
-    if (ENDS[h.end].freeTop !== undefined && !(PINS[h.end] !== null && PINS[h.end] <= pinLimitOff(h.end) + 0.5)) topOff = Math.max(er[0], Math.min(ENDS[h.end].freeTop, ENDS[h.end].off));
+    if (ENDS[h.end].freeTop !== undefined && !(PINS[h.end] !== null && PINS[h.end] <= pinLimitOff(h.end) + 0.5 && (h.end !== 'F2f' || f5Slope()))) topOff = Math.max(er[0], Math.min(ENDS[h.end].freeTop, ENDS[h.end].off));
     cand[h.end] = Math.min(lo, Math.max(topOff, Math.round((cand[h.end] + h.dir * RATE * dt) * 10) / 10));
     if (h.end === 'MID') {
       // 中央継ぎ目を動かすと、3番後ろの斜めシリンダーはシーソーのように連動する

@@ -43,8 +43,9 @@
   function isNarrow(e) { return (e.width || 0) <= (cfg.slots['6'].maxWidthM || Infinity); }
 
   // items: [{entry, img, flipImg}](6台か7台)。戻り値 { ok, H(最小の荷姿の高さm), why }
-  function check(items) {
-    var n = items.length;
+  //  opts.fixed = { assign: [5番,6番,7番のデッキ番号], order: [1〜4番のデッキ番号] } を渡すと、その割り当てだけを調べる(チュートリアルの固定デッキ用。assign だけ・order だけの指定もできる)
+  function check(items, opts) {
+    var n = items.length, fx = opts && opts.fixed;
     if (!items.some(function (it) { return isNarrow(it.entry); })) return { ok: false, why: '6番に積める幅の車が無い' };
     var fw = items.map(function (it) { return dims(it, false); });
     var limit = (window.GAME_MODE && window.GAME_MODE.SCORE ? window.GAME_MODE.SCORE.heightLimitM : 4.1) + SLACK_M;
@@ -54,6 +55,7 @@
       // 宙段: 5番(バック)・6番・7番の車の組み合わせが成立するもの。成立する組み合わせのうち、荷姿の高さがいちばん低くなるものを選ぶ
       //  荷姿の高さ: 宙段を使う時の棚の高さ(2番前・3番前・3番後ろ=ピンの上限)で、残りの4台(1〜4番)を最も低く並べた時の、上段(1〜3番)の車の屋根
       var offs7 = Object.assign({}, BASE, { F2f: fm.FIT_OFFS.F2f, MID: fm.FIT_OFFS.MID, F3r: fm.FIT_OFFS.F3r });
+      var EPS = 0.004, bestCost = Infinity;   // 荷姿の高さが同じ(±4mm)なら、1・4番と5・7番に低くて短い車が入る並べ方を選ぶ(下の cost)
       var best7 = Infinity, fit = null, fitOrder = null, fitPin = 1, pins = [], hole0 = fm.stopPin ? fm.stopPin.hole : 1, nHoles = fm.stopPinHoles || 1, ph;
       // フレームの固定ピン(1〜nHoles番の位置)のどれか1つで成立すれば積める。成立する位置を pins に集める
       for (ph = 1; ph <= nHoles; ph++) {
@@ -62,6 +64,7 @@
       permute(idx, 3, function (t) {
         var i5 = t[0], i6 = t[1], i7 = t[2];
         if (!isNarrow(items[i6].entry)) return;
+        if (fx && fx.assign && (i5 !== fx.assign[0] || i6 !== fx.assign[1] || i7 !== fx.assign[2])) return;
         if (!fm.hangFit(dims(items[i5], true), fw[i6], fw[i7]).ok) return;
         var rest = idx.filter(function (i) { return t.indexOf(i) < 0; });   // 1〜4番に載せる4台
         var needF1 = {}, topAt = {};
@@ -70,10 +73,12 @@
           topAt[i] = [1, 2, 3].map(function (u) { var S = cfg.slots[u]; return fm.onFloor(S.floor, S.tireX, S.deckY, offs7)[1] - fw[i].h; });
         });
         permute(rest, 4, function (a) {   // a[0..2] = 1〜3番、a[3] = 4番
+          if (fx && fx.order && a.some(function (v, q) { return v !== fx.order[q]; })) return;
           var top = Math.min(topAt[a[0]][0] - Math.max(0, needF1[a[3]]), topAt[a[1]][1], topAt[a[2]][2]);
           var Hm = (cfg.ramp.groundY - top) / PX;
           okHere = true;
-          if (Hm < best7) { best7 = Hm; fit = t; fitOrder = a; fitPin = ph; }
+          var cost = fw[a[0]].h + fw[a[3]].h + fw[i5].h + fw[i7].h + 0.5 * (fw[i5].w + fw[i7].w);   // 1番・4番(4番の屋根は1番の棚を押し上げる)と、5番・宙段に入る車の高さ・長さ
+          if (Hm < best7 - EPS || (Hm < best7 + EPS && cost < bestCost)) { best7 = Math.min(best7, Hm); bestCost = cost; fit = t; fitOrder = a; fitPin = ph; }
         });
       });
       if (okHere) pins.push(ph);

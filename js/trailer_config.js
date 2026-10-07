@@ -45,7 +45,7 @@ window.TRAILER_CONFIG = {
     "4": { "tireX": 474,  "deckY": 442, "rot": 0,    "floor": null, "hit": [434, 304, 500, 138], "stopKind": "stopper", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
     "5": { "tireX": 1030, "deckY": 510, "rot": 0,    "floor": null, "carrier": "F5", "hit": [956, 326, 608, 181], "stopKind": "none", "chockRequired": true, "chockRange": { "front": 44, "rear": 44, "divisions": 22, "step": 4 } },
     "7": { "tireX": 1452, "deckY": 510, "rot": 0,    "floor": null, "carrier": "F7", "hit": [1310, 300, 340, 150], "stopKind": "hole", "noChock": true, "instantLid": true, "note": "宙段フロア(7台目)。タイヤ位置は宙段フロアのローカル座標(格納時の平らな姿勢=下段の床の高さy510、前端x1427)。輪止めは無く、タイヤ落としの穴だけ。格納中は下段の窪みにはまっていて穴は関係なく、上げた時には最初から穴が空いている(落し蓋の操作は無い)" },
-    "6": { "tireX": 1626, "deckY": 510, "rot": 0,    "floor": null, "hit": [1564, 326, 486, 181], "maxWidthM": 1.755, "restrictedNote": "6番は車幅1.75m以下(軽自動車・5ナンバー・ステップワゴンクラスまで)の車のみ。幅の広い車は6番に載せられません", "stopKind": "none", "chockRequired": true, "chockRange": { "front": 72, "rear": 72, "divisions": 18, "step": 8 } }
+    "6": { "tireX": 1626, "deckY": 510, "rot": 0,    "floor": null, "hit": [1564, 326, 486, 181], "maxWidthM": 1.755, "maxWidthNoTireM": 1.48, "restrictedNote": "6番は車幅1.75m以下(軽自動車・5ナンバー・ステップワゴンクラスまで)の車のみ。幅の広い車は6番に載せられません", "stopKind": "none", "chockRequired": true, "chockRange": { "front": 72, "rear": 72, "divisions": 18, "step": 8 } }
   },
   "chock": {
     "sizeCm": 8,
