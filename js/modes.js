@@ -11,7 +11,7 @@
     perMinor: 30,         // 軽いミス(手順の不備: 道板未展開・棚を動かした・積めない車種等)1回の減点
     perMajor: 80,         // 重いミス(ぶつかる・乗り越える・脱輪・ピン無しで下へ入る等)1回の減点
     minorLimit: 3,        // リアルモード: 重いミスは即終了、軽いミスはこの回数で終了
-    heightLimitM: 4.1,    // これを超えた分だけ減点(第9.1章)
+    heightLimitM: (cfg.score && cfg.score.heightLimitM) || 4.1,    // これを超えた分だけ減点(第9.1章)。トレーラーごとに trailer_config の score.heightLimitM で決める(semi-6b は 4.6)
     minHOffsetM: 0.05,    // この組み合わせをいちばん低く積める高さ(積める判定で計算。実測とほぼ一致、1/3の組み合わせで0.2m高めに出る)+この余裕まで、減点しない(車の組み合わせで決まる高さは、積む人のせいではないので)
     hangExtraM: 0.7,      // 宙段を使う7台のサイクルは、宙段のために2・3番を高く上げるので、高さ制限をこの分だけ緩める(実測: 7台で約0.6m高くなる)
     perMeterOver: 1000,   // 高さ超過1mあたりの減点(=10cmで100点)
@@ -91,6 +91,12 @@
 
   // ---- サイクル完了: 6台積込み済み + フロアが全て走行位置 + ジャッキ・扇動板を格納 ----
   function cycleComplete() {
+    if (cfg.id === 'semi-6b') {   // semi-6b: 1〜6番がそろって全部固定・動作中の車がいない・2番が傾いたままでない・スロープを下げた・道板をしまった(fm.cycleReady)
+      if (['1', '2', '3', '4', '5', '6'].some(function (n) { return !state.occupied[n]; })) return false;
+      if (state.car && !state.car.seated && state.car.phase !== 'docked') return false;
+      if (!Object.keys(state.occupied).every(function (n) { var c = state.occupied[n].live; return c && c.locked; })) return false;
+      return fm.cycleReady();
+    }
     // 1〜6番がそろっている(宙段の7台目は任意。数だけで判定すると、宙段があるのに5番が空でも完了してしまう)
     if (['1', '2', '3', '4', '5', '6'].some(function (n) { return !state.occupied[n]; })) return false;
     if (state.deckSize >= 7 && !state.occupied['7']) return false;   // 7台のサイクルは、宙段の7台目も積む
@@ -232,11 +238,12 @@
   }
 
   // ---- 画面の配線 ----
+  function trailerHash() { var t = /trailer=[\w-]+/.exec(location.hash); return t ? '&' + t[0] : ''; }   // 選んだトレーラー(#...&trailer=semi-6b)を、hash を書き換える時も残す
   Object.keys(MODES).forEach(function (k) {
     var b = document.querySelector('[data-mode="' + k + '"]');
     b.querySelector('small').textContent = MODES[k].desc;
     b.addEventListener('click', function () {
-      if (k === 'sim') { location.hash = 'mode=sim'; start('sim'); return; }   // シミュレーションは難易度なし(全部見えて解説あり)
+      if (k === 'sim') { location.hash = 'mode=sim' + trailerHash(); start('sim'); return; }   // シミュレーションは難易度なし(全部見えて解説あり)
       pickDiff(k);
     });
   });
@@ -251,7 +258,7 @@
   Array.prototype.forEach.call(document.querySelectorAll('[data-diff]'), function (b) {
     b.addEventListener('click', function () {
       var d = b.getAttribute('data-diff');
-      location.hash = 'mode=' + diffMode + '&diff=' + d;
+      location.hash = 'mode=' + diffMode + '&diff=' + d + trailerHash();
       $('diffOverlay').style.display = 'none';
       start(diffMode, d);
     });

@@ -1,6 +1,7 @@
 (function () {
   var cfg = window.TRAILER_CONFIG;
   var assets = window.TRAILER_ASSETS;
+  var IS6B = cfg.id === 'semi-6b';   // 2台目のトレーラー(宙段なし・台車1軸)。素材・機構・描き方が semi-6 と違う(下の「semi-6b」の節。js/floor_mech_6b.js)
   var statusEl = document.getElementById('status');
   var canvas = document.getElementById('stage');
   var ctx = canvas.getContext('2d');
@@ -89,7 +90,14 @@
     return cv;
   }
 
-  var loadList = [
+  // semi-6b: 奥の枠・手前の枠と、設定の parts を全部読む(b64の旧画像・semi-6 のフロア画像は使わない)
+  function loadList6b() {
+    return [
+      loadImage(newSrc(NA.frameBack)).then(function (img) { images.bg = img; }),
+      loadImage(newSrc(NA.frameFront)).then(function (img) { images.fg = img; })
+    ].concat(Object.keys(NA.parts).map(function (k) { return loadImage(newSrc(NA.parts[k])).then(function (img) { images[k] = img; }); }));
+  }
+  var loadList = IS6B ? loadList6b() : [
     loadImage(NA && NA.frameBack ? newSrc(NA.frameBack) : assets.bg).then(function (img) { images.bg = img; images.tailOcc = makeTailOcc(img); }),
     loadImage(NA && NA.frameFront ? newSrc(NA.frameFront) : assets.fg).then(function (img) { images.fg = cleanFg(img); }),
     loadImage(assets.wheel).then(function (img) { images.wheel = img; }),
@@ -294,6 +302,7 @@
   }
 
   function draw() {
+    if (IS6B) { draw6b(); return; }
     // ジャッキでトレーラーが持ち上がると、キングピンを支点にトレーラー全体(トラクタ以外)が傾く(β版の#rig回転と同じ)
     var fm = window.FLOOR_MECH;
     if (fm) fm.rampUpdate();
@@ -360,10 +369,10 @@
   // トレーラー座標系を開始(キングピンを支点に-tilt度回転)。呼び出し側でctx.restore()する
   var rigShake = [0, 0];   // 衝撃で揺れる分(draw()の先頭で更新)
   function beginRig(tilt) {
-    var k = cfg.outrigger.kingpin;
     ctx.save();
     if (rigShake[0] || rigShake[1]) ctx.translate(rigShake[0], rigShake[1]);
     if (tilt) {
+      var k = cfg.outrigger.kingpin;
       ctx.translate(k[0], k[1]);
       ctx.rotate(-tilt * Math.PI / 180);
       ctx.translate(-k[0], -k[1]);
@@ -1232,7 +1241,7 @@
   // 輪止めの新素材: 1番=オレンジの鉄板、上段(2・3番)と4番=低い黄色いくさび、5・6番=黄色いくさび。素材は左=タイヤ側なので、タイヤの前に置く向きに左右反転して描く
   var CHOCK_ART = { '7': 'chock_wedge', '1': 'chock_plate', '2': 'chock_wedge_flat', '3': 'chock_wedge_flat', '4': 'chock_wedge_flat', '5': 'chock_wedge', '6': 'chock_wedge' };
   function drawChockArt(num) {
-    var key = CHOCK_ART[num], img = key && images[key], info = NA && NA.chockInfo && NA.chockInfo[key];
+    var key = (NA && NA.chockArt || CHOCK_ART)[num], img = key && images[key], info = NA && NA.chockInfo && NA.chockInfo[key];
     if (!img || !info) return false;
     ctx.save();
     ctx.scale(-1, 1);
@@ -1458,5 +1467,111 @@
       ctx.fillText(key, p[0] + 6, p[1] - 6);
     });
     ctx.restore();
+  }
+
+  // =====================================================================
+  // semi-6b(6台積み・宙段なし・台車1軸)の描画。素材は assets/semi-6b/、置き方は make_semi6b.py の compose() と同じ。
+  // 描く順(parts.json drawOrder): 奥の枠 → 道板・スロープ → 車 → 2番の支え・シリンダー → 2番 → 1番のシリンダー → 1番 → 手前の枠 → 台車タイヤ → フェンダー → トラクタ → トラクタの車輪
+  // 車は手前の枠(中央の柱・下段の側板)より奥に描く(車が柱の後ろを通って見える)。機構の姿勢は fm.MECH.f1(1番の上げ量px)・f2(2番の傾き度)・道板・スロープの時間で決まる。
+  // =====================================================================
+  var RAD6 = Math.PI / 180;
+  // part を、part 内の pv が画面の at に来るように deg 度(時計回り)回して描く(make_semi6b.py の place())
+  function place6b(img, pv, at, deg) {
+    ctx.save(); ctx.translate(at[0], at[1]); ctx.rotate(deg * RAD6); ctx.drawImage(img, -pv[0], -pv[1]); ctx.restore();
+  }
+  function rot6b(p, c, deg) {
+    var a = deg * RAD6, x = p[0] - c[0], y = p[1] - c[1];
+    return [c[0] + x * Math.cos(a) - y * Math.sin(a), c[1] + x * Math.sin(a) + y * Math.cos(a)];
+  }
+  function ang6b(a, b) { return Math.atan2(b[1] - a[1], b[0] - a[0]) / RAD6; }
+  function lerp6b(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+  // 長さの決まった棒の上端が top の時の、下のピン(床のレールを滑る。高さ deckY)の位置
+  function slideBottom6b(top, len, deckY) { var dy = deckY - top[1]; return [top[0] - Math.sqrt(Math.max(0, len * len - dy * dy)), deckY]; }
+  // シリンダー: ロッドを先端(top)に、外筒を根元(base)に置く。pivots は素材の作り方(pad=3)から: 外筒=(3+w/2,3+w/2)、ロッド=(3+rodLen-w/2,3+w/2)
+  function cyl6b(c, base, top, barrelImg, rodImg) {
+    var a = ang6b(base, top), w = c.w;
+    place6b(rodImg, [3 + c.rodLen - w / 2, 3 + w / 2], top, a);
+    place6b(barrelImg, [3 + w / 2, 3 + w / 2], base, a);
+  }
+  // 2番を後ろで支える黒い角棒・緑のアーム(平行)とシリンダー。下のピンは下段のレールを滑る台に付く
+  function drawF2Support6b(fm) {
+    var T6 = cfg.t6b, deg = fm.MECH.f2, h = T6.f2.hinge, kb = T6.linkBlack, kg = T6.linkGreen;
+    function f2pt(loc) { return rot6b([h[0] + loc[0], h[1] + loc[1]], h, deg); }
+    function len(k) { var t0 = [h[0] + k.top[0], h[1] + k.top[1]]; return Math.hypot(k.deck[0] - t0[0], k.deck[1] - t0[1]); }   // 走行時(傾き0)の長さ。棒の長さは動いても変わらない
+    var tb = f2pt(kb.top), bb = slideBottom6b(tb, len(kb), kb.deck[1]), tg = f2pt(kg.top), bg = slideBottom6b(tg, len(kg), kg.deck[1]);
+    [bb, bg].forEach(function (p) { place6b(images.slider, [15, 9], p, 0); });
+    place6b(images[kg.img], [3 + kg.w / 2, 3 + kg.w / 2], bg, ang6b(bg, tg));
+    cyl6b(T6.cylF2, T6.cylF2.base, lerp6b(bg, tg, T6.cylF2.onGreen), images.cyl_f2_barrel, images.cyl_f2_rod);
+    place6b(images[kb.img], [3 + kb.w / 2, 3 + kb.w / 2], bb, ang6b(bb, tb));
+  }
+  function f1Pose6b(fm) {
+    var F = cfg.t6b.f1, a = [F.front[0], F.front[1] - fm.MECH.f1];
+    return { a: a, deg: ang6b(F.front, F.rear) };
+  }
+  function drawF1Cyl6b(fm) {
+    var F = cfg.t6b.f1, P = f1Pose6b(fm), c = cfg.t6b.cylF1;
+    var post = rot6b([P.a[0] + (F.postX - F.front[0]) / Math.cos(P.deg * RAD6), P.a[1] + F.thick], P.a, P.deg);
+    cyl6b(c, c.base, [c.base[0], post[1]], images.cyl_f1_barrel, images.cyl_f1_rod);
+  }
+  function drawSlope6b(fm) {
+    var S = cfg.t6b.slope, t = fm.slopeT(), e = t * t * (3 - 2 * t), full = Math.asin((S.hinge[1] - S.topY) / S.len) / RAD6;
+    place6b(images[S.img], [S.pad, S.pad], S.hinge, 180 + full * e);
+  }
+  // 道板(2段の伸縮式): 0〜0.55 尻尾の先から真後ろへ伸びながら出てくる(尻尾の側板の中から見える範囲だけ)→ 0.55〜1 先が地面へ傾く
+  function drawRamp6b(fm) {
+    var rt = fm.rampT(); if (rt <= 0) return;
+    var R = cfg.t6b.ramp, hx = R.hinge[0], hy = R.hinge[1], L = R.len, sec = R.sec;
+    var slide = Math.min(1, rt / 0.55), u = Math.max(0, (rt - 0.55) / 0.45); u = u * u * (3 - 2 * u);
+    var full = Math.asin((cfg.ramp.groundY - hy) / L) / RAD6, deg = full * u, a = deg * RAD6, ext = (L - sec) * slide;
+    var hx2 = hx - (1 - slide) * (sec + 6);
+    ctx.save();
+    if (slide < 1) { ctx.beginPath(); ctx.rect(hx - 6, 0, L + 80, cfg.stage.h); ctx.clip(); }
+    place6b(images.ramp_ext, [4, 6], [hx2 + Math.cos(a) * ext + Math.sin(a) * 2, hy + Math.sin(a) * ext - Math.cos(a) * 2 + 1.5], deg);
+    place6b(images.ramp_base, [4, 6], [hx2, hy], deg);
+    ctx.restore();
+  }
+  function drawWheels6b() {
+    var W = cfg.t6b.wheels, tw = W.trailer, im = images.wheel_drive, k = tw.r / 60;
+    if (im) ctx.drawImage(im, Math.round(tw.center[0] - im.width * k / 2), Math.round(tw.center[1] - im.height * k / 2), Math.round(im.width * k), Math.round(im.height * k));
+    if (images.fender) ctx.drawImage(images.fender, tw.center[0] - 70, tw.center[1] - 72);
+  }
+  function drawTractor6b() {
+    var W = cfg.t6b.wheels;
+    if (chk.tractor.checked && images.tractor) ctx.drawImage(images.tractor, 0, 0);
+    [[W.front, images.wheel_front], [W.drive, images.wheel_drive]].forEach(function (w) {
+      if (w[1]) ctx.drawImage(w[1], Math.round(w[0][0] - w[1].width / 2), Math.round(w[0][1] - w[1].height / 2));
+    });
+  }
+  function draw6b() {
+    var fm = window.FLOOR_MECH;
+    fm.rampUpdate();
+    updateShake();
+    curTilt = 0;
+    VIEW.begin();
+    ctx.fillStyle = '#5a616c';
+    ctx.fillRect(0, 0, cfg.stage.w, cfg.stage.h);
+    beginRig(0);
+    ctx.drawImage(images.bg, 0, 0);
+    drawRamp6b(fm);
+    drawSlope6b(fm);
+    updateLids();
+    drawHolesUnder();
+    drawCars();
+    drawChocks('holes');
+    if (chk.floors.checked) {
+      drawF2Support6b(fm);
+      place6b(images.floor_f2, cfg.t6b.f2.pivot, cfg.t6b.f2.hinge, fm.MECH.f2);
+      drawF1Cyl6b(fm);
+      var P1 = f1Pose6b(fm);
+      place6b(images.floor_f1, cfg.t6b.f1.pivot, P1.a, P1.deg);
+    }
+    if (chk.fg.checked) ctx.drawImage(images.fg, 0, 0);
+    if (chk.wheel.checked) drawWheels6b();
+    drawChocks('blocks');
+    drawChockMarkers();
+    drawSlotMarks();
+    if (chk.hit.checked) drawHitBoxes();
+    ctx.restore();
+    drawTractor6b();
   }
 })();

@@ -1,6 +1,7 @@
 (function () {
   var cfg = window.TRAILER_CONFIG;
   var lib = window.CAR_LIBRARY;
+  var T6 = cfg.id === 'semi-6b';   // 2台目のトレーラー(js/floor_mech_6b.js)。経路・通れない理由・台数・積める判定が semi-6 と違う
   // 車の寸法・画像は、実車の参考車種の諸元に合わせた値(js/car_dims.js。200px/mの画像)で上書きする。画像は使う車だけを必要な時に読み込む
   if (window.CAR_DIMS) lib.forEach(function (e) {
     var d = window.CAR_DIMS[e.id];
@@ -129,7 +130,40 @@
   // 経路の各点は world座標({x,y})か、可動フロア上のローカル座標({floor,x,y})のどちらか。
   // フロア上の点は毎フレーム window.FLOOR_MECH.onFloor() で現在の傾きに変換される(1〜3番は同時操作対応)。
   var ROUTE_SLOTS = { U: ['3', '2', '1'], L: ['6', '5'], '4': ['6', '5', '4'], '7': ['6', '7'] };
+  // semi-6b の道: 道板の先 → 道板の根元 → (U)2番の後端 → 2番の前端 → 1番の後端 → 1番 / (L)尻尾の山 → 5番 / (4)5番 → スロープ → 4番
+  function buildRoute6b(id) {
+    var fm = window.FLOOR_MECH, S = cfg.slots, rb = cfg.ramp.bottom, rt = cfg.ramp.top, TT = cfg.t6b;
+    var pts = [{ x: ENTRY_STOP.x, y: ENTRY_STOP.y }, { x: rb[0], y: rb[1] }, { x: rt[0], y: rt[1] }];
+    var tg = {}, extra = {};
+    function slotPt(n, floor) { return floor ? { floor: floor, x: S[n].tireX, y: S[n].deckY } : { x: S[n].tireX, y: S[n].deckY }; }
+    var tail = TT.tail.deck, sl = TT.slope;
+    if (id === 'U') {
+      var f2 = TT.f2, f1 = fm.FLOORS.F1;
+      pts.push({ floor: 'F2', x: f2.hinge[0] + f2.len - 5, y: f2.hinge[1] });             // 2番の後端(尻尾に着いている)
+      pts.push({ floor: 'F2', x: f2.hinge[0] + 4, y: f2.hinge[1] });                       // 2番の前端(中央の柱の後ろ)
+      extra.f2front = { floor: 'F2', x: f2.hinge[0] + 4, y: f2.hinge[1] };
+      pts.push({ floor: 'F1', x: TT.f1.rear[0] - 2, y: f1.surfaceY(TT.f1.rear[0] - 2) });  // 1番の後端(柱の前)
+      pts.push(slotPt('1', 'F1'));
+      tg['3'] = slotPt('3', 'F2'); tg['2'] = slotPt('2', 'F2'); tg['1'] = slotPt('1', 'F1');
+    } else {
+      pts.push({ x: tail[1][0], y: tail[1][1] });   // 台車の山の後ろ端
+      pts.push({ x: tail[0][0], y: tail[0][1] });   // 山の前端
+      pts.push({ x: 1560, y: S['5'].deckY });       // 5番の床の後端
+      if (id === '4') {
+        pts.push({ x: sl.hinge[0] + 8, y: S['5'].deckY });
+        pts.push({ x: sl.hinge[0], y: sl.hinge[1] + (sl.surfaceDy || 0) });                 // スロープの後端
+        pts.push({ x: sl.hinge[0] - sl.len * Math.cos(Math.asin((sl.hinge[1] - sl.topY) / sl.len)), y: sl.topY });   // スロープの前端(4番の床の高さ)
+        pts.push(slotPt('4'));
+        tg['6'] = slotPt('6'); tg['5'] = slotPt('5'); tg['4'] = slotPt('4');
+      } else {
+        pts.push(slotPt('5'));
+        tg['6'] = slotPt('6'); tg['5'] = slotPt('5');
+      }
+    }
+    return { id: id, raw: pts, tg: tg, extra: extra, slots: ROUTE_SLOTS[id], hasFloor: pts.some(function (p) { return !!p.floor; }) };
+  }
   function buildRoute(id) {
+    if (T6) return buildRoute6b(id);
     var fm = window.FLOOR_MECH, S = cfg.slots, rb = cfg.ramp.bottom, rt = cfg.ramp.top;
     var pts = [
       { x: ENTRY_STOP.x, y: ENTRY_STOP.y },
@@ -173,6 +207,7 @@
   function lowRoute(id) { return id === 'L' || id === '4'; }
   function chooseRoute() {
     var fm = window.FLOOR_MECH;
+    if (T6) return fm.chooseRoute6b();
     if (fm.upperConnected()) return 'U';
     // 宙段は、少し斜めに上げた状態(後端が接地に近い)なら後端から乗れるので宙段の道。もっと高く上げてあれば下段の道(6・5番)のまま
     if (fm.hangReachable()) return '7';
@@ -228,6 +263,7 @@
   }
   var TIRE_PASS_MARGIN_PX = 30;   // 6番のタイヤ基準点からこれ以上通り過ぎたら「通過」とみなす(6番に止まる車は輪止めの手前で止まる)
   function routeProblems(car) {
+    if (T6) return window.FLOOR_MECH.routeProblems6b(car);
     var fm = window.FLOOR_MECH, out = [], id = car.route.id;
     if (!fm.rampReady()) out.push({ key: 'ramp', msg: '道板が出ていません。フロア昇降パネルの「道板を出す」で出してから進めてください。' });
     if (fm.tireOffGround()) out.push({ key: 'jack', msg: 'ジャッキで台車が浮いている間は車を動かせません。ジャッキを縮めて接地させてください。' });
@@ -266,6 +302,7 @@
   // 幅の広い車は6番に載せられない(車幅はcar_libraryの各車のwidth)
   function carFitsSlot(num, entry) {
     var slot = cfg.slots[num];
+    if (slot.maxLenM && entry && (entry.len || 0) > slot.maxLenM) return false;   // 全長の制限(semi-6b の6番)
     if (!slot.maxWidthM || !entry) return true;
     return (entry.width || 0) <= slot.maxWidthM;   // 幅の広い車は6番に載せられない(タイヤの格納が次のサイクルの必須条件のため)
   }
@@ -356,6 +393,7 @@
   // チュートリアル(#mode=tutorial): 常に7台(宙段あり)で、積めない荷物は出さない(js/tutorial.js)
   state.forceDeckSize = /mode=tutorial/.test(location.hash) ? 7 : 0;
   if (state.forceDeckSize) state.impossibleChance = 0;
+  if (T6) state.impossibleChance = 0;   // semi-6b は積めない荷物を出さない(積める判定は js/loadable_6b.js の簡易版)
   var deckAllEl = document.getElementById('deckAll'), deckHardEl = document.getElementById('deckHard');
   var btnPrevCar = document.getElementById('btnPrevCar'), btnNextCar = document.getElementById('btnNextCar');
   var deckCountEl = document.getElementById('deckCount'), btnOrient = document.getElementById('btnOrient'), btnOrientCar = document.getElementById('btnOrientCar');
@@ -367,7 +405,7 @@
   state.hints = true;
 
   // 1サイクルの6台: ランダムに選ぶ(重複なし)。ただし6番に載せられる車(幅が上限以下)を必ず1台は入れる
-  function fitsSlot6(e) { return (e.width || 0) <= (cfg.slots['6'].maxWidthM || Infinity); }
+  function fitsSlot6(e) { return carFitsSlot('6', e); }
   // 軽四(軽自動車・軽箱バン・軽トラ・軽クーペ。幅1.5m以下)は、本来3台あれば上段・下段のどちらにも3台並べて積めるが、その積み方は未実装。
   // 3台以上の組み合わせは出さない(1デッキに最大2台。KEI_MAX)
   var KEI_MAX = 2;
@@ -551,7 +589,7 @@
     var token = ++deckToken;
     state.deck = []; state.sel = 0; state.pendingEntry = null;
     renderDeck();
-    var size = state.forceDeckSize || (Math.random() < 0.5 ? 6 : 7);
+    var size = state.forceDeckSize || (T6 ? 6 : (Math.random() < 0.5 ? 6 : 7));
     setStatus('車を準備しています...');
     var chance = state.impossibleChance !== undefined ? state.impossibleChance : IMPOSSIBLE_CHANCE;
     var impossible = state.deckDrawn > 0 && Math.random() < chance;
@@ -1070,7 +1108,7 @@
   // 3番前(継ぎ目)は下端に載るのでピンは不要。上段へ向かう道(上段の車)は対象外。
   var FLOOR_NAME = { F1: '1番', F2: '2番', F3: '3番' };
   function checkUnderFloors(car) {
-    if (!car.route || car.route.id === 'U') return;
+    if (T6 || !car.route || car.route.id === 'U') return;   // semi-6b にはセットピンが無い
     var fm = window.FLOOR_MECH, fx = car.x - car.leftTireX;   // 車の先端
     ['F3', 'F2', 'F1'].forEach(function (id) {
       var f = fm.FLOORS[id];
