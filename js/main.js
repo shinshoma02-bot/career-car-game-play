@@ -205,6 +205,29 @@
       tgt.zoom = zoom || (close() ? 2.4 : 1.4);
       clampTarget(tgt);
     }
+    function focusPoint(cx, cy, zoom) {
+      manual = false;
+      tgt.cx = cx; tgt.cy = cy;
+      tgt.zoom = zoom || (close() ? 2.4 : 1.4);
+      clampTarget(tgt);
+    }
+    // スイッチの操作盤を開いた時: 枠(説明の札や取付板を含む)の真ん中ではなく、操作するスイッチ(bind付き)そのものの真ん中へ寄る
+    function focusSwitches(rect, zoom) {
+      var NAx = window.TRAILER_CONFIG && window.TRAILER_CONFIG.newArt, lay = NAx && NAx.switchLayout, sc = (NAx && NAx.switchScale) || 0.27;
+      var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      (lay || []).forEach(function (s) {
+        var b = images[s.body];
+        if (!s.bind || !b) return;
+        if (s.at[0] < rect[0] - 30 || s.at[0] > rect[0] + rect[2] + 30 || s.at[1] < rect[1] - 30 || s.at[1] > rect[1] + rect[3] + 30) return;
+        var k = s.scale || sc, w = b.width * k, h = b.height * k, a = (s.rot || 0) * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
+        [[-w / 2, 0], [w / 2, 0], [-w / 2, h], [w / 2, h]].forEach(function (p) {
+          var px = s.at[0] + p[0] * c - p[1] * sn, py = s.at[1] + p[0] * sn + p[1] * c;
+          x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+        });
+      });
+      if (x0 > x1) { focusRect(rect, zoom); return; }
+      focusPoint((x0 + x1) / 2, (y0 + y1) / 2, zoom);
+    }
     function fitAll() { manual = true; tgt.zoom = 1; tgt.cx = SW / 2; tgt.cy = SH / 2; clampTarget(tgt); }
     function update(now) {
       var dt = Math.min(0.1, Math.max(0, (now - lastT) / 1000)); lastT = now;
@@ -320,7 +343,7 @@
     layout();
     tgt.zoom = cam.zoom = defZoom(); clampTarget(tgt); clampTarget(cam);
     return {
-      begin: begin, update: update, drawMini: drawMini, layout: layout, focusRect: focusRect, fitAll: fitAll, clientToStage: clientToStage, stageToClient: stageToClient,
+      begin: begin, update: update, drawMini: drawMini, layout: layout, focusRect: focusRect, focusPoint: focusPoint, focusSwitches: focusSwitches, fitAll: fitAll, clientToStage: clientToStage, stageToClient: stageToClient,
       state: function () { return { cx: cam.cx, cy: cam.cy, zoom: cam.zoom, manual: manual }; },
       dragSuppressed: function () { return performance.now() < suppressUntil; },
       isPortrait: function () { return portrait; },
@@ -561,6 +584,7 @@
     var C = chuudanArt();
     if (C) drawChuudan(C, fm);   // 宙段の素材が読めていなければ描かない(素材は全て読み込んでからゲームが始まる)
   }
+  var F2_TIP_CUT_X = 900;   // 2番フロアの先端(x=885〜)は、スライド板が入る分、ここ(柱の手前)まで切り取って描く(2026-10-07 ユーザー許可)
   function drawTransformedFloor(id, img) {
     var fm = window.FLOOR_MECH;
     if (!fm) { ctx.drawImage(img, 0, 0); return; }
@@ -571,6 +595,7 @@
     ctx.translate(p[0], p[1]);
     ctx.rotate(pose.ang * Math.PI / 180);
     ctx.translate(-p[0], -p[1]);
+    if (id === 'F2' && fm.slideT) { ctx.beginPath(); ctx.rect(F2_TIP_CUT_X, 0, img.width, img.height); ctx.clip(); }
     ctx.drawImage(img, 0, 0);
     ctx.restore();
   }
@@ -837,13 +862,13 @@
   function drawSlidePlate() {
     var fm = window.FLOOR_MECH;
     if (!fm.slideT) return;   // semi-6b には無い
-    if (fm.slideT() <= 0.01) return;   // 完全にしまった状態は、1番フロアの下に隠れて見えない
+    if (fm.slideT() <= 0.01) return;   // 完全にしまった状態は、1番フロアの下の奥に入って見えない
     var t = fm.slideT(), e = t * t * (3 - 2 * t), len = fm.SLIDE.len, th = fm.SLIDE.thick;
     var g = fm.slideGeom(undefined, 1), ang = Math.atan2(g.b[1] - g.a[1], g.b[0] - g.a[0]);
     ctx.save();
     ctx.translate(g.a[0], g.a[1]);
     ctx.rotate(ang);
-    ctx.translate(-len * (1 - e), 0);   // しまう時は、板の向きのまま、1番フロアの下へ真っ直ぐ潜り込む(ひっくり返らない)
+    ctx.translate(-len * (1 - e), 13 * (1 - e));   // しまう時は、板の向きのまま、1番フロアの「下」側(フロアの厚み13px分下)へ後ろから前へ潜り込む(上には乗らない・ひっくり返らない)
     // 上面は1番フロアの床面と同じ高さ(段差なし)。上面のメッシュ→側面の枠の順に、床面から下へ向かって描く
     var mesh = 3;
     ctx.fillStyle = '#9fe9dc'; ctx.fillRect(0, 0, len, mesh);

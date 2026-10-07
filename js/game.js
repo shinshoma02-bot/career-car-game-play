@@ -1384,7 +1384,7 @@
     }
     if (best) {
       if (window.SWITCH_UI) window.SWITCH_UI.open(best.id);
-      if (window.VIEW) window.VIEW.focusRect(best.rect);   // スイッチの辺りへ寄る
+      if (window.VIEW) window.VIEW.focusSwitches(best.rect);   // 操作するスイッチの真ん中へ寄る
       return;
     }
     // 車をタップ: 操作対象にする / OKの車なら固定する(固定した車はタップで操作対象に戻る)。

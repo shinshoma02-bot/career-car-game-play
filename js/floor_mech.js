@@ -533,7 +533,7 @@
   // ---- スライド板(1番フロア後端の下に滑り込ませて格納する、1番↔2番のつなぎ板)----
   // 出している間(MECH.slide=true・既定)は、1番フロアの後端から2番側へ板が出て、1番↔2番を渡れる。
   // しまうと1番フロアの下に入り、1番の後端が板の分だけ短くなる(1番へは通れなくなる)。1番を上げて2番に長い車を積む時は、板が車に当たるのでしまう。
-  var SLIDE = cfg.slidePlate || { len: 100, thick: 7 };
+  var SLIDE = cfg.slidePlate || { len: 50, thick: 7 };
   function f1DeckYAt(x) { return floorsCfg.f1DeckYAt625 + floorsCfg.f1DeckYSlope * (x - 625); }
   // 板の上面の、付け根 a と 先端 b(画面座標)。t=出ている割合(省略=今の進み具合)
   function slideGeom(offs, t) {

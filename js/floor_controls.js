@@ -44,7 +44,57 @@
   btnSlide.addEventListener('click', function () { fm.toggleSlide(); renderMechButtons(); });
   var btnF2Flap = document.getElementById('btnF2Flap');
   btnF2Flap.addEventListener('click', function () { fm.toggleF2Flap(); renderMechButtons(); });
+  // ---- 昇降ボタン自動切りかえ(任意でON/OFF。ブラウザに覚えさせる)----
+  // 車を1台積む(固定する)と、次に動かすスイッチの操作盤へ自動で切り替わり、スイッチの真ん中へ寄る。その操作が終わると、さらに次のスイッチへ、を繰り返す。
+  // 「次に動かすスイッチ」は、積んだ台数と棚・5番・宙段・タイヤの状態から決める(wantGroup)。チュートリアルでは使わない(ガイドが操作盤を切り替えるため)
+  var btnAutoSw = document.getElementById('btnAutoSw');
+  var autoSw = true;
+  try { autoSw = localStorage.getItem('autoSwitchPanel') !== '0'; } catch (e) { }
+  var isTutorial = /mode=tutorial/.test(location.hash);
+  btnAutoSw.addEventListener('click', function () {
+    autoSw = !autoSw;
+    try { localStorage.setItem('autoSwitchPanel', autoSw ? '1' : '0'); } catch (e) { }
+    renderMechButtons();
+  });
+  function raised(k) { return fm.ENDS[k].off <= (k === 'F3r' ? -20 : -2); }
+  function wantGroup() {
+    var gs = window.GAME_STATE, o = gs && gs.occupied; if (!o) return null;
+    var M = fm.MECH;
+    if (!(o[1] && o[2] && o[3])) {   // 上段(1・2・3番)を積んでいる間: 道板につなぐ(3番 後)→ 1番へ渡れるようにする(前側)
+      if (!fm.upperConnected()) return 'rear';
+      if (!o[1] && !fm.f1Connected()) return 'front';
+      return null;
+    }
+    if (!['F1f', 'F1r', 'F2f'].every(raised)) return 'front';   // 下段へ入れるよう、棚を上げてピンで固定
+    if (!['MID', 'F3r'].every(raised)) return 'rear';
+    if (!o[4]) return fm.f5Slope() ? null : 'front';   // 4番: 5番フロアをスロープに(2番 前のシリンダー)
+    if (!o[5]) return fm.atTravel('F5') ? null : 'front';
+    if (!o[6]) return null;
+    if (!o[7] && M.hang < 1) return 'rear';   // 7台目: 宙段
+    return M.tireOut ? 'tire' : null;
+  }
+  var chain = false, lastCount = -1, lastSwitchAt = 0;
+  setInterval(function () {
+    if (!autoSw || isTutorial) return;
+    var gs = window.GAME_STATE; if (!gs || !gs.occupied) return;
+    var n = Object.keys(gs.occupied).filter(function (k) { return gs.occupied[k]; }).length;
+    if (lastCount >= 0 && n > lastCount) chain = true;   // 1台積んだ(固定した)ので、次のスイッチへの切り替えを始める
+    lastCount = n;
+    if (!chain) return;
+    var g = wantGroup();
+    if (!g) { chain = false; return; }
+    var pr = fm.pressInfo && fm.pressInfo();
+    if (pr && (pr.hold || pr.hang || pr.jack)) return;   // 押している間は切り替えない
+    if (g !== current && Date.now() - lastSwitchAt > 700) {
+      lastSwitchAt = Date.now();
+      open(g);
+      var TC = window.TRAILER_CONFIG, cfgG = (TC.newArt && TC.newArt.switchGroups || []).filter(function (x) { return x.id === g; })[0];
+      if (cfgG && window.VIEW) window.VIEW.focusSwitches(cfgG.rect);
+    }
+  }, 500);
   function renderMechButtons() {
+    btnAutoSw.textContent = '昇降ボタン自動切りかえ ' + (autoSw ? 'ON' : 'OFF');
+    btnAutoSw.classList.toggle('on', autoSw);
     btnStopper.textContent = fm.MECH.stopper ? '5番ストッパーを外す' : '5番ストッパーを掛ける';
     btnStopper.classList.toggle('on', fm.MECH.stopper);
     btnBridge.textContent = fm.MECH.bridge ? '扇動板を格納' : '扇動板を搬出';
