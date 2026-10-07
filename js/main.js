@@ -100,12 +100,12 @@
   // ヤード(積み下ろしの場所)の背景・地面。グラフィック部門の納品(R21)があれば、設定 cfg.yard のパスの画像を読んで、ベタ塗りの代わりに描く。無ければ従来のまま。
   // cfg.yard = { bg: 背景(空・ヤードの景色。ステージ全面 2520×724)、ground: 地面(同サイズの透明PNG。地面 y=577 より下)、frameBack: 背景色を含まない透明な奥の枠(今の frame_back は背景色 #5a616c 込みの不透明なので、
   //   ヤードを見せる時は、これに差し替えて描く)、v: ?v= の番号 }。frameBack が無いまま bg・ground だけ指定しても、不透明な奥の枠がヤードを隠すだけ(エラーにはならない)。
-  var yardImgs = { bg: null, ground: null, back: null }, YARD = cfg.yard || null;
+  var yardImgs = { bg: null, ground: null, back: null, tractor: null }, YARD = cfg.yard || null;
   if (YARD) {
-    ['bg', 'ground', 'frameBack'].forEach(function (k) {
+    ['bg', 'ground', 'frameBack', 'tractor'].forEach(function (k) {
       if (!YARD[k]) return;
       var im = new Image();
-      im.onload = function () { yardImgs[k === 'frameBack' ? 'back' : k] = im; };
+      im.onload = function () { yardImgs[k === 'frameBack' ? 'back' : k] = im; };   // tractor: 背景色の四角を抜いた版(ヤードの上でも灰色の箱にならない)
       im.src = YARD[k] + (YARD.v ? '?v=' + YARD.v : '');
     });
   }
@@ -385,7 +385,7 @@
     if (chk.pin.checked) drawPinMarks();
     ctx.restore();
 
-    if (chk.tractor.checked) ctx.drawImage(images.tractor, 0, 0);
+    if (chk.tractor.checked) ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0);
   }
 
   // ぶつかった衝撃でトレーラーが揺れる(減衰する振動)
@@ -1570,7 +1570,7 @@
   }
   function drawTractor6b() {
     var W = cfg.t6b.wheels;
-    if (chk.tractor.checked && images.tractor) ctx.drawImage(images.tractor, 0, 0);
+    if (chk.tractor.checked && images.tractor) ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0);
     [[W.front, images.wheel_front], [W.drive, images.wheel_drive]].forEach(function (w) {
       if (w[1]) ctx.drawImage(w[1], Math.round(w[0][0] - w[1].width / 2), Math.round(w[0][1] - w[1].height / 2));
     });

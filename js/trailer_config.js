@@ -2,6 +2,7 @@ window.TRAILER_CONFIG = {
   "id": "semi-6",
   "name": "セミトレーラー(6台積み)",
   "stage": { "w": 2520, "h": 724 },
+  "yard": { "bg": "assets/common/yard/yard_bg.png", "ground": "assets/common/yard/yard_ground.png", "frameBack": "assets/semi-6/frame_back_clear.png", "tractor": "assets/semi-6/tractor_clear.png", "v": 1 },
   "pxPerMeter": 114,
 
   "newArt": {
