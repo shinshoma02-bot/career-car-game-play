@@ -11,7 +11,7 @@
   var ENDS = {};
   Object.keys(floorsCfg.ends).forEach(function (k) {
     var e = floorsCfg.ends[k];
-    ENDS[k] = { off: 0, r: e.range.slice(), hole: e.hole, holeMax: e.holeMax, travel: e.travel || 0, label: e.label, noTravelPin: !!e.noTravelPin, freeTop: e.freeTop, pitchUpPx: e.pitchUp };
+    ENDS[k] = { off: 0, r: e.range.slice(), hole: e.hole, holeMax: e.holeMax, travel: e.travel || 0, label: e.label, noTravelPin: !!e.noTravelPin, freeTop: e.freeTop, pitchUpPx: e.pitchUp, pitchDownPx: e.pitchDown };
     if (e.limit !== undefined) ENDS[k].limit = e.limit;
   });
   // 5番フロアはセットピン対象外・機構側(2番前シリンダーの余力)で直接動かす
@@ -69,7 +69,7 @@
   // 柱の穴番号(実車の番号): 最下段=0番(ピンなし)、走行位置=hole番、ピンを差せる最大=holeMax番(棚の上限の1穴下)。
   // 棚の絵(off=0)は変えずに番号を当てはめるので、走行位置より上と下で1穴の間隔が違う(上は細かい)。
   function pitchUp(k) { var e = ENDS[k]; return e.pitchUpPx || (e.travel - e.r[0]) / (e.holeMax - e.hole + 1); }   // pitchUp(設定): 穴の間隔を実車に合わせて決めている棚(2番前)
-  function pitchDown(k) { var e = ENDS[k]; return e.hole > 0 ? (e.r[1] - e.travel) / e.hole : 0; }
+  function pitchDown(k) { var e = ENDS[k]; return e.pitchDownPx || (e.hole > 0 ? (e.r[1] - e.travel) / e.hole : 0); }   // pitchDown(設定): 走行位置より下の穴の間隔を決めている棚(3番後ろ。設定が無ければ、下の可動域を穴の数で割る)
   function holeNo(k, off) {
     var e = ENDS[k];
     if (off > e.travel) return pitchDown(k) > 0 ? Math.max(0, e.hole - Math.round((off - e.travel) / pitchDown(k))) : e.hole;
