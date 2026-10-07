@@ -137,18 +137,20 @@
   function rested(k) {
     var e = ENDS[k];
     if (k === 'F7') return MECH.hang <= 0.01 || (SP.inserted && Math.abs(MECH.hang - HANG.loadU) < 0.03);   // 宙段: 格納か、固定ピン(赤い板)に載って止まっている
-    if (e.noTravelPin) return e.off >= e.travel - 1.5 || (PINS[k] !== null && e.off >= PINS[k] - 2 * pitchUp(k) - 0.5);   // 3番前も、棚の少し下にピンがあれば固定扱い(棚をそのピンまで下げ切っていなくてよい)
+    if (e.noTravelPin) return e.off >= e.travel - 1.5 || (PINS[k] !== null && e.off >= PINS[k] - restTol(k) - 0.5);   // 3番前も、棚の少し下にピンがあれば固定扱い(棚をそのピンまで下げ切っていなくてよい)
     // 支柱の短い棚(2番前): ピンを一番上の穴に差して昇降させた(伸ばした)状態は、ピンより上でも固定されている
     if (e.freeTop !== undefined && PINS[k] !== null && PINS[k] <= pinLimitOff(k) + 0.5) return true;
     // 棚が走行位置まで下がっていなくても、棚の少し下(最大2穴分)にピンが差してあれば固定されているとみなす(下段の車を積む間は棚を上げたままにするので、ピンは棚の位置付近に差せばよい。棚をそのピンまで下げ切っている必要はない。2026-10-06 ユーザー指示)
-    return PINS[k] !== null && e.off >= PINS[k] - 2 * pitchUp(k) - 0.5;
+    return PINS[k] !== null && e.off >= PINS[k] - restTol(k) - 0.5;
   }
+  // ピンの下に棚が入っていても「載っている」とみなす隙間(2穴分。ただし穴の間隔が8pxを超える棚(3番後ろ 14.4px)は、7pxまで)
+  function restTol(k) { var pp = pitchUp(k); return pp > 8 ? 7 : 2 * pp; }
   function floorPinsOk(id) { var f = FLOORS[id]; return rested(f.front.end) && rested(f.rear.end); }
   function pinned(k) {
     if (k === 'F7') return rested('F7');
     if (ENDS[k].noTravelPin) return true;
     if (ENDS[k].freeTop !== undefined && PINS[k] !== null && PINS[k] <= pinLimitOff(k) + 0.5) return true;
-    return PINS[k] !== null && ENDS[k].off >= PINS[k] - 2 * pitchUp(k) - 0.5;
+    return PINS[k] !== null && ENDS[k].off >= PINS[k] - restTol(k) - 0.5;
   }
   initPins();
 
