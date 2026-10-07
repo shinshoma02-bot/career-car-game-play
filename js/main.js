@@ -362,6 +362,7 @@
     updateLids();
     drawPitBack();
     drawHolesUnder();
+    drawSlidePlate();   // スライド板は内側の機構: 車とフロア・フレームの奥に描いて、外側からは見えないようにする
     drawCars();
     if (images.tailOcc) ctx.drawImage(images.tailOcc, TAIL.x0, TAIL.y0);   // 後端の部材は車より手前
     drawChocks('holes');
@@ -828,6 +829,33 @@
     // 付け根のヒンジ
     ctx.fillStyle = '#1c3a35';
     ctx.beginPath(); ctx.arc(0, rail / 2, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // スライド板(1番フロア後端): 出ている時は、後端から2番側へ板が伸びる。しまうと1番フロアの下へ滑り込む(約0.8秒)。
+  // 1番フロアの姿勢(上げ下げ)に合わせて、後端の位置と傾きについていく。メッシュの床の上面と、側面の枠を描く
+  function drawSlidePlate() {
+    var fm = window.FLOOR_MECH;
+    if (!fm.slideT) return;   // semi-6b には無い
+    if (fm.slideT() <= 0.01) return;   // 完全にしまった状態は、1番フロアの下に隠れて見えない
+    var t = fm.slideT(), e = t * t * (3 - 2 * t), len = fm.SLIDE.len, th = fm.SLIDE.thick;
+    var g = fm.slideGeom(undefined, 1), ang = Math.atan2(g.b[1] - g.a[1], g.b[0] - g.a[0]);
+    ctx.save();
+    ctx.translate(g.a[0], g.a[1]);
+    ctx.rotate(ang);
+    ctx.translate(-len * (1 - e), 0);   // しまう時は、板の向きのまま、1番フロアの下へ真っ直ぐ潜り込む(ひっくり返らない)
+    // 上面は1番フロアの床面と同じ高さ(段差なし)。上面のメッシュ→側面の枠の順に、床面から下へ向かって描く
+    var mesh = 3;
+    ctx.fillStyle = '#9fe9dc'; ctx.fillRect(0, 0, len, mesh);
+    ctx.strokeStyle = 'rgba(20,90,80,0.75)'; ctx.lineWidth = 1;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, len, mesh); ctx.clip(); ctx.beginPath();
+    for (var d = -mesh; d < len; d += 5) { ctx.moveTo(d, mesh); ctx.lineTo(d + mesh, 0); ctx.moveTo(d + mesh, mesh); ctx.lineTo(d, 0); }
+    ctx.stroke(); ctx.restore();
+    var gr = ctx.createLinearGradient(0, mesh, 0, th);
+    gr.addColorStop(0, '#5fe3cd'); gr.addColorStop(0.45, '#2cc9b0'); gr.addColorStop(1, '#138d7b');
+    ctx.fillStyle = gr; ctx.fillRect(0, mesh, len, th - mesh);
+    ctx.fillStyle = '#e2574c'; ctx.fillRect(len - 10, 0, 10, th);   // 先端の赤い帯
+    ctx.strokeStyle = '#0d2b27'; ctx.lineWidth = 1.2; ctx.strokeRect(0, 0, len, th);
     ctx.restore();
   }
 

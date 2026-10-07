@@ -74,13 +74,14 @@
   });
 
   // 今は押せない操作(ゲームが断る条件と同じ。fm.toggle* の中の判定): 灰色の板にする(押すと理由が出る)
-  var btnBridge = $('btnBridge'), btnFlap = $('btnF2Flap');
+  var btnSlide = $('btnSlide'), btnBridge = $('btnBridge'), btnFlap = $('btnF2Flap');
   setInterval(function () {
     if (!fm || !gs) return;
     var car = gs.car, moving = !!(car && !car.seated && car.phase !== 'docked');
     var rid = car && car.route && car.route.id;
     if (btnRamp) btnRamp.classList.toggle('na', !!(fm.MECH.ramp && moving && !(car.phase === 'ready' && !(car.progress > 0))));   // 道板の上・作業中の車がいる
     if (btnBridge) btnBridge.classList.toggle('na', !!(fm.MECH.bridge && moving && rid === '4' && car.progress > 0));          // 4番へ向かう車が扇動板を渡る
+    if (btnSlide) btnSlide.classList.toggle('na', !!(fm.MECH.slide && moving && rid === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 150));   // 1番・2番へ向かう車が板の近くにいる
     if (btnFlap) btnFlap.classList.toggle('na', !!(!fm.MECH.f2Flap && moving && car.dynamicPath && rid === 'U' && car.progress > 0));   // 1番へ向かう車が2番扇動板の上を通る
   }, 200);
 

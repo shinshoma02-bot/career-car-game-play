@@ -26,7 +26,7 @@
   }
 
   // 使わない semi-6 のボタンは隠す
-  ['btnStopper', 'btnF2Flap'].forEach(function (id) { var b = document.getElementById(id); if (b) b.style.display = 'none'; });
+  ['btnStopper', 'btnF2Flap', 'btnSlide'].forEach(function (id) { var b = document.getElementById(id); if (b) b.style.display = 'none'; });
   var btnRamp = document.getElementById('btnRamp'), btnBridge = document.getElementById('btnBridge');
   btnRamp.addEventListener('click', function () { fm.toggleRamp(); renderMechButtons(); });
   btnBridge.addEventListener('click', function () { fm.toggleBridge(); renderMechButtons(); });

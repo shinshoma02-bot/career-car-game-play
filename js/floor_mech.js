@@ -460,7 +460,7 @@
   function hangReachable() { return MECH.hang > 0.05 && 510 - hangPose().R[1] <= 40; }
   // ---- 5番フロア(2番前シリンダーの余力で二段階に持ち上がる)----
   var LIFT_MAX = cfg.floor5.liftMax, HOOK_OFF = cfg.floor5.hookOff;
-  var MECH = { lockR: true, lockL: true, hang: 0, lift: 0, hook: false, stopper: true, bridge: false, f2Flap: false, ramp: false };
+  var MECH = { lockR: true, lockL: true, hang: 0, lift: 0, hook: false, stopper: true, bridge: false, f2Flap: false, slide: true, ramp: false };
   function applyF5() {
     if (MECH.stopper && -MECH.lift < HOOK_OFF - 3) MECH.hook = true;
     ENDS.F5r.off = 0;
@@ -501,8 +501,8 @@
   // ---- 扇動板(4-5番間の格納式プレート)----
   var BR_ANCHOR = cfg.bridgePlate.anchor, BRIDGE_STOWED_X = cfg.bridgePlate.stowedX;
   // 開閉の進行度(0=閉/格納、1=開/搬出)。道板と同じく時間経過で進み、描画が止まっていても進む
-  function makeAnim(key, sec) {
-    var a = { t: 0, last: null };
+  function makeAnim(key, sec, init) {
+    var a = { t: init || 0, last: null };
     function update() {
       var now = performance.now(), dt = a.last === null ? 0 : Math.min(2, (now - a.last) / 1000);
       a.last = now;
@@ -510,9 +510,10 @@
       a.t = a.t < target ? Math.min(target, a.t + step) : Math.max(target, a.t - step);
       return a.t;
     }
+    update.reset = function (v) { a.t = v; a.last = null; };
     return update;
   }
-  var bridgeT = makeAnim('bridge', 0.9), flapT = makeAnim('f2Flap', 0.7);
+  var bridgeT = makeAnim('bridge', 0.9), flapT = makeAnim('f2Flap', 0.7), slideT = makeAnim('slide', 0.8, 1);
   // 搬出時の扇動板の先端: 5番フロアの今の位置ではなく、5番をスロープにセットした時の前端の高さ(固定)
   function bridgeTip() {
     var offs = curOffs(); offs.F5f = HOOK_OFF; offs.F5r = 0;
@@ -527,6 +528,48 @@
     bridgeT(); // 切り替え前の位置まで進めてから、新しい向きで動かし始める
     MECH.bridge = !MECH.bridge;
     onInfo(MECH.bridge ? '扇動板を搬出した' : '扇動板を格納した');
+  }
+
+  // ---- スライド板(1番フロア後端の下に滑り込ませて格納する、1番↔2番のつなぎ板)----
+  // 出している間(MECH.slide=true・既定)は、1番フロアの後端から2番側へ板が出て、1番↔2番を渡れる。
+  // しまうと1番フロアの下に入り、1番の後端が板の分だけ短くなる(1番へは通れなくなる)。1番を上げて2番に長い車を積む時は、板が車に当たるのでしまう。
+  var SLIDE = cfg.slidePlate || { len: 100, thick: 7 };
+  function f1DeckYAt(x) { return floorsCfg.f1DeckYAt625 + floorsCfg.f1DeckYSlope * (x - 625); }
+  // 板の上面の、付け根 a と 先端 b(画面座標)。t=出ている割合(省略=今の進み具合)
+  function slideGeom(offs, t) {
+    var x1 = FLOORS.F1.x1, len = SLIDE.len * (t === undefined ? slideT() : t);
+    return { a: onFloor('F1', x1, f1DeckYAt(x1), offs), b: onFloor('F1', x1 + len, f1DeckYAt(x1 + len), offs) };
+  }
+  function slideReady() { return MECH.slide && slideT() >= 1; }
+  // 車の体(x0〜x1、屋根の高さ関数 top、接地の高さ y)が、板(姿勢 offs・出ている割合 t)に当たるか。
+  // 板の上面が、車の接地面より16px(約0.14m、1番↔2番がつながる許容14px+余裕)以上高い所にあって、板の下面が屋根より下に入れば当たり
+  function slideHitsBody(x0, x1, top, y, offs, t) {
+    var g = slideGeom(offs, t), th = SLIDE.thick, w = g.b[0] - g.a[0];
+    if (w < 2) return false;
+    for (var x = Math.max(g.a[0], x0); x <= Math.min(g.b[0], x1); x += 4) {
+      var ty = g.a[1] + (g.b[1] - g.a[1]) * (x - g.a[0]) / w;
+      if (ty < y - 16 && ty + th > top(x) + 2) return true;
+    }
+    return false;
+  }
+  function slideHitsCar2(offs, t) {
+    var gsn = window.GAME_STATE, o = gsn && gsn.occupied[2];
+    if (!o) return false;
+    var pos = o.floor ? onFloor(o.floor, o.localX, o.localY) : [o.localX, o.localY], x0 = pos[0] - o.leftTireX;
+    return slideHitsBody(x0, x0 + o.w, carTopY(o, pos, 0), pos[1], offs, t);
+  }
+  function toggleSlide() {
+    var st = window.GAME_STATE, car = st && st.car;
+    slideT();
+    if (MECH.slide) {
+      if (car && !car.seated && car.phase !== 'docked' && car.route && car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 150) {
+        onWarn('車がスライド板の上を通るので、しまえません'); return;
+      }
+      MECH.slide = false; onInfo('スライド板を格納した(1番フロアの下へ)');
+    } else {
+      if (slideHitsCar2(curOffs(), 1)) { onWarn('2番の車に当たるので、スライド板を出せません'); return; }
+      MECH.slide = true; onInfo('スライド板を搬出した');
+    }
   }
 
   // ---- 2番扇動板(2番フロア前端の、外側に開くメッシュ床)----
@@ -645,6 +688,8 @@
       });
       return worst;
     }
+    // 出しているスライド板(1番の後端)が、2番の車に当たらないか(当たる状態に新しくなる動きだけ止める)
+    if (slideT() > 0.02 && slideHitsCar2(offs) && !slideHitsCar2(curOffs())) return 'スライド板が2番の車に当たる(スライド板を格納してください)';
     if (cars.length) {
       var wc = worstOverlap(offs);
       if (wc.v > FRAME_GAP_PX && wc.v > worstOverlap(curOffs()).v + 0.01) return wc.n + '番の車に当たる';
@@ -770,7 +815,7 @@
   function f1Connected() {
     var f1DeckY = function (x) { return floorsCfg.f1DeckYAt625 + floorsCfg.f1DeckYSlope * (x - 625); };
     var a = onFloor('F1', 850, f1DeckY(850)), b = onFloor('F2', 885, 314);
-    return !MECH.f2Flap && flapT() <= 0 && Math.abs(a[1] - b[1]) <= 14; // 2番扇動板を開いている間は1番への道が切れる
+    return !MECH.f2Flap && flapT() <= 0 && slideReady() && Math.abs(a[1] - b[1]) <= 14; // 2番扇動板を開いている間は1番への道が切れる
   }
 
   // ---- アウトリガー(6番のタイヤ張り出しを解除するためのジャッキ)----
@@ -859,7 +904,7 @@
   function resetAll() {
     holdStop(); if (typeof jackHoldStop === 'function') jackHoldStop();
     MECH.ramp = false; RAMP.t = 0; RAMP.last = null;
-    MECH.bridge = false; MECH.f2Flap = false;
+    MECH.bridge = false; MECH.f2Flap = false; MECH.slide = true; slideT.reset(1);
     MECH.lift = 0; MECH.hook = false; MECH.stopper = true;
     MECH.jack = 0; MECH.tireOut = false; MECH.lockR = MECH.lockL = true;
     applyF5();
@@ -878,7 +923,7 @@
     stepPinTarget: stepPinTarget, togglePin: togglePin,
     toggleStopper: toggleStopper, toggleBridge: toggleBridge, f5Slope: f5Slope,
     toggleRamp: toggleRamp, rampUpdate: rampUpdate, rampReady: rampReady, rampT: function () { rampUpdate(); return RAMP.t; },
-    toggleF2Flap: toggleF2Flap, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
+    toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
     holdStart: holdStart, holdStop: holdStop,
     atTravel: atTravel, upperConnected: upperConnected, f1Connected: f1Connected,
     cylPin: cylPin, cylLen: cylLen,

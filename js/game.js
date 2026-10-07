@@ -271,6 +271,11 @@
     if (!fm.rampReady()) out.push({ key: 'ramp', msg: '道板が出ていません。フロア昇降パネルの「道板を出す」で出してから進めてください。' });
     if (fm.tireOffGround()) out.push({ key: 'jack', msg: 'ジャッキで台車が浮いている間は車を動かせません。ジャッキを縮めて接地させてください。' });
     if (id === 'U') {
+      // 出しているスライド板(1番フロアの後端)が、2番へ入る車の前に当たる(1番へ渡る時は、板の上を走るので当たらない)
+      var sx0 = car.x - car.leftTireX;
+      if (fm.slideT() > 0.02 && fm.slideHitsBody(sx0, sx0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), car.y, undefined, fm.slideT())) {
+        out.push({ key: 'slide', phys: true, msg: 'スライド板に車の前が当たります。スライド板を格納してください。' });
+      }
       if (car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 30 && (fm.MECH.f2Flap || !fm.f1Connected())) {
         out.push({ key: 'f1link', msg: fm.MECH.f2Flap ? '2番扇動板が開いているので1番へは通れません。閉じてください。' : '1番へはまだ2番↔1番がつながっていません。フロア昇降パネルでつなげてください。' });
       }

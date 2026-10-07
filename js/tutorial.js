@@ -86,7 +86,9 @@
     fm.togglePin(k); await sleep(50);
     for (var i = 0; i < 12 && P[k] !== null; i++) { fm.holdStart(k, -1); await sleep(250); fm.holdStop(); await sleep(80); fm.togglePin(k); await sleep(50); }
   };
+  Auto.slideIn = async function () { if (MECH.slide) fm.toggleSlide(); for (var i = 0; i < 30 && fm.slideT() > 0; i++) await sleep(50); };
   Auto.move = async function (k, target) {
+    if (MECH.slide && gs.occupied['2']) await Auto.slideIn();   // 2番に車が載っていれば、棚を動かす前にスライド板をしまう
     await Auto.unpin(k);
     var e = E[k]; if (Math.abs(e.off - target) < 0.6) return;
     var dir = target < e.off ? -1 : 1; fm.holdStart(k, dir);
@@ -295,6 +297,7 @@
   loadSteps('3', { c: 4, lid: true, lidText: '3番も同じです。スロット「3」を選んで、「落し蓋を開ける」を押してください(2番の蓋は積んだ後なのでそのまま)。', callText: function () { return '3番に積む「3番用」の黄色い枠の車、' + cname('3') + 'を呼びます。' + (fixedDeck() ? '3番にも背の高い車(SUV)を入れます。3番 前(継ぎ目)の棚は宙段のために高く上げますが、3番 後ろは低くできるので、車の背が高くても荷姿はあまり高くなりません。' : ''); }, driveText: '◀ で前進。手前の3番の穴で止まります。' });
 
   // 5. 棚を上げて固定
+  add({ c: 5, t: 'スライド板を格納', x: '棚を上げる前に、1番と2番の間の「スライド板」をしまいます。出したままだと、上げた棚(1番)の後ろに付いている板が、2番に積んだ車に当たることがあります。「スライド板を格納」を押してください。', hint: '操作ボタンの「スライド板を格納」を押すと、板が1番フロアの下へ滑り込みます。', hl: function () { return MECH.slide ? el('btnSlide') : []; }, past: function () { return !MECH.slide; }, done: function () { return !MECH.slide && fm.slideT() <= 0; }, fix: Auto.slideIn });
   add({ c: 5, t: '前側のスイッチを開く', x: '上段に積み終わったら、棚(フロア)を上げて、セットピンで固定します。下の段に車を入れる時に、上の棚が低いとぶつかるからです。また、積んだ車の重さを、油圧だけでなくピンでも支えます。まず、トレーラー前寄りの光るスイッチ枠(1番・2番)をタップしてください。', hint: '絵の左寄り、運転席の後ろの柱の近くにあるスイッチ枠が「前側(1番・2番)」です。', ring: 'front', done: function () { return window.SWITCH_UI.current === 'front'; }, fix: function () { openPanel('front'); } });
   add({ c: 5, t: '1番 前: 上げてピンで固定', x: 'セットピンは「棚の少し下」の穴に差し、そのピンに棚を載せます。手順: ピンを抜く → ▲で上へ → ピンを差す → ▼で棚をピンに載せる。ピンの穴の番号は、棚の少し下が自動で入ります。下げる時は、いったん上げてからピンを抜きます(載ったままでは抜けません)。', sub: function () { return endCardSub('F1f'); }, hint: '「抜く(13)」のような表示は、いま差しているピンの穴番号です。棚が載っているとピンは抜けないので、▲で少し浮かせてから抜きます。', enter: function () { openPanel('front'); }, hl: function () { return swCard(0); }, done: function () { return raisedRest('F1f'); }, fix: async function () { openPanel('front'); await Auto.rest('F1f', -3); } });
   add({ c: 5, t: '1番 後・2番 前も同じ手順', x: '同じ手順で、1番 後(2枚目)と2番 前(3枚目)も、上まで上げてピンに載せてください。2番 前は、上の方では▲を押し続けると5番フロアの持ち上げにも使うので、ピンに載せたところで止めます。', sub: function () { return raisedRest('F1r') ? '2番 前: ' + endCardSub('F2f') : '1番 後: ' + endCardSub('F1r'); }, hint: '1番 後 → 2番 前 の順にやると分かりやすいです。2番 前は「ピンを抜く」ときに5番フロアが関係するメッセージが出たら、5番が平らか確認します。', enter: function () { openPanel('front'); }, hl: function () { return raisedRest('F1r') ? swCard(2) : swCard(1); }, done: function () { return raisedRest('F1r') && raisedRest('F2f'); }, fix: async function () { openPanel('front'); await Auto.rest('F1r', -3); await Auto.rest('F2f', -3); } });

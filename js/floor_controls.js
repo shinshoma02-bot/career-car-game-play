@@ -26,6 +26,7 @@
     if (fm.upperConnected()) msgs.push('3番↔下段(道板)つながり');
     if (!fm.MECH.ramp) msgs.push('道板 格納中(積み込み前に出す)');
     if (fm.MECH.bridge) msgs.push('4番↔5番(扇動板)つながり');
+    if (!fm.MECH.slide) msgs.push('スライド板 格納(1番へは通れない)');
     if (fm.MECH.f2Flap) msgs.push('2番扇動板 開(1番へは通れない)');
     if (fm.tireOffGround()) msgs.push('台車タイヤ浮いています');
     statusEl.textContent = msgs.length ? msgs.join(' / ') : '全て走行位置';
@@ -39,6 +40,8 @@
   btnBridge.addEventListener('click', function () { fm.toggleBridge(); renderMechButtons(); });
   var btnRamp = document.getElementById('btnRamp');
   btnRamp.addEventListener('click', function () { fm.toggleRamp(); renderMechButtons(); });
+  var btnSlide = document.getElementById('btnSlide');
+  btnSlide.addEventListener('click', function () { fm.toggleSlide(); renderMechButtons(); });
   var btnF2Flap = document.getElementById('btnF2Flap');
   btnF2Flap.addEventListener('click', function () { fm.toggleF2Flap(); renderMechButtons(); });
   function renderMechButtons() {
@@ -48,6 +51,8 @@
     btnBridge.classList.toggle('on', fm.MECH.bridge);
     btnRamp.textContent = fm.MECH.ramp ? '道板をしまう' : '道板を出す';
     btnRamp.classList.toggle('on', fm.MECH.ramp);
+    btnSlide.textContent = fm.MECH.slide ? 'スライド板を格納' : 'スライド板を搬出';
+    btnSlide.classList.toggle('on', fm.MECH.slide);
     btnF2Flap.textContent = fm.MECH.f2Flap ? '2番扇動板を閉じる' : '2番扇動板を開く(4番の長い車用)';
     btnF2Flap.classList.toggle('on', fm.MECH.f2Flap);
   }
