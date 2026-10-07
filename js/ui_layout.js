@@ -14,6 +14,16 @@
   var mb = $('modeBar'), miss = $('missCount');
   if (mb && miss) { miss.style.marginLeft = ''; mb.appendChild(miss); }
 
+  // 上の情報欄(modeBar)の高さを --mbh に入れる(ステージの固定部分が、その下に付くように)。回転・折り返しで高さが変わった時も追いかける
+  (function () {
+    var root = document.documentElement, last = -1;
+    function setH() {
+      var st = window.getComputedStyle(mb), h = mb && st.display !== 'none' && st.position === 'sticky' ? Math.round(mb.getBoundingClientRect().height) : 0;
+      if (h !== last) { last = h; root.style.setProperty('--mbh', h + 'px'); }
+    }
+    if (mb) { setH(); if (window.ResizeObserver) new ResizeObserver(setH).observe(mb); window.addEventListener('resize', setH); setInterval(setH, 500); }
+  })();
+
   // スイッチの説明文は、? を押した時だけ出す
   var h3 = document.querySelector('#floorPanel h3'), hint = $('swHint'), close = $('btnSwClose');
   if (h3 && hint) {

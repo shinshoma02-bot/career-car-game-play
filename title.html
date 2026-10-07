@@ -193,6 +193,18 @@
 .scene.t-night .road3d .strip { background-image: url(assets/ui/scenery/road_night.webp?v=1); }
 .scene.t-night.w-rain .road3d .strip { background-image: url(assets/ui/scenery/road_night_wet.webp?v=1); }
 
+/* ---- 2026-10-07 道路・景色の継ぎ目で一瞬白く(背景が透けて)見える対策 ----
+   (1) 路面の下に暗い路面色を敷く: タイルの継ぎ目・端のサブピクセルのすき間・画像の読み込み前に、空の明るい色ではなく路面の色が見えるようにする
+   (2) backface-visibility と translate3d で、継ぎ目(ループの折り返し)で GPU のレイヤーが作り直されないようにする
+   (3) 画像を読み込み終えてからアニメーションを始める(.ready が付くまでは路面・景色を出さない。3秒で打ち切り) */
+.road3d { background: #3b4046; backface-visibility: hidden; }
+.road3d .strip, .sl { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+@keyframes slide { from { transform: translate3d(calc(-1 * var(--tw)), 0, 0); } to { transform: translate3d(0, 0, 0); } }
+.scene:not(.ready) .sl, .scene:not(.ready) .road3d { opacity: 0; }
+.scene .sl, .scene .road3d { transition: opacity .35s ease; }
+.scene.ready .sl, .scene.ready .road3d { opacity: 1; }
+.scene.ready.w-rain .far { opacity: .35; } .scene.ready.w-rain .mid { opacity: .85; }
+
   /* ---- D29 枠なしメニュー assets/ui/title_menu_example.css ---- */
 /* メイン画面(title.html)のタイトル・メニューを、背景に溶けこむ「枠なし」のデザインにする例。DEV_HANDOFF_MEMO.md の D29 を参照。
    title.html の <style> の最後(背景の例 title_scenery_example.css の後)に足すだけで効く。HTML の変更は1か所だけ:
@@ -259,14 +271,6 @@
 }
 
 
-/* トレーラーの選択(モードの前。semi-6b はシミュレーションだけ) */
-.trailerRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 clamp(8px, 1.6vh, 14px); }
-.trailerRow .tl { flex-basis: 100%; font-size: clamp(11px, 1.7vh, 13px); letter-spacing: .12em; color: var(--ink-dim); text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
-.tbtn { all: unset; box-sizing: border-box; cursor: pointer; padding: 6px 12px; font-size: clamp(11px, 1.8vh, 14px); color: #fff; border-bottom: 2px solid rgba(255, 255, 255, .25); text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
-.tbtn.on { border-bottom-color: var(--accent); color: #7fe0c0; font-weight: 700; }
-.tbtn:focus-visible, .tbtn:hover { background: rgba(255, 255, 255, .1); }
-.tnote { margin: 0 0 8px; font-size: 12px; color: #f2c060; text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
-.card.off { opacity: .35; pointer-events: none; }
 </style>
 <script>
   // 長押しメニュー(画像を保存/コピー)・ピンチ/ダブルタップ拡大を無効化
@@ -305,24 +309,28 @@
 
   <section class="panel" id="modePanel" aria-labelledby="modeTitle">
     <h2 id="modeTitle">ゲームモード</h2>
-    <div class="trailerRow" role="group" aria-label="トレーラー">
-      <span class="tl">トレーラー</span>
-      <button type="button" class="tbtn on" data-trailer="semi-6" aria-pressed="true">セミトレ(6台+宙段)</button>
-      <button type="button" class="tbtn" data-trailer="semi-6b" aria-pressed="false">新型 semi-6b(6台)</button>
-    </div>
-    <p class="tnote" id="trailerNote" hidden>semi-6b はシミュレーションのみ(開発中)</p>
-    <button class="card" data-mode="tutorial"><span class="ico">学</span><span><b>チュートリアル</b><small>操作とルールを順番に覚える</small></span><span class="go">›</span></button>
     <button class="card" data-mode="time"><span class="ico">⏱</span><span><b>タイムアタック</b><small>制限時間内に何サイクルこなせるか(6分)</small></span><span class="go">›</span></button>
     <button class="card" data-mode="real"><span class="ico">⚠</span><span><b>リアルモード</b><small>ミスした時点で終了。何がダメだったかを表示</small></span><span class="go">›</span></button>
-    <button class="card" data-mode="sim"><span class="ico">🛠</span><span><b>シミュレーション</b><small>自由に操作できる練習用。時間制限・終了なし</small></span><span class="go">›</span></button>
+    <button class="card" data-mode="tutsim"><span class="ico">学</span><span><b>チュートリアル/シミュレーション</b><small>操作を覚える・自由に練習する</small></span><span class="go">›</span></button>
   </section>
 
   <section class="panel" id="diffPanel" aria-labelledby="diffTitle" hidden>
-    <button class="back" id="btnBack">‹ 戻る</button>
+    <button class="back" data-back="mode">‹ 戻る</button>
     <h2 id="diffTitle">難易度</h2>
     <button class="card easy" data-diff="easy"><span class="ico">E</span><span><b>イージー</b><small>積む車が全部見える・解説あり</small></span><span class="go">›</span></button>
     <button class="card normal" data-diff="normal"><span class="ico">N</span><span><b>ノーマル</b><small>積む車が全部見える・解説なし</small></span><span class="go">›</span></button>
     <button class="card hard" data-diff="hard"><span class="ico">H</span><span><b>ハード</b><small>車は1台ずつ(◀▶で選ぶ)・解説なし</small></span><span class="go">›</span></button>
+  </section>
+  <section class="panel" id="tsPanel" aria-labelledby="tsTitle" hidden>
+    <button class="back" data-back="mode">‹ 戻る</button>
+    <h2 id="tsTitle">チュートリアル/シミュレーション</h2>
+    <button class="card" data-ts="tutorial"><span class="ico">学</span><span><b>チュートリアル</b><small>操作とルールを順番に覚える</small></span><span class="go">›</span></button>
+    <button class="card" data-ts="sim"><span class="ico">🛠</span><span><b>シミュレーション</b><small>自由に操作できる練習用。時間制限・終了なし</small></span><span class="go">›</span></button>
+  </section>
+
+  <section class="panel" id="trailerPanel" aria-labelledby="trailerTitle" hidden>
+    <button class="back" data-back="ts">‹ 戻る</button>
+    <h2 id="trailerTitle">トレーラーを選ぶ</h2>
   </section>
 </main>
 
@@ -334,6 +342,18 @@
     { k: 'drive', cx: 328.0, cy: 170.0, size: 60 },
     { k: 'trailer', cx: 933.5, cy: 168.5, size: 60 } ] };
   var GAME_URL = 'index.html';
+  // トレーラーの一覧(ここだけ直せば選択肢・ランダム選択が変わる)。modes に入っているモードで使える。
+  //   sim = 選択画面に出る(自分で選ぶ)。time/real = 使えるものからランダムに選ばれる(tutorial は semi-6 固定でここは使わない)。
+  //   semi-6b を time/real でも使えるようにする時は、modes に 'time', 'real' を足すだけ。
+  var TRAILERS = [
+    { id: 'semi-6',  name: 'セミトレ(6台+宙段)', desc: '従来のキャリアカー。6台+宙段に積む', modes: ['sim', 'time', 'real'] },
+    { id: 'semi-6b', name: 'ロルフォ Blizzard J1(6台)', desc: '新型トレーラー(開発中)', modes: ['sim'] }
+  ];
+  function pickTrailer(m) {
+    var c = TRAILERS.filter(function (t) { return t.modes.indexOf(m) >= 0; });
+    return (c.length ? c[Math.floor(Math.random() * c.length)] : TRAILERS[0]).id;
+  }
+  window.TITLE_TRAILERS = TRAILERS; window.pickTrailer = pickTrailer;   // 確認用
   var NAMES = { tutorial: 'チュートリアル', time: 'タイムアタック', real: 'リアルモード', sim: 'シミュレーション' };
   var $ = function (id) { return document.getElementById(id); };
   var rig = $('rig'), menu = $('menu'), scene = $('scene');
@@ -351,17 +371,34 @@
     rig.appendChild(box);
   });
 
+  // 景色・路面の画像を先に読み込んでから動かす(読み込み前の白い瞬間を出さない)
+  (function () {
+    var urls = [], seen = {};
+    ['.far', '.mid', '.near', '.grail', '.road3d .strip'].forEach(function (sel) {
+      var el = scene.querySelector(sel); if (!el) return;
+      var m = /url\(["']?([^"')]+)["']?\)/.exec(getComputedStyle(el).backgroundImage || '');
+      if (m && !seen[m[1]]) { seen[m[1]] = 1; urls.push(m[1]); }
+    });
+    var left = urls.length, fin = false;
+    function ok() { if (fin) return; fin = true; scene.classList.add('ready'); }
+    if (!left) { ok(); return; }
+    urls.forEach(function (u) { var i = new Image(); i.onload = i.onerror = function () { if (--left <= 0) ok(); }; i.src = u; if (i.decode) i.decode().then(function () {}, function () {}); });
+    setTimeout(ok, 3000);
+  })();
+
   var mode = null, leaving = false, trailer = 'semi-6';
+  var PANELS = ['mode', 'diff', 'ts', 'trailer'], cur = 'mode';
   function show(panel) {
-    $('modePanel').hidden = panel !== 'mode';
-    $('diffPanel').hidden = panel !== 'diff';
+    cur = panel;
+    PANELS.forEach(function (p) { $(p + 'Panel').hidden = p !== panel; });
     var first = document.querySelector('#' + panel + 'Panel .card, #' + panel + 'Panel .back');
     if (first) first.focus({ preventScroll: true });
   }
-  function go(m, d) {
+  function go(m, d, t) {
+    trailer = t || 'semi-6';   // t が無い(チュートリアル)時は trailer= を付けない = semi-6
     if (leaving) return;
     leaving = true;
-    var url = GAME_URL + '?r=' + Date.now() + '#mode=' + m + (d ? '&diff=' + d : '') + (trailer !== 'semi-6' ? '&trailer=' + trailer : '');
+    var url = GAME_URL + '?r=' + Date.now() + '#mode=' + m + (d ? '&diff=' + d : '') + (t ? '&trailer=' + trailer : '');
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce) { location.href = url; return; }
     menu.classList.add('leave');
@@ -373,28 +410,35 @@
     setTimeout(next, 2200);                                  // 念のため
   }
 
-  // トレーラー選択: semi-6b は、得点・難易度の調整が済むまで、シミュレーションだけ選べる
-  Array.prototype.forEach.call(document.querySelectorAll('[data-trailer]'), function (b) {
-    b.addEventListener('click', function () {
-      trailer = b.getAttribute('data-trailer');
-      Array.prototype.forEach.call(document.querySelectorAll('[data-trailer]'), function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
-      Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (c) { c.classList.toggle('off', trailer === 'semi-6b' && c.getAttribute('data-mode') !== 'sim'); });
-      $('trailerNote').hidden = trailer !== 'semi-6b';
-    });
+  // トレーラー選択画面(シミュレーション用)。一覧から作る
+  TRAILERS.filter(function (t) { return t.modes.indexOf('sim') >= 0; }).forEach(function (t) {
+    var b = document.createElement('button');
+    b.className = 'card'; b.setAttribute('data-trailer', t.id);
+    b.innerHTML = '<span class="ico"></span><span><b></b><small></small></span><span class="go">›</span>';
+    b.querySelector('b').textContent = t.name; b.querySelector('small').textContent = t.desc;
+    b.addEventListener('click', function () { go('sim', null, t.id); });
+    $('trailerPanel').appendChild(b);
   });
   Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
     b.addEventListener('click', function () {
       mode = b.getAttribute('data-mode');
-      if (mode === 'sim' || mode === 'tutorial') { go(mode); return; }   // シミュレーション・チュートリアルは難易度なし(ゲーム側の仕様: 全部見えて解説あり)
+      if (mode === 'tutsim') { show('ts'); return; }
       $('diffTitle').textContent = NAMES[mode] + ' の難易度';
       show('diff');
     });
   });
-  Array.prototype.forEach.call(document.querySelectorAll('[data-diff]'), function (b) {
-    b.addEventListener('click', function () { go(mode, b.getAttribute('data-diff')); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-ts]'), function (b) {
+    b.addEventListener('click', function () {
+      if (b.getAttribute('data-ts') === 'tutorial') go('tutorial');   // チュートリアルは semi-6 固定・難易度なし
+      else show('trailer');
+    });
   });
-  $('btnBack').addEventListener('click', function () { show('mode'); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('diffPanel').hidden) show('mode'); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-diff]'), function (b) {
+    b.addEventListener('click', function () { go(mode, b.getAttribute('data-diff'), pickTrailer(mode)); });   // タイムアタック・リアルはトレーラーをランダムに選ぶ
+  });
+  function back() { var b = document.querySelector('#' + cur + 'Panel [data-back]'); if (b) show(b.getAttribute('data-back')); }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-back]'), function (b) { b.addEventListener('click', back); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') back(); });
 
   // ゲームから「戻る」で帰ってきた時(ページが保存されていた場合)は元の状態に戻す
   window.addEventListener('pageshow', function (e) {
@@ -405,6 +449,6 @@
   });
 })();
 </script>
-<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 226</div>
+<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 227</div>
 </body>
 </html>

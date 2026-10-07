@@ -471,6 +471,10 @@
     var t = hlEls[0]; if (!t || !t.getBoundingClientRect) return;
     var top = $('stickyTop').getBoundingClientRect().bottom, r = t.getBoundingClientRect(), vh = window.innerHeight;
     if (r.height === 0) return;
+    if (window.VIEW && VIEW.isCompactLand && VIEW.isCompactLand()) {   // スマホ横: 操作盤は右の列の中でスクロールするので、その中で見える所へ
+      if (r.top < 4 || r.bottom > vh - 84) t.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
     if (r.top < top + 4 || r.bottom > vh - 84) {
       var want = r.top - (top + Math.max(8, (vh - top - r.height) / 3));
       window.scrollBy({ top: want, behavior: 'smooth' });

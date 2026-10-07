@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>キャリアカーゲーム</title>
 <style>
   /* 確認用の欄(当たり判定・レイヤー切り替え・読み込み表示)は、URLに debug を付けた時だけ出す(下の D8 の部分で非表示にしている) */
@@ -301,33 +301,33 @@
     color: #1b1f24; font-size: 13px; font-weight: bold; line-height: 1.2; text-align: center;
     background: none;
     border: 14px solid transparent; border-width: 14px; margin: 0;
-    border-image: url(assets/common/ui/btn_plate.png?v=226) 14 fill / 14px stretch;
+    border-image: url(assets/common/ui/btn_plate.png?v=227) 14 fill / 14px stretch;
     border-radius: 0;
     text-shadow: 0 1px 0 rgba(255,255,255,.35);
   }
-  .plate:active, #floorPanel .mechRow button:active, #chockPanel button:active, #btnOrient:active, #btnOrientCar:active, #deckDrawerHandle:active { border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=226); padding-top: 2px; }
-  #floorPanel .mechRow button.on, #chockPanel button.on, #btnOrientCar { border-image-source: url(assets/common/ui/btn_plate_go.png?v=226); }
-  #floorPanel .mechRow button.on:active, #btnOrientCar:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=226); }
-  #btnStopper:not(.on), #btnLid { border-image-source: url(assets/common/ui/btn_plate_warn.png?v=226); }
-  #btnStopper:not(.on):active, #btnLid:active { border-image-source: url(assets/common/ui/btn_plate_warn_pressed.png?v=226); }
-  #floorPanel .mechRow button.go { border-image-source: url(assets/common/ui/btn_plate_go.png?v=226); }
-  #floorPanel .mechRow button.go:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=226); }
-  #chockPanel button:disabled, #btnOrient:disabled { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=226); opacity: 1; color: #6b7078; text-shadow: none; }
+  .plate:active, #floorPanel .mechRow button:active, #chockPanel button:active, #btnOrient:active, #btnOrientCar:active, #deckDrawerHandle:active { border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=227); padding-top: 2px; }
+  #floorPanel .mechRow button.on, #chockPanel button.on, #btnOrientCar { border-image-source: url(assets/common/ui/btn_plate_go.png?v=227); }
+  #floorPanel .mechRow button.on:active, #btnOrientCar:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=227); }
+  #btnStopper:not(.on), #btnLid { border-image-source: url(assets/common/ui/btn_plate_warn.png?v=227); }
+  #btnStopper:not(.on):active, #btnLid:active { border-image-source: url(assets/common/ui/btn_plate_warn_pressed.png?v=227); }
+  #floorPanel .mechRow button.go { border-image-source: url(assets/common/ui/btn_plate_go.png?v=227); }
+  #floorPanel .mechRow button.go:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=227); }
+  #chockPanel button:disabled, #btnOrient:disabled { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=227); opacity: 1; color: #6b7078; text-shadow: none; }
   #floorPanel .mechRow button::before, #chockPanel #btnLid::before, #chockPanel #btnChockSet::before, #chockPanel #btnChockFront::before, #chockPanel #btnChockRear::before, #btnOrient::before, #btnOrientCar::before, #deckDrawerHandle::before {
     content: ''; flex: none; width: 26px; height: 26px; background-position: center; background-size: contain; background-repeat: no-repeat;
   }
   #modeBar > span:empty { display: none; }
   #floorPanel .mechRow button.hold6b::before { display: none; }   /* semi-6b の仮の昇降ボタン(アイコン無し) */
-  #btnStopper::before { background-image: url(assets/common/ui/ic_stopper.png?v=226); }
-  #btnRamp::before { background-image: url(assets/common/ui/ic_ramp.png?v=226); }
-  #btnBridge::before { background-image: url(assets/common/ui/ic_bridge.png?v=226); }
-  #btnF2Flap::before { background-image: url(assets/common/ui/ic_flap2.png?v=226); }
-  #btnLid::before { background-image: url(assets/common/ui/ic_lid.png?v=226); }
-  #btnChockSet::before { background-image: url(assets/common/ui/ic_chock.png?v=226); }
-  #btnChockFront::before { background-image: url(assets/common/ui/ic_front.png?v=226); }
-  #btnChockRear::before { background-image: url(assets/common/ui/ic_rear.png?v=226); }
-  #btnOrient::before, #btnOrientCar::before { background-image: url(assets/common/ui/ic_orient.png?v=226); }
-  #deckDrawerHandle::before { background-image: url(assets/common/ui/ic_drawer.png?v=226); }
+  #btnStopper::before { background-image: url(assets/common/ui/ic_stopper.png?v=227); }
+  #btnRamp::before { background-image: url(assets/common/ui/ic_ramp.png?v=227); }
+  #btnBridge::before { background-image: url(assets/common/ui/ic_bridge.png?v=227); }
+  #btnF2Flap::before { background-image: url(assets/common/ui/ic_flap2.png?v=227); }
+  #btnLid::before { background-image: url(assets/common/ui/ic_lid.png?v=227); }
+  #btnChockSet::before { background-image: url(assets/common/ui/ic_chock.png?v=227); }
+  #btnChockFront::before { background-image: url(assets/common/ui/ic_front.png?v=227); }
+  #btnChockRear::before { background-image: url(assets/common/ui/ic_rear.png?v=227); }
+  #btnOrient::before, #btnOrientCar::before { background-image: url(assets/common/ui/ic_orient.png?v=227); }
+  #deckDrawerHandle::before { background-image: url(assets/common/ui/ic_drawer.png?v=227); }
   #chockPanel #btnChockFront, #chockPanel #btnChockRear { font-size: 0; padding: 0 4px; min-width: 56px; }   /* ◀前へ・後ろへ▶ は、アイコンだけ */
   #chockPanel #btnChockFront::after { content: '前へ'; font-size: 12px; }
   #chockPanel #btnChockRear::after { content: '後ろへ'; font-size: 12px; }
@@ -336,90 +336,90 @@
   /* 輪止め・落し蓋のスロット: 棚の名札(slot_*)。選んでいる番号は黄色い縁 */
   #slotSel button { box-sizing: border-box; width: 46px; height: 46px; min-width: 0; padding: 0; border: 0; border-radius: 0; font-size: 0; color: transparent; background: center / contain no-repeat; }
   #slotSel button.on { background-color: transparent; border: 0; }
-  #slotSel button[data-slot="1"] { background-image: url(assets/common/ui/slot_1.png?v=226); } #slotSel button[data-slot="1"].on { background-image: url(assets/common/ui/slot_1_selected.png?v=214); }
-  #slotSel button[data-slot="2"] { background-image: url(assets/common/ui/slot_2.png?v=226); } #slotSel button[data-slot="2"].on { background-image: url(assets/common/ui/slot_2_selected.png?v=214); }
-  #slotSel button[data-slot="3"] { background-image: url(assets/common/ui/slot_3.png?v=226); } #slotSel button[data-slot="3"].on { background-image: url(assets/common/ui/slot_3_selected.png?v=214); }
-  #slotSel button[data-slot="4"] { background-image: url(assets/common/ui/slot_4.png?v=226); } #slotSel button[data-slot="4"].on { background-image: url(assets/common/ui/slot_4_selected.png?v=214); }
-  #slotSel button[data-slot="5"] { background-image: url(assets/common/ui/slot_5.png?v=226); } #slotSel button[data-slot="5"].on { background-image: url(assets/common/ui/slot_5_selected.png?v=214); }
-  #slotSel button[data-slot="6"] { background-image: url(assets/common/ui/slot_6.png?v=226); } #slotSel button[data-slot="6"].on { background-image: url(assets/common/ui/slot_6_selected.png?v=214); }
-  #slotSel button[data-slot="7"] { background-image: url(assets/common/ui/slot_mid.png?v=226); } #slotSel button[data-slot="7"].on { background-image: url(assets/common/ui/slot_mid_selected.png?v=214); }
+  #slotSel button[data-slot="1"] { background-image: url(assets/common/ui/slot_1.png?v=227); } #slotSel button[data-slot="1"].on { background-image: url(assets/common/ui/slot_1_selected.png?v=214); }
+  #slotSel button[data-slot="2"] { background-image: url(assets/common/ui/slot_2.png?v=227); } #slotSel button[data-slot="2"].on { background-image: url(assets/common/ui/slot_2_selected.png?v=214); }
+  #slotSel button[data-slot="3"] { background-image: url(assets/common/ui/slot_3.png?v=227); } #slotSel button[data-slot="3"].on { background-image: url(assets/common/ui/slot_3_selected.png?v=214); }
+  #slotSel button[data-slot="4"] { background-image: url(assets/common/ui/slot_4.png?v=227); } #slotSel button[data-slot="4"].on { background-image: url(assets/common/ui/slot_4_selected.png?v=214); }
+  #slotSel button[data-slot="5"] { background-image: url(assets/common/ui/slot_5.png?v=227); } #slotSel button[data-slot="5"].on { background-image: url(assets/common/ui/slot_5_selected.png?v=214); }
+  #slotSel button[data-slot="6"] { background-image: url(assets/common/ui/slot_6.png?v=227); } #slotSel button[data-slot="6"].on { background-image: url(assets/common/ui/slot_6_selected.png?v=214); }
+  #slotSel button[data-slot="7"] { background-image: url(assets/common/ui/slot_mid.png?v=227); } #slotSel button[data-slot="7"].on { background-image: url(assets/common/ui/slot_mid_selected.png?v=214); }
   #slotSel button:active { filter: brightness(.85); }
 
   /* 前進(◀ 緑)・後退(▶ 橙)の大きな丸い押ボタン(押している間は沈む。クラス down は ui_layout.js が付ける) */
   #arrowGroup { background: none; border: 0; padding: 0; gap: 14px; }
   #arrowGroup .arrowBtn { width: 76px; height: 76px; border: 0; border-radius: 0; background-color: transparent; background-position: center; background-size: contain; background-repeat: no-repeat; font-size: 0; color: transparent; }
-  #btnLeft { background-image: url(assets/common/ui/btn_drive_fwd.png?v=226); }
-  #btnRight { background-image: url(assets/common/ui/btn_drive_back.png?v=226); }
-  #btnLeft:active, #btnLeft.down { background-image: url(assets/common/ui/btn_drive_fwd_pressed.png?v=226); background-color: transparent; }
-  #btnRight:active, #btnRight.down { background-image: url(assets/common/ui/btn_drive_back_pressed.png?v=226); background-color: transparent; }
+  #btnLeft { background-image: url(assets/common/ui/btn_drive_fwd.png?v=227); }
+  #btnRight { background-image: url(assets/common/ui/btn_drive_back.png?v=227); }
+  #btnLeft:active, #btnLeft.down { background-image: url(assets/common/ui/btn_drive_fwd_pressed.png?v=227); background-color: transparent; }
+  #btnRight:active, #btnRight.down { background-image: url(assets/common/ui/btn_drive_back_pressed.png?v=227); background-color: transparent; }
   body { padding-bottom: 104px; }
 
   /* 上の情報欄・下の操作パネルの背景 */
-  #modeBar { box-sizing: border-box; background: none; border: solid transparent; border-width: 0 24px 6px 24px; border-image: url(assets/common/ui/hud_bar.png?v=226) 0 24 6 24 fill / 0 24px 6px 24px stretch; padding: 8px 0 4px; gap: 8px; color: #dfe8f2; min-height: 56px; align-items: center; }
+  #modeBar { box-sizing: border-box; background: none; border: solid transparent; border-width: 0 24px 6px 24px; border-image: url(assets/common/ui/hud_bar.png?v=227) 0 24 6 24 fill / 0 24px 6px 24px stretch; padding: 8px 0 4px; gap: 8px; color: #dfe8f2; min-height: 56px; align-items: center; }
   #modeBar #modeBarName { flex: 1 1 100%; font-size: 14px; }
-  #modeBar > span:not(#modeBarName):not(#missCount) { box-sizing: border-box; border: 8px solid transparent; border-image: url(assets/common/ui/meter_box.png?v=226) 8 fill / 8px stretch; padding: 0 2px; min-width: 56px; text-align: center; font-size: 13px; color: #7dfcd0; font-weight: bold; line-height: 1.1; }
+  #modeBar > span:not(#modeBarName):not(#missCount) { box-sizing: border-box; border: 8px solid transparent; border-image: url(assets/common/ui/meter_box.png?v=227) 8 fill / 8px stretch; padding: 0 2px; min-width: 56px; text-align: center; font-size: 13px; color: #7dfcd0; font-weight: bold; line-height: 1.1; }
   #modeBar #modeBarScore { margin-left: auto; color: #ffd34d; }
   #modeBar #missCount { margin-left: 4px; font-size: 14px; }
   #toolbar { display: none; }
   body.debug #toolbar { display: flex; }
   #status { display: none; }
   body.debug #status { display: block; }
-  #floorPanel, #chockPanel, #controls { box-sizing: border-box; background: none; border: solid transparent; border-width: 12px 16px 8px 16px; border-image: url(assets/common/ui/panel_bg.png?v=226) 12 16 8 16 fill / 12px 16px 8px 16px stretch; margin-top: 2px; }
+  #floorPanel, #chockPanel, #controls { box-sizing: border-box; background: none; border: solid transparent; border-width: 12px 16px 8px 16px; border-image: url(assets/common/ui/panel_bg.png?v=227) 12 16 8 16 fill / 12px 16px 8px 16px stretch; margin-top: 2px; }
 
   /* A-3 必要な時だけ出す: スイッチの説明文は ? を押した時だけ。車の一覧は引き出し式 */
   #swHint { display: none !important; }
   #swHint.show { display: block !important; }
   #btnHelp, #btnSwClose { box-sizing: border-box; width: 36px; height: 36px; padding: 0; margin-left: 8px; vertical-align: middle; border: 0; background: center / contain no-repeat; font-size: 0; color: transparent; cursor: pointer; }
-  #btnHelp { background-image: url(assets/common/ui/ic_help.png?v=226); }
-  #floorPanel #btnSwClose { width: 36px; height: 36px; padding: 0; margin-left: 4px; border: 0; background: center / contain no-repeat url(assets/common/ui/ic_close.png?v=226); font-size: 0; }
+  #btnHelp { background-image: url(assets/common/ui/ic_help.png?v=227); }
+  #floorPanel #btnSwClose { width: 36px; height: 36px; padding: 0; margin-left: 4px; border: 0; background: center / contain no-repeat url(assets/common/ui/ic_close.png?v=227); font-size: 0; }
   #deckDrawerHandle { width: 100%; justify-content: flex-start; }
   #deckDrawerHandle .cnt { margin-left: auto; font-weight: normal; }
   #deckDrawer { display: none; }
   #deckDrawer.open { display: block; margin-top: 6px; }
 
   /* 今は押せない操作(車が道板・扇動板を通っている間など)は、灰色の板にする(ui_layout.js が na を付ける。押すとゲームが理由を出す) */
-  #floorPanel .mechRow button.na, #floorPanel .mechRow button.na:active { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=226); color: #6b7078; text-shadow: none; padding-top: 0; }
+  #floorPanel .mechRow button.na, #floorPanel .mechRow button.na:active { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=227); color: #6b7078; text-shadow: none; padding-top: 0; }
   #floorPanel .mechRow button.na::before { opacity: .45; }
 
   /* モード・難易度・結果の画面のボタンも、同じ板にそろえる(もう一度=緑) */
-  .modeBtn { box-sizing: border-box; background: none; border: 14px solid transparent; border-image: url(assets/common/ui/btn_plate.png?v=226) 14 fill / 14px stretch; border-radius: 0; color: #1b1f24; text-shadow: 0 1px 0 rgba(255,255,255,.35); padding: 4px 8px; min-height: 52px; }
+  .modeBtn { box-sizing: border-box; background: none; border: 14px solid transparent; border-image: url(assets/common/ui/btn_plate.png?v=227) 14 fill / 14px stretch; border-radius: 0; color: #1b1f24; text-shadow: 0 1px 0 rgba(255,255,255,.35); padding: 4px 8px; min-height: 52px; }
   .modeBtn small { color: #3a4048; }
-  .modeBtn:active { background: none; border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=226); }
-  #btnRetry.modeBtn { border-image-source: url(assets/common/ui/btn_plate_go.png?v=226); }
-  #btnRetry.modeBtn:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=226); }
+  .modeBtn:active { background: none; border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=227); }
+  #btnRetry.modeBtn { border-image-source: url(assets/common/ui/btn_plate_go.png?v=227); }
+  #btnRetry.modeBtn:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=227); }
 
   /* ===== スマホ幅: 下にスクロールしなくても、操作が1画面に収まるように詰める(車の一覧だけ、下にスクロールでよい。2026-10-06) =====
      幅 700px 以下だけに効く(パソコンの広い画面は、今まで通り)。ボタンの高さ・余白・段数を減らす */
-  @media (max-width: 700px) {
+  @media (max-width: 700px), (orientation: landscape) and (max-height: 520px) {
     /* 上のバー: 3段(113px) → 2段。名前の行にまとめ、数値は小さめに */
     #modeBar { border-width: 0 12px 4px 12px; border-image-slice: 0 24 6 24; padding: 4px 0 2px; gap: 3px 5px; min-height: 0; }
-    #modeBar #modeBarName { flex: 1 1 auto; font-size: 12px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #modeBar > span:not(#modeBarName):not(#missCount) { border-width: 5px; border-image-slice: 8; padding: 0 1px; min-width: 0; font-size: 11px; line-height: 1.2; }
+    #modeBar #modeBarName { flex: 1 1 auto; font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #modeBar > span:not(#modeBarName):not(#missCount) { border-width: 5px; border-image-slice: 8; padding: 0 1px; min-width: 0; font-size: 12px; line-height: 1.2; }
     #modeBar #modeBarScore { margin-left: auto; }
     #modeBar #missCount { margin-left: 2px; font-size: 12px; }
-    #btnDispatch { font-size: 11px; padding: 3px 6px; }
+    #btnDispatch { font-size: 12px; padding: 0 8px; min-height: 30px; }
 
     /* フロア操作: 見出し(スイッチ操作・?・✕)を細く、ボタン4つは2列で小さめ(3段178px → 2段) */
     #floorPanel, #chockPanel, #controls { border-width: 8px 12px 6px 12px; border-image-width: 8px 12px 6px 12px; margin-top: 1px; }
     #floorPanel { padding: 0; }
     #floorPanel h3 { margin: 0 0 2px; font-size: 12px; display: flex; align-items: center; }
-    #btnHelp, #floorPanel #btnSwClose { width: 28px; height: 28px; margin-left: 4px; }
+    #btnHelp, #floorPanel #btnSwClose { width: 40px; height: 40px; margin-left: 4px; }
     .mechRow { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 6px; margin-top: 4px; }
-    #floorPanel .mechRow button, #chockPanel button, #btnOrient, #btnOrientCar, #deckDrawerHandle { min-height: 36px; font-size: 12px; padding: 0 6px 0 4px; border-width: 10px; border-image-width: 10px; }
+    #floorPanel .mechRow button, #chockPanel button, #btnOrient, #btnOrientCar, #deckDrawerHandle { min-height: 44px; font-size: 13px; padding: 0 6px 0 4px; border-width: 10px; border-image-width: 10px; }
     #floorPanel .mechRow button { width: 100%; justify-content: flex-start; }
 
     /* 輪止め: スロット1〜6を1段(98px → 40px)。説明文は隠す。ボタン3つも1段にまとめる */
     #slotSel > span { display: none; }
-    #slotSel { gap: 6px; flex-wrap: nowrap; justify-content: space-between; }
-    #slotSel button { width: 42px; height: 42px; flex: 0 0 auto; }
+    #slotSel { gap: 4px; flex-wrap: nowrap; justify-content: space-between; }
+    #slotSel button { width: auto; max-width: 46px; height: 44px; flex: 1 1 0; min-width: 0; }
     #chockPanel { gap: 4px 6px; }
     #chockPanel #btnChockSet { flex: 1 1 0; min-width: 0; font-size: 11px; }
     #chockPanel #btnChockFront, #chockPanel #btnChockRear { flex: 0 0 auto; min-width: 48px; }
     #chockPanel #btnChockFront::after, #chockPanel #btnChockRear::after { font-size: 11px; }
     /* イージーの説明文(黄色い案内・輪止めの説明・フロアのメッセージ)は、小さい字で1段分の幅に */
-    #chockPanel #chockLabel { flex: 1 1 100%; font-size: 11px; line-height: 1.3; }
-    #gameStatus { font-size: 12px; line-height: 1.35; padding: 4px 10px; }
-    #floorStatus { margin-top: 2px; font-size: 11px; min-height: 0; }
+    #chockPanel #chockLabel { flex: 1 1 100%; font-size: 12px; line-height: 1.4; color: #ffd890; }
+    #gameStatus { font-size: 13px; line-height: 1.4; padding: 5px 10px; }
+    #floorStatus { margin-top: 2px; font-size: 12px; line-height: 1.4; color: #b8e0b8; min-height: 0; }
   }
 
   /* チュートリアル(js/tutorial.js): 得点・サイクルなどの表示は隠し、操作を教えるパネルを上の固定部分(ステージの下。PCは右横)に出す */
@@ -462,6 +462,72 @@
   @keyframes tutPulse { 0%, 100% { outline-color: rgba(255,211,77,1); border-color: rgba(255,211,77,1); } 50% { outline-color: rgba(255,211,77,.25); border-color: rgba(255,211,77,.25); } }
   #tutRing { display: none; position: fixed; z-index: 55; pointer-events: none; border: 3px solid #ffd34d; border-radius: 8px; box-sizing: border-box; animation: tutPulse 1.3s ease-in-out infinite; }
   @media (prefers-reduced-motion: reduce) { .tutHi, #tutRing { animation: none; } }
+
+  /* ===== 2026-10-07 スマホの縦・横: 全体の共通 ===== */
+  /* 切り欠き(ノッチ)・角丸を避ける: viewport-fit=cover の時だけ値が入る(普通のブラウザは 0) */
+  body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  /* 上の情報欄(経過・スコア・ミス)は、スクロールしても上に残す。ステージ(stickyTop)はその下に付く(高さは ui_layout.js が --mbh に入れる) */
+  #modeBar { position: sticky; top: 0; z-index: 21; background-color: #111; }   /* 背景を塗っておく(スクロールで下の物が透けないように) */
+  #stickyTop { top: var(--mbh, 0px); }
+  /* スマホ縦: body が overflow-x:hidden のままだと上の固定部分がスクロールで流れてしまう(スクロールコンテナになるため)。clip にして、情報欄+ステージ+指示を上に残す。
+     パソコン・タブレットは、今まで通り(画面が低いので、固定すると操作盤の場所が足りなくなる) */
+  @media (max-width: 700px) and (orientation: portrait) { body { overflow-x: clip; } }
+  /* 小さい画面でも、モード・難易度・結果・配車連絡のカードが画面からはみ出さない */
+  .overlay .card { box-sizing: border-box; max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; }
+
+  /* ===== スマホの横画面(横長で高さが低い: 例 844×390・915×412・667×375): 左にステージ・右に操作盤の2列 =====
+     パソコンの横長と同じ「ステージ+操作盤」の並びを、スクロールなしの1画面に収める。ページ自体はスクロールせず、右の列だけ中でスクロールする。
+     判定は main.js の VIEW.layout() と同じ式(orientation: landscape かつ高さ 520px 以下) */
+  @media (orientation: landscape) and (max-height: 520px) {
+    :root { --side: clamp(300px, 40vw, 380px); }
+    html, body { height: 100%; overflow: hidden; overflow-x: hidden; }
+    body, body.tutorial { box-sizing: border-box; height: 100vh; height: 100dvh; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) var(--side); grid-template-rows: auto auto minmax(0, 1fr); padding-bottom: 0; }
+    #toolbar, body.debug #toolbar { display: none; }
+    #modeBar #modeBarName { flex: 1 1 60px; }
+    #modeBar { gap: 3px 4px; border-width: 0 8px 4px 8px; }
+    #modeBar #missCount { margin-left: 0; }
+    #modeBar #modeBarCycles { display: none; }   /* サイクル数は縦・PCで見られる。横画面は場所が足りないので省く */
+    @media (max-width: 760px) {   /* 幅が狭い横画面(667×375 など): 右の列を細く、モード名は省いて(積込数・スコアを1段に)、ステージを広く残す */
+      :root { --side: 288px; }
+      #modeBar #modeBarName { display: none; }
+      body.tutorial #modeBar #modeBarName { display: block; }
+      #modeBar { gap: 3px 4px; }
+      #gameStatus { font-size: 12px; line-height: 1.35; padding: 3px 8px; }
+    }
+    #modeBar { grid-column: 1; grid-row: 1; position: static; }
+    #cycleBanner { grid-column: 1; grid-row: 2; font-size: 12px; padding: 4px 10px; }
+    #stickyTop { grid-column: 1; grid-row: 3; position: static; display: flex; flex-direction: column; min-height: 0; min-width: 0; box-shadow: none; }
+    #stageWrap { flex: 1 1 0; min-height: 0; width: auto; }
+    #stage { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+    #gameStatus { flex: none; max-height: 4.6em; overflow-y: auto; }
+    #opsPanel { grid-column: 2; grid-row: 1 / 4; min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 0 0 92px; background: #111; border-left: 2px solid #333; }
+    #opsPanel #floorPanel, #opsPanel #chockPanel, #opsPanel #controls { margin-top: 0; }
+    /* 前進・後退のボタンは、右の列の右下に重ねる(右の列は下に余白を取ってある) */
+    #arrowGroup { right: calc(10px + env(safe-area-inset-right)); bottom: 8px; gap: 12px; }
+    #arrowGroup .arrowBtn { width: 68px; height: 68px; }
+    /* 輪止めのボタン: 「セット」は1段、「前へ・後ろへ」は半分ずつ(狭い列で字が縦に割れないように) */
+    #chockPanel #btnChockSet { flex: 1 1 100%; }
+    #chockPanel #btnChockFront, #chockPanel #btnChockRear { flex: 1 1 0; }
+    /* チュートリアル: パネルは左の列のステージの下(縦と同じ並び)。高さを抑えて、ステージを広く残す */
+    body.tutorial #stickyTop { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+    body.tutorial #stageWrap { flex: 1 1 0; min-width: 0; }
+    body.tutorial #tutPanel { flex: none; max-height: none; overflow: visible; border-left: 0; border-top: 2px solid #5a86b4; padding: 3px 10px 5px; font-size: 12px; line-height: 1.4; }
+    body.tutorial #tutPanel .tutScroll { max-height: 64px; }
+    body.tutorial #tutPanel .tutTitle { font-size: 13px; margin: 1px 0 0; }
+    body.tutorial #tutPanel .tutBtns { margin-top: 3px; }
+    body.tutorial #tutPanel button { min-height: 34px; }
+    body.tutorial #tutPanel button.tutFold { min-height: 34px; padding: 2px 10px; }
+    body.tutorial #status, body.tutorial #gameStatus { flex: none; order: 0; }
+    body.tutorial #gameStatus { display: none; }   /* チュートリアルの案内パネルと同じ内容なので、横画面では省いてステージを広く(警告はパネルにも出る) */
+    /* オーバーレイ(モード・難易度・結果・配車連絡): 低い画面でも収まるよう、余白・ボタンを詰める */
+    .overlay .card { padding: 10px 18px 12px; width: min(94vw, 460px); }
+    .overlay h2 { font-size: 17px; margin: 0 0 4px; }
+    .overlay p { margin: 3px 0; font-size: 13px; }
+    .modeBtn { margin-top: 5px; min-height: 44px; border-width: 10px; border-image-width: 10px; font-size: 15px; padding: 0 6px; }
+    .modeBtn small { font-size: 11px; margin-top: 1px; }
+    #resultScore { font-size: 22px; margin: 6px 0; }
+    .dispatchSpeech { font-size: 16px; line-height: 1.5; padding: 10px; }
+  }
 </style>
 <script>
   if (/debug/.test(location.search + location.hash)) document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('debug'); });
@@ -504,6 +570,7 @@
 <div id="gameStatus">準備中...</div>
 </div>
 
+<div id="opsPanel">
 <div id="floorPanel">
   <h3><span id="floorTitle">スイッチ操作</span> <button id="btnSwClose" type="button">閉じる</button></h3>
   <div id="swHint">トレーラーについているスイッチ(とその周り)をタップすると、そのスイッチを操作できます。<br>前側(1番・2番の柱の間)/ 後ろ側(中央の柱の後ろ。3番・宙段)/ アウトリガーとタイヤ(ランプ盤・6ボタン)</div>
@@ -543,6 +610,8 @@
   </div>
 </div>
 
+</div><!-- /opsPanel(スマホ横画面では右の列。縦・PCでは、ただの入れ物) -->
+
 <div id="modeOverlay" class="overlay">
   <div class="card">
     <h2>キャリアカーゲーム</h2>
@@ -576,7 +645,7 @@
 // トレーラーの切り替え: URL の hash に trailer=semi-6b があれば semi-6b、無ければ semi-6(従来どおり)。選んだIDは window.TRAILER_ID。
 // 読むファイルの組み合わせがトレーラーごとに違う(設定・フロア機構・積める判定・操作ボタン)ので、ここで決めて順番に読む。画像・JSを差し替えたら ?v= を上げる
 (function () {
-  var m = /[#&]trailer=(semi-6b?)(?:&|$)/.exec(location.hash), id = window.TRAILER_ID = m ? m[1] : 'semi-6', V = '?v=226';
+  var m = /[#&]trailer=(semi-6b?)(?:&|$)/.exec(location.hash), id = window.TRAILER_ID = m ? m[1] : 'semi-6', V = '?v=227';
   var list = id === 'semi-6b'
     ? ['trailer_config_semi6b', 'car_library', 'car_dims', 'floor_mech_6b', 'loadable_6b', 'main', 'game', 'floor_controls_6b', 'modes', 'dispatch', 'ui_layout']
     : ['trailer_config', 'trailer_assets', 'car_library', 'car_dims', 'floor_mech', 'loadable', 'main', 'game', 'floor_controls', 'modes', 'tutorial', 'dispatch', 'ui_layout'];

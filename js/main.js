@@ -136,9 +136,16 @@
     var wrap = document.getElementById('stageWrap'), mini = document.getElementById('miniMap');
     var mctx = mini ? mini.getContext('2d') : null;
     var cam = { cx: SW / 2, cy: SH / 2, zoom: 1 }, tgt = { cx: SW / 2, cy: SH / 2, zoom: 1 };
-    var portrait = false, manual = false, suppressUntil = 0, lastT = 0, lastCar = null, lastSeated = false, miniT = 0;
+    var portrait = false, compactLand = false, manual = false, suppressUntil = 0, lastT = 0, lastCar = null, lastSeated = false, miniT = 0;
     var MAXZ = 4, TAU = 0.1;   // TAU: 追いつく速さ(秒)。約0.3秒でほぼ着く
-    function defZoom() { return portrait ? 1.8 : 1; }
+    // 寄って表示する画面: スマホ縦(幅700未満)・スマホ横(横長で高さ520以下。index.html の @media と同じ式)。それ以外(PC・タブレット)は全体表示
+    function aspect() { return canvas.width > 0 && canvas.height > 0 ? canvas.height / canvas.width : SH / SW; }
+    function close() { return portrait || compactLand; }
+    function defZoom() {
+      if (portrait) return 1.8;
+      if (compactLand) return Math.max(1.8, Math.min(3, SW / SH * aspect() * 0.85));   // 縦が収まる倍率の8割強(寄りすぎず、トレーラーを大きく)
+      return 1;
+    }
     function visW() { return SW / cam.zoom; }
     function visH() { return visW() * (canvas.width > 0 ? canvas.height / canvas.width : SH / SW); }
     function clampTarget(t) {
@@ -154,23 +161,29 @@
     function layout() {
       var w = wrap.clientWidth || window.innerWidth;
       if (!(w > 0)) return;   // 非表示で幅が0の間は、何もしない(表示された時の resize でもう一度ここへ来る)
+      var wasClose = close(), wasCompact = compactLand;
       portrait = window.innerWidth < 700 && window.innerHeight > window.innerWidth;
-      var h = Math.round(w * (portrait ? 0.62 : SH / SW));
+      compactLand = !portrait && window.innerWidth > window.innerHeight && window.innerHeight <= 520;   // スマホ横: ステージは左の列いっぱい(高さは入れ物 #stageWrap に合わせる)
+      var h = compactLand ? Math.round(wrap.clientHeight || w * 0.6) : Math.round(w * (portrait ? 0.62 : SH / SW));
       var dpr = Math.min(2, window.devicePixelRatio || 1);
       var cw = Math.round(w * dpr), ch = Math.round(h * dpr);
       canvas.style.height = h + 'px';
       if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
       if (mini) {
-        var mw = Math.round(w * (portrait ? 0.46 : 0.2)), mh = Math.round(mw * SH / SW);
+        var mw = Math.round(w * (portrait ? 0.46 : compactLand ? 0.3 : 0.2)), mh = Math.round(mw * SH / SW);
         mini.style.width = mw + 'px'; mini.style.height = mh + 'px';
         if (mini.width !== mw * 2) { mini.width = mw * 2; mini.height = mh * 2; }
+      }
+      if (wasClose !== close() || wasCompact !== compactLand) {   // 縦⇔横に回した・画面の種類が変わった: 倍率を新しい画面の標準に戻す(手で動かしていなければ)
+        if (!manual) { tgt.zoom = defZoom(); if (!(cam.zoom > 1)) cam.zoom = tgt.zoom; }
+        else if (tgt.zoom < defZoom() * 0.5) tgt.zoom = cam.zoom = defZoom();
       }
       clampTarget(tgt); clampTarget(cam);
     }
     function focusRect(r, zoom) {
       manual = false;
       tgt.cx = r[0] + r[2] / 2; tgt.cy = r[1] + r[3] / 2;
-      tgt.zoom = zoom || (portrait ? 2.4 : 1.4);
+      tgt.zoom = zoom || (close() ? 2.4 : 1.4);
       clampTarget(tgt);
     }
     function fitAll() { manual = true; tgt.zoom = 1; tgt.cx = SW / 2; tgt.cy = SH / 2; clampTarget(tgt); }
@@ -284,13 +297,15 @@
       mini.addEventListener('pointermove', function (e) { if (e.buttons || e.pressure > 0) jump(e); });
     }
     window.addEventListener('resize', layout);
+    window.addEventListener('orientationchange', function () { setTimeout(layout, 120); setTimeout(layout, 500); });   // 回した直後は innerWidth が古いままのことがある
     layout();
     tgt.zoom = cam.zoom = defZoom(); clampTarget(tgt); clampTarget(cam);
     return {
       begin: begin, update: update, drawMini: drawMini, layout: layout, focusRect: focusRect, fitAll: fitAll, clientToStage: clientToStage, stageToClient: stageToClient,
       state: function () { return { cx: cam.cx, cy: cam.cy, zoom: cam.zoom, manual: manual }; },
       dragSuppressed: function () { return performance.now() < suppressUntil; },
-      isPortrait: function () { return portrait; }
+      isPortrait: function () { return portrait; },
+      isCompactLand: function () { return compactLand; }
     };
   })();
 
