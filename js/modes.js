@@ -222,6 +222,7 @@
 
   function start(m, d, tut) {
     isTut = !!tut; if (isTut) document.body.classList.add('tutorial');
+    state.freeMode = m === 'sim' && !tut;   // シミュレーション(チュートリアルを除く)は、道板・扇動板などの状態で動作を制限しない。ぶつかった時にアニメーションを出す
     mode = m; diff = m === 'sim' ? 'easy' : (d || 'easy'); turn.startedAt = Date.now(); turn.snap = { carPoints: stats.carPoints, docks: stats.docks };
     state.setDifficulty && state.setDifficulty(diff); ended = false; startedAt = Date.now();
     $('modeOverlay').style.display = 'none';

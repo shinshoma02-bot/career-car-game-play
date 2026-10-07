@@ -137,7 +137,7 @@
   function rested(k) {
     var e = ENDS[k];
     if (k === 'F7') return MECH.hang <= 0.01 || (SP.inserted && Math.abs(MECH.hang - HANG.loadU) < 0.03);   // 宙段: 格納か、固定ピン(赤い板)に載って止まっている
-    if (e.noTravelPin) return e.off >= e.travel - 1.5 || (PINS[k] !== null && e.off >= PINS[k] - 1.5);
+    if (e.noTravelPin) return e.off >= e.travel - 1.5 || (PINS[k] !== null && e.off >= PINS[k] - 2 * pitchUp(k) - 0.5);   // 3番前も、棚の少し下にピンがあれば固定扱い(棚をそのピンまで下げ切っていなくてよい)
     // 支柱の短い棚(2番前): ピンを一番上の穴に差して昇降させた(伸ばした)状態は、ピンより上でも固定されている
     if (e.freeTop !== undefined && PINS[k] !== null && PINS[k] <= pinLimitOff(k) + 0.5) return true;
     // 棚が走行位置まで下がっていなくても、棚の少し下(最大2穴分)にピンが差してあれば固定されているとみなす(下段の車を積む間は棚を上げたままにするので、ピンは棚の位置付近に差せばよい。棚をそのピンまで下げ切っている必要はない。2026-10-06 ユーザー指示)
@@ -339,35 +339,84 @@
   // 2・3番フロアは、宙段を使う時に、セットピンで固定できる上限の高さ(下の FIT_OFFS。2番前 -60・3番前=ピン最大28番・3番後ろ=ピン最大33番)まで上げた状態とする。
   // (2026-10-03: ユーザーが案2を選んだ。写真の測定で、ゲームの2番の床は実車より約26〜48px低いため。前の値は 2番前 -46・3番前 -72・3番後ろ -24)
   // 前半(u=0.5〜1.5。スロープで7番を積む間)は5番と7番だけ、全上げ(u=1.9〜2)の時は6番も居る
-  // 実際に棚をピンで固定できる、一番高い位置(ピン最大の穴の高さ)。判定(LOADABLE・hangFit)は、実際に届かない高さを前提にすると、
+  // 実際に棚をピンで固定できる、一番高い位置(ピン最大の穴の高さ)。【2026-10-07〜: LOADABLE.check は棚を最小の高さまで下げて評価する(loadable.js の check7)。FIT_OFFS は hangFit の shelf を省略した時の既定(最も余裕のある高さ)】判定(LOADABLE・hangFit)は、実際に届かない高さを前提にすると、
   // 判定は通るのに本物では2・3番の棚に当たって宙段が上がり切らない組み合わせが出るので、この値で行う(2026-10-06。3番後ろは -60 でなく -58.5、3番前は -72 でなく -71.7)。
   // 2番前は、ピンを刺さずに(freeTop)可動域の上限まで上げて、5番フロアを持ち上げる時の固定位置にできるので、上限の -60
   var FIT_OFFS = { F2f: -60, MID: offOfHole('MID', ENDS.MID.holeMax), F3r: offOfHole('F3r', ENDS.F3r.holeMax) };
-  function hangFit(c5, c6, c7) {
-    var S5 = cfg.slots['5'], S6 = cfg.slots['6'], S7 = cfg.slots['7'];
-    var offs = curOffs(); offs.F2f = FIT_OFFS.F2f; offs.MID = FIT_OFFS.MID; offs.F3r = FIT_OFFS.F3r;
-    var o5 = { img: c5.img, prof: c5.prof, w: c5.w, h: c5.h, leftTireX: c5.leftTireX, localX: S5.tireX + 8, localY: S5.deckY };
-    var o6 = { img: c6.img, prof: c6.prof, w: c6.w, h: c6.h, leftTireX: c6.leftTireX, localX: S6.tireX + 8, localY: S6.deckY };
-    var o7 = { img: c7.img, prof: c7.prof, w: c7.w, h: c7.h, leftTireX: c7.leftTireX, localX: S7.tireX, localY: S7.deckY };
-    function hits(o, u) { var x0 = o.localX - o.leftTireX; return hangHits(x0, x0 + o.w, carTopY(o, [o.localX, o.localY]), u); }
-    var us = [0.05, 0.1, 0.15, 0.2];
-    for (var ui = 0.24; ui <= 2 + 1e-9; ui += 0.04) us.push(Math.round(ui * 100) / 100);   // 全体を 0.04 刻みで調べる   // 0.1 刻みでは、間(例 u=1.85)で当たる組み合わせを見逃し、判定は通るのに実際は宙段が途中で止まった(2026-10-06)   // 動きの途中も細かく調べる(持ち上げ始めの前端が、5番のボンネットの先に当たらないか)。6番の車は、宙段を上げ切って(ピンは1.9付近)から積む
-    // 7台目を載せた宙段は、一番上(u=2)まで上げず、セットピンで loadU(HANG.loadU。無ければ2)の穴に止めて、6番を積む。loadU までの動きだけを調べる
-    var loadU = (HANG && HANG.loadU) || 2;
+  // 宙段の動き(格納に近い所から固定ピンの高さ loadU まで)を調べる u の一覧。0.04 刻み(0.1 刻みでは、間で当たる組み合わせを見逃した 2026-10-06)
+  //  7台目を載せた宙段は、一番上(u=2)まで上げず、固定ピンで loadU(HANG.loadU)に止めて6番を積む。ピンは最初から刺さっていて loadU より上へは動かない(hangStep の onPin)ので、
+  //  loadU までの動きだけを調べる(2026-10-07: 以前は loadU より上〜u=2 も調べていた。ピンを抜かない限り行かない範囲なので、判定が実車より厳しかった)
+  function hangUsList() {
+    var us = [0.05, 0.1, 0.15, 0.2], loadU = (HANG && HANG.loadU) || 2;
+    for (var ui = 0.24; ui <= 2 + 1e-9; ui += 0.04) us.push(Math.round(ui * 100) / 100);
     us = us.filter(function (x) { return x < loadU - 1e-9; }); us.push(loadU);
+    return us;
+  }
+  function hangO(c, slotNum, isHang) {
+    var S = cfg.slots[slotNum];
+    return { img: c.img, prof: c.prof, w: c.w, h: c.h, leftTireX: c.leftTireX, localX: isHang ? S.tireX : S.tireX + 8, localY: S.deckY };
+  }
+  function hangLowerHits(o, u) { var x0 = o.localX - o.leftTireX; return hangHits(x0, x0 + o.w, carTopY(o, [o.localX, o.localY]), u); }
+  // 5番(slotNum='5')・6番('6')の車と宙段の動きが当たらないか。棚の高さに関係しない
+  //  shiftPx: 輪止めを前(キャビン側)へ動かして、車をその分(px)前へ寄せた位置(5番は輪止めを前へ最大44cm動かせる)
+  function hangLowerFit(c, slotNum, shiftPx) {
+    var o = hangO(c, slotNum, false); o.localX -= (shiftPx || 0);
+    var us = hangUsList(), loadU = (HANG && HANG.loadU) || 2;
     for (var i = 0; i < us.length; i++) {
-      var u = us[i];
-      if (hits(o5, u)) return { ok: false, why: '5番の車(ボンネットの高さ)に宙段が当たる' };
-      if (u >= loadU - 0.1 - 1e-9 && hits(o6, u)) return { ok: false, why: '6番の車に宙段が当たる' };
-      var vu = hangVsUpperX(u, offs, null, o7);
-      if (vu.why && vu.car) return { ok: false, why: '宙段の車が2・3番フロアに当たる' };
-    }
-    // ピンの高さから先(全上げ u=2まで)も、載せた車の屋根が2・3番フロアに当たらないこと(当たると、上げようとしても途中で動かなくなる)
-    for (var uu = loadU + 0.04; uu < 2 + 1e-9; uu += 0.04) {
-      var vu2 = hangVsUpperX(Math.min(2, uu), offs, null, o7);
-      if (vu2.why && vu2.car) return { ok: false, why: '宙段の車が2・3番フロアに当たる(ピンより上へ上げた時)' };
+      if (slotNum === '6' && us[i] < loadU - 0.1 - 1e-9) continue;   // 6番の車は、宙段を上げ切って(ピンの高さ)から積む
+      if (hangLowerHits(o, us[i])) return { ok: false, why: slotNum === '5' ? '5番の車(ボンネットの高さ)に宙段が当たる' : '6番の車に宙段が当たる' };
     }
     return { ok: true };
+  }
+  // 宙段に載せた7台目と宙段が、上のフロア(2・3番)に当たらないか(棚の高さ offs で)。構造(フロアと宙段)・車どちらの干渉も不合格
+  function hangUpperFit(c7, offs) {
+    var o7 = hangO(c7, '7', true), us = hangUsList();
+    for (var i = 0; i < us.length; i++) {
+      var vu = hangVsUpperX(us[i], offs, null, o7);
+      if (vu.why) return { ok: false, why: vu.car ? '宙段の車が2・3番フロアに当たる' : '宙段が2・3番フロアに当たる' };
+    }
+    return { ok: true };
+  }
+  // 7台目の車と宙段の動きから、上のフロアの下面(画面のx)ごとの「これより下に来てはいけない高さ y」の表(包絡線)を作る。
+  // 棚の高さの組み合わせを何千通りも調べるための高速版(hangVsUpperX と同じ式: 床の下面 y ≤ 宙段の上面 − 載せた車の高さ − 4)。x は2px刻み、隣の格子の小さい方(安全側)を使う
+  var ENV_X0 = 400, ENV_DX = 2, ENV_N = 1000;   // x=400〜2400(下段の車・宙段まで含む)
+  function hangUpperEnvelope(c7) {
+    var o7 = hangO(c7, '7', true), us = hangUsList(), L = new Float32Array(ENV_N);
+    for (var i = 0; i < ENV_N; i++) L[i] = 1e9;
+    us.forEach(function (u) {
+      var e = hangEnds(u), car = hangCarBoxOf(o7, u);
+      var i0 = Math.max(0, Math.floor((e.F[0] - ENV_X0) / ENV_DX)), i1 = Math.min(ENV_N - 1, Math.ceil((e.R[0] - ENV_X0) / ENV_DX));
+      for (var i = i0; i <= i1; i++) {
+        var x = ENV_X0 + i * ENV_DX;
+        if (x < e.F[0] || x > e.R[0]) continue;
+        var lim = hangTop(u, x) - (car && x >= car.x0 && x <= car.x1 ? car.hAt(x) : 0) - 4;
+        if (lim < L[i]) L[i] = lim;
+      }
+    });
+    return L;
+  }
+  function envAt(L, x) {
+    var f = (x - ENV_X0) / ENV_DX, i = Math.floor(f);
+    if (i < 0 || i >= ENV_N - 1) return 1e9;
+    return Math.min(L[i], L[i + 1]);
+  }
+  // 包絡線 L(と、下段の車などの追加の上限)に対して、上のフロア ids の下面が収まるか(offs で)。ids の下面の各点 y ≤ L(x)
+  function envFits(Ls, ids, offs) {
+    for (var q = 0; q < ids.length; q++) {
+      var f = FLOORS[ids[q]];
+      for (var x = f.x0; x <= f.x1; x += 15) {
+        var p = onFloor(ids[q], x, f.bottom(x), offs);
+        for (var j = 0; j < Ls.length; j++) if (p[1] > envAt(Ls[j], p[0])) return false;
+      }
+    }
+    return true;
+  }
+  // c5=5番・c6=6番・c7=宙段に載せる車。{img, prof, w, h, leftTireX}(向きに合わせたもの)。offs = 2・3番の棚の高さ { F2f, MID, F3r }(無ければ FIT_OFFS=ピンで届く上限)
+  function hangFit(c5, c6, c7, shelf) {
+    var offs = curOffs(); var sh = shelf || FIT_OFFS; offs.F2f = sh.F2f; offs.MID = sh.MID; offs.F3r = sh.F3r;
+    var r = hangLowerFit(c5, '5'); if (!r.ok) return r;
+    r = hangLowerFit(c6, '6'); if (!r.ok) return r;
+    return hangUpperFit(c7, offs);
   }
   var hangHold = null, hangRaf = null, hangHitKeys = {};   // hangHitKeys: ぶつかり中のもの(離れるまで減点は1回)
   function hangStart(dir) {
@@ -544,6 +593,12 @@
     return [x0, x0 + occ.w];
   }
   function poseProblem(ids, offs) {
+    var sp = staticPoseProblem(ids, offs);
+    if (sp) return sp;
+    return dynamicPoseProblem(ids, offs);
+  }
+  // 棚の位置だけで決まる制限(可動範囲・フレーム・道板・シリンダー下限)。車や宙段の状態に関係しない(積める判定が使う)
+  function staticPoseProblem(ids, offs) {
     for (var k in ENDS) { if (offs[k] < ENDS[k].r[0] || offs[k] > ENDS[k].r[1]) return '可動範囲いっぱい'; }
     if (onFloor('F3', FLOORS.F3.x1, 312, offs)[1] > RAMP_TOP[1] + 2) return '下段に当たる';   // 3番の後端(延長板の先)が道板の高さより下がらない
     var fr = onFloor('F2', 885, 314, offs);
@@ -555,6 +610,9 @@
       if (!c.floor && ids.indexOf('F2') < 0) continue;
       if (cylLen(c, offs).L < c.barrel + 6) return 'シリンダーが縮みきってる';
     }
+    return null;
+  }
+  function dynamicPoseProblem(ids, offs) {
     if (MECH.hang > 0.05) {   // 上げてある宙段(と載せた車)に、2・3番のフロアが下がってぶつからない
       var hv = hangVsUpper(MECH.hang, offs, ids);
       if (hv) return hv;
@@ -812,7 +870,7 @@
     resetAll: resetAll,
     stopPinResolve: stopPinSolve, stopPin: SP, stopPinHoles: SP_CFG ? SP_CFG.pts.length : 0, stopPinCfg: SP_CFG, setStopPinHole: setStopPinHole, toggleStopPin: toggleStopPin,
     rearPin: RP, rearPinHoles: RP_CFG.holes || 1, rearPinPitch: RP_CFG.pitch || 0, setRearPinHole: setRearPinHole, rearPinLen: function () { return RP.len; },
-    FLOORS: FLOORS, FIDS: FIDS, ENDS: ENDS, PINS: PINS, MECH: MECH, CYLS: CYLS, initPins: initPins, FRAME_GAP_PX: FRAME_GAP_PX, hangPose: hangPose, hangSlope: hangSlope, hangReachable: hangReachable, hangHits: hangHits, carTopY: carTopY, hangFit: hangFit, hangVsUpperX: hangVsUpperX, FIT_OFFS: FIT_OFFS, hangProblem: hangProblem, hangStuck: hangStuck, hangEnds: hangEnds, hangSolve: hangSolve, hangRebuild: hangRebuild, pinned: pinned, rested: rested, floorPinsOk: floorPinsOk, offOfHole: offOfHole, poseProblem: poseProblem,
+    FLOORS: FLOORS, FIDS: FIDS, ENDS: ENDS, PINS: PINS, MECH: MECH, CYLS: CYLS, initPins: initPins, FRAME_GAP_PX: FRAME_GAP_PX, hangPose: hangPose, hangSlope: hangSlope, hangReachable: hangReachable, hangHits: hangHits, carTopY: carTopY, hangFit: hangFit, hangLowerFit: hangLowerFit, hangUpperFit: hangUpperFit, hangUpperEnvelope: hangUpperEnvelope, envFits: envFits, envAt: envAt, ENV: { x0: ENV_X0, dx: ENV_DX, n: ENV_N }, hangVsUpperX: hangVsUpperX, FIT_OFFS: FIT_OFFS, hangProblem: hangProblem, hangStuck: hangStuck, hangEnds: hangEnds, hangSolve: hangSolve, hangRebuild: hangRebuild, pinned: pinned, rested: rested, floorPinsOk: floorPinsOk, offOfHole: offOfHole, poseProblem: poseProblem, staticPoseProblem: staticPoseProblem,
     BR_ANCHOR: BR_ANCHOR, BRIDGE_STOWED_X: BRIDGE_STOWED_X,
     F1_CYL: F1_CYL, SHEAVE: SHEAVE, WIRE_TOP: WIRE_TOP, f1CylLen: f1CylLen,
     poseOf: poseOf, tf: tf, onFloor: onFloor, curOffs: curOffs,

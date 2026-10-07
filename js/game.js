@@ -224,7 +224,7 @@
   function hangBlocksCar(car) {
     // 車の前後の余白は取らない。余白を取ると、積める組み合わせの判定(hangFit、余白なし)を通った車が、実際には宙段の下の位置まで進めなくなる
     var fm = window.FLOOR_MECH, x0 = car.x - car.leftTireX;
-    return fm.hangHits(x0, x0 + car.w, fm.carTopY({ img: car.img, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), fm.MECH.hang);
+    return fm.hangHits(x0, x0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), fm.MECH.hang);
   }
   var TIRE_PASS_MARGIN_PX = 30;   // 6番のタイヤ基準点からこれ以上通り過ぎたら「通過」とみなす(6番に止まる車は輪止めの手前で止まる)
   function routeProblems(car) {
@@ -521,18 +521,31 @@
     return Promise.all(out.map(loadItem)).then(function (items) { items.drawTries = 1; items.loadable = { ok: false, why: '6番に載せられる車が無い' }; items.impossible = true; return items; });
   }
   // チュートリアルの最初の荷物: 車を厳選した固定デッキ(ガイドの順 = 1番・2番・3番・4番・5番・7番(宙段)・6番)。js/tutorial.js が車名つきで案内する
-  //  選び方(2026-10-07。LOADABLE.check で全ての組み合わせを実際の高さ計算で比べた結果):
-  //   ・7台サイクルは、宙段を上げる時に2番前・3番前・3番後ろを一番上まで上げる → 2番・3番の棚が一番高くなる。ここに背の高い車(ミニバン・SUV)を入れると荷姿が約4.47m、いちばん低い2台を入れると約4.17m。よって2番=スポーツクーペ(1.28m)・3番=スポーツタイプ(1.24m)
-  //   ・1番・4番は、4番の車の屋根が1番の棚を押し上げる → 背の低いセダン(1.43m)
-  //   ・5番(バック)と宙段(7番)は、宙段が動く間にぶつからない小さい車 = 長さ3.4mの軽自動車(kei-5・kei-6)。6番は幅1.755m以下の5ナンバー(コンパクトカー、幅1.695m)
-  var TUTORIAL_DECK = ['sedan-0', 'sports-6', 'sports-5', 'sedan-4', 'kei-5', 'kei-6', 'compact-0'];
+  //  選び方(2026-10-07。宙段の判定を直したあとの LOADABLE.check の固定割り当てで、候補約2400通りを実際の高さ計算で比べた結果):
+  //   ・宙段を使う時は、宙段(と7番の車)の真上に来る3番前の棚だけが高くなり、2番前・3番後ろは宙段の上を外れるので低くできる(棚は傾けて使う)。そのため、2番・3番に背の高い車を入れても荷姿はほとんど高くならない
+  //     (ミニバン・SUVを2・3番に入れた並びは 4.07m、1・4番に入れた並びは 4.04m。変更前は 4.68m と 4.37m だった)。2番=ミニバン(minivan-4, 高さ1.84m)、3番=SUV(suv-0, 1.59m)
+  //   ・1番・4番は、4番の車の屋根が1番の棚を押し上げるので、背の低い車: 1番=セダン(sedan-0, 1.43m)、4番=スポーツタイプ(sports-0, 1.44m)
+  //   ・5番(バック)は、宙段が持ち上がる時に鼻が当たらない短くてボンネットの低い車: ハッチバック(hatch-0, 長さ3.86m)。宙段(7番)は、屋根が2・3番の棚の下に収まる一番背の低い車: スポーツタイプ(sports-5, 1.24m)
+  //   ・6番は幅1.755m以下の5ナンバー: コンパクトカー(compact-0, 幅1.695m)
+  //   ・並べ方は、荷姿 4.07m・宙段の固定ピンは6つの穴のどれでも成立・5番の輪止めは基準位置のまま(前へ寄せる必要なし)。宙段の車と2・3番の棚の余裕 約15px、5番の車と宙段の余裕 約21px(候補の中で余裕が大きい組み合わせ)
+  var TUTORIAL_DECK = ['sedan-0', 'minivan-4', 'suv-0', 'sports-0', 'hatch-0', 'sports-5', 'compact-0'];
   function drawTutorialDeck() {
     var entries = TUTORIAL_DECK.map(function (id) { return lib.filter(function (e) { return e.id === id; })[0]; });
     var r = null;
-    if (window.LOADABLE && entries.every(Boolean)) r = window.LOADABLE.check(entries.map(function (en) { return { entry: en }; }), { fixed: { order: [0, 1, 2, 3], assign: [4, 6, 5] } });   // assign = [5番, 6番, 7番]のデッキの番号
+    if (window.LOADABLE && entries.every(Boolean)) r = window.LOADABLE.check(entries.map(function (en) { return { entry: en }; }), { fixed: { order: [0, 1, 2, 3], assign: [4, 6, 5], flip5: true } });   // assign = [5番, 6番, 7番]のデッキの番号
     if (!r || !r.ok) return drawLoadableDeck(7, 0);   // ライブラリが変わって成立しなくなった時は、ふつうの7台に戻す
     return Promise.all(entries.map(loadItem)).then(function (items) { items.drawTries = 1; items.loadable = r; items.tutorialFixed = true; return items; });
   }
+  // 検証用: 車の id を指定して、そのデッキに差し替える(判定 LOADABLE.check を通した状態にする。.claude/ の検証スクリプトが使う)
+  state.useDeck = function (ids, opts) {
+    var entries = ids.map(function (id) { return lib.filter(function (e) { return e.id === id; })[0]; });
+    return Promise.all(entries.map(loadItem)).then(function (items) {
+      var r = window.LOADABLE ? window.LOADABLE.check(items, opts) : { ok: true };
+      items.drawTries = 1; if (opts) items.fixedPlan = true;   // opts = LOADABLE.check の fixed 指定(その割り当てで通す)
+       items.loadable = r; state.deck = items; state.sel = 0; state.deckSize = items.length;
+      state.deckMinH = isFinite(r.H) ? r.H : null; refreshDeck(); return r;
+    });
+  };
   state.deckImpossible = false; state.dispatchDone = false; state.deckDrawn = 0;
   function newDeck() {
     var token = ++deckToken;
@@ -547,7 +560,7 @@
       state.deckDrawn++; state.deckImpossible = !!items.impossible; state.dispatchDone = false;
       state.deck = items; state.sel = 0; state.deckSize = size; state.deckTries = items.drawTries;
       if (window.GAME_MODE && window.GAME_MODE.onTurnStart) window.GAME_MODE.onTurnStart();   // 新しい荷物が届いた(ターン開始)
-      state.deckMinH = items.loadable && isFinite(items.loadable.H) ? items.loadable.H : null;   // この組み合わせをいちばん低く積める荷姿の高さ(6台。7台は無し)
+      state.deckMinH = items.loadable && isFinite(items.loadable.H) ? items.loadable.H : null;   // この組み合わせをいちばん低く積める荷姿の高さ(6台・7台とも)
       refreshDeck();
       idleHint();
     }).catch(function (err) {
@@ -739,6 +752,8 @@
     var tl = flip ? 1 - e.tr : e.tl, tr = flip ? 1 - e.tl : e.tr;
     car.flip = flip;
     car.img = flip ? it.flipImg : it.img;
+    // 当たり判定の輪郭は、積める判定(LOADABLE)と同じ entry.prof を使う(画像から読み取った輪郭とは縁の列で最大約9px違い、判定が通っても実際は当たることがあった。2026-10-07)
+    car.prof = e.prof ? (flip ? e.prof.slice().reverse() : e.prof) : null;
     car.tlRatio = tl; car.trRatio = tr;
     car.leftTireX = tl * car.w;
   }
@@ -941,7 +956,15 @@
     var probs = routeProblems(car), blocked = null, present = {};
     probs.forEach(function (p) {
       present[p.key] = true;
-      if (state.hints) { if (!blocked) blocked = p; }
+      if (state.freeMode) {
+        // シミュレーション(自由に操作できる練習用): 道板が出ていない・扇動板が出ていない等でも、動作は制限しない。進んでぶつかったら、その時にぶつかったアニメーション(揺れ・グシャッ)と理由を表示する(減点なし)
+        if (pressedDir > 0 && !car.missedKeys[p.key]) {
+          car.missedKeys[p.key] = true;
+          triggerShake(9, 700); triggerSquash(car, 0.16, 600);
+          setStatus('ぶつかった!' + p.msg.split('。')[0] + '。');
+        }
+      }
+      else if (state.hints) { if (!blocked) blocked = p; }
       else if (pressedDir > 0 && !car.missedKeys[p.key]) { car.missedKeys[p.key] = true; recordMiss(p.msg.split('。')[0], (p.key === 'ramp' || p.key === 'jack') ? 'minor' : 'major'); }
     });
     Object.keys(car.missedKeys).forEach(function (k) { if (!present[k]) delete car.missedKeys[k]; });
@@ -1098,7 +1121,7 @@
     car.shelfMissed = false;
     // フロア上のスロットは、フロアが動いても車が輪止め位置に追従するようローカル座標で保持する
     state.occupied[num] = {
-      img: car.img, w: car.w, h: car.h, leftTireX: car.leftTireX,
+      img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX,
       floor: slot.floor || slot.carrier || null, localX: tgt.x, localY: tgt.y + dip, rotDeg: rotDeg, dx: tgt.x - slot.tireX, live: car
     };
     if (window.GAME_MODE && window.GAME_MODE.onDock) window.GAME_MODE.onDock(num);
@@ -1156,12 +1179,15 @@
     // 乗りかけの車(前のタイヤは宙段の上、後ろのタイヤはまだ下段)をまたいだまま宙段を動かすと、タイヤが外れる(脱輪)
     var hg = fm.MECH.hang;
     if (car && hangStraddle(car)) {
-      if (lastHang !== null && Math.abs(hg - lastHang) > 0.0005 && !state.hints && !car.hangDerailed) {
+      if (lastHang !== null && Math.abs(hg - lastHang) > 0.0005 && (!state.hints || state.freeMode) && !car.hangDerailed) {
         car.hangDerailed = true;
         car.derail = { t0: performance.now(), dur: 1100 };
         triggerShake(9, 800); triggerSquash(car, 0.14, 600);
-        recordMiss('車が乗りかけの時に宙段を動かして脱輪した', 'major');
-        setStatus('脱輪!車が乗りかけの時に宙段を動かしました。(ミス: ' + state.misses + ')');
+        if (state.freeMode) setStatus('脱輪!車が乗りかけの時に宙段を動かしました。');
+        else {
+          recordMiss('車が乗りかけの時に宙段を動かして脱輪した', 'major');
+          setStatus('脱輪!車が乗りかけの時に宙段を動かしました。(ミス: ' + state.misses + ')');
+        }
       }
     } else if (car) car.hangDerailed = false;
     lastHang = hg;
