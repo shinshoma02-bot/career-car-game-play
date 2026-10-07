@@ -97,6 +97,25 @@
       loadImage(newSrc(NA.frameFront)).then(function (img) { images.fg = img; })
     ].concat(Object.keys(NA.parts).map(function (k) { return loadImage(newSrc(NA.parts[k])).then(function (img) { images[k] = img; }); }));
   }
+  // ヤード(積み下ろしの場所)の背景・地面。グラフィック部門の納品(R21)があれば、設定 cfg.yard のパスの画像を読んで、ベタ塗りの代わりに描く。無ければ従来のまま。
+  // cfg.yard = { bg: 背景(空・ヤードの景色。ステージ全面 2520×724)、ground: 地面(同サイズの透明PNG。地面 y=577 より下)、frameBack: 背景色を含まない透明な奥の枠(今の frame_back は背景色 #5a616c 込みの不透明なので、
+  //   ヤードを見せる時は、これに差し替えて描く)、v: ?v= の番号 }。frameBack が無いまま bg・ground だけ指定しても、不透明な奥の枠がヤードを隠すだけ(エラーにはならない)。
+  var yardImgs = { bg: null, ground: null, back: null }, YARD = cfg.yard || null;
+  if (YARD) {
+    ['bg', 'ground', 'frameBack'].forEach(function (k) {
+      if (!YARD[k]) return;
+      var im = new Image();
+      im.onload = function () { yardImgs[k === 'frameBack' ? 'back' : k] = im; };
+      im.src = YARD[k] + (YARD.v ? '?v=' + YARD.v : '');
+    });
+  }
+  function drawBackdrop() {   // 背景(ベタ塗り or ヤード)を描いて、そのあとに描く奥の枠の画像を返す
+    ctx.fillStyle = '#5a616c';
+    ctx.fillRect(0, 0, cfg.stage.w, cfg.stage.h);
+    if (yardImgs.bg) ctx.drawImage(yardImgs.bg, 0, 0);
+    if (yardImgs.ground) ctx.drawImage(yardImgs.ground, 0, 0);
+    return yardImgs.back || images.bg;
+  }
   var loadList = IS6B ? loadList6b() : [
     loadImage(NA && NA.frameBack ? newSrc(NA.frameBack) : assets.bg).then(function (img) { images.bg = img; images.tailOcc = makeTailOcc(img); }),
     loadImage(NA && NA.frameFront ? newSrc(NA.frameFront) : assets.fg).then(function (img) { images.fg = cleanFg(img); }),
@@ -328,14 +347,13 @@
     curTilt = tilt;
 
     VIEW.begin();   // カメラの位置・拡大(ステージ座標で描けるように変換をかける)
-    ctx.fillStyle = '#5a616c';
-    ctx.fillRect(0, 0, cfg.stage.w, cfg.stage.h);
+    var backImg = drawBackdrop();
 
     // z-order (back -> front) はβ版(old/tsumikomi-simulator-beta.html)のz-indexに合わせる:
     // 背景 -> 道板 -> 車 -> フロア(柱) -> 扇動板・1番ワイヤー・ジャッキ -> 前景(手前のフレーム) -> 台車タイヤ -> シリンダー -> トラクタ -> デバッグ表示
     // 車は前景フレーム・後輪より奥にある(トレーラーの枠の内側に積まれている)ので、fg/台車タイヤは必ず車の後に描く。
     beginRig(tilt);
-    ctx.drawImage(images.bg, 0, 0);
+    ctx.drawImage(backImg, 0, 0);
     ctx.restore();
 
     drawRamp(tilt); // 道板は先端が地面に着くよう、傾きに合わせて角度を計算し直す(画面座標で描く)
@@ -1563,10 +1581,9 @@
     updateShake();
     curTilt = 0;
     VIEW.begin();
-    ctx.fillStyle = '#5a616c';
-    ctx.fillRect(0, 0, cfg.stage.w, cfg.stage.h);
+    var backImg6b = drawBackdrop();
     beginRig(0);
-    ctx.drawImage(images.bg, 0, 0);
+    ctx.drawImage(backImg6b, 0, 0);
     drawRamp6b(fm);
     drawSlope6b(fm);
     updateLids();

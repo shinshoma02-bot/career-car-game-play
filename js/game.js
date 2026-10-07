@@ -802,9 +802,17 @@
   }
   state.flipCar = function () {
     if (!carFlippable()) return false;
-    var c = state.car;
-    c.deckItem.flip = !c.deckItem.flip;
-    orientCar(c, c.deckItem.flip);
+    var c = state.car, item = c.deckItem;
+    // 向きを変える時も、他の車と入れ替える時と同じように、いったん画面の右へ退場してから、新しい向きで入場し直す(その場で絵だけ反転しない。2026-10-07 ユーザー指示)
+    item.flip = !item.flip;
+    c.phase = 'exiting';
+    setStatus('向きを変えるため、いったん退場します...');
+    animateExit(function () {
+      var idx = state.deck.indexOf(item);
+      if (idx < 0) return;
+      state.sel = idx; state.pendingEntry = item;
+      beginEntry();
+    });
     renderDeck();
     return true;
   };
