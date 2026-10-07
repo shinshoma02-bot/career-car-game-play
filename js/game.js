@@ -193,11 +193,13 @@
       var f5 = fm.FLOORS.F5;
       pts.push({ floor: 'F5', x: f5.rear.pt[0], y: f5.rear.pt[1] });
       pts.push({ floor: 'F5', x: 962, y: f5.front.pt[1] });
+      extra.bridgeWall = { floor: 'F5', x: 962, y: f5.front.pt[1] };   // 5番フロアの前端(スロープの上端)。扇動板が出ていない間は、ここから先(4番との隙間)へ進めない(格納した扇動板が垂れ下がっている)
       pts.push({ x: fm.BR_ANCHOR[0], y: fm.BR_ANCHOR[1] });
       pts.push(slotPt('4'));
       tg['6'] = slotPt('6'); tg['5'] = slotPt('5', 'F5'); tg['4'] = slotPt('4');
     } else {
       pts.push(slotPt('5'));
+      extra.f5Edge = { x: 1560, y: S['5'].deckY };   // 5番フロアの後端(ここから先は5番フロアの上)。5番フロアが平らでない間は、ここから先へ進めない
       tg['6'] = slotPt('6'); tg['5'] = slotPt('5');
     }
     var hasFloor = pts.some(function (p) { return !!p.floor; });
@@ -211,7 +213,8 @@
     if (fm.upperConnected()) return 'U';
     // 宙段は、少し斜めに上げた状態(後端が接地に近い)なら後端から乗れるので宙段の道。もっと高く上げてあれば下段の道(6・5番)のまま
     if (fm.hangReachable()) return '7';
-    if (fm.f5Slope() && fm.bridgeReady()) return '4';
+    // 5番フロアがスロープなら、扇動板が出ていなくても、スロープを上る道('4')を走る(扇動板が出ていなければ、スロープの上端で扇動板に当たって止まる。routeProblems の 'bridge')
+    if (fm.f5Slope()) return '4';
     return 'L';
   }
 
@@ -273,15 +276,21 @@
       }
     } else {
       var hb = (id === 'L' || id === '4') && hangBlocksCar(car);
-      if (hb) out.push({ key: 'hang', msg: '宙段フロアが上がっていて通れません。宙段を下げてから(格納してから)通ってください。' });
+      // phys: true = 実物(フロア・扇動板・宙段・タイヤ)に当たる理由。シミュレーションでも、その位置で止まる(ぶつかった演出つき)。道板が出ていない・ジャッキで浮いている、は止めない(下の phys 無し)
+      if (hb) out.push({ key: 'hang', phys: true, msg: '宙段フロアが上がっていて通れません。宙段を下げてから(格納してから)通ってください。' });
       var lf = lowFloorBlocked(car);
-      if (lf) out.push({ key: 'lowfloor', msg: lf + 'が下がっていて通れません。下段の車が入れる高さまで棚を上げてください。' });
+      if (lf) out.push({ key: 'lowfloor', phys: true, msg: lf + 'が下がっていて通れません。下段の車が入れる高さまで棚を上げてください。' });
+      // 5番フロアがスロープなのに扇動板が出ていない: スロープを上って、上端で、垂れ下がった扇動板に当たって止まる
+      if (id === '4' && !fm.bridgeReady() && car.bridgeWallArc !== undefined && car.progress >= car.bridgeWallArc - 1) {
+        out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '扇動板が出ていないので、スロープの先(4番との隙間)へは進めません。扇動板を搬出してください。' });
+      }
       // 台車のタイヤを突出させていないと、6番の横を通れるのは軽自動車(幅1.48m以下)だけ。それ以外(5ナンバー・3ナンバー)は、6番に止まる(積む)分には従来どおりだが、6番を通り過ぎて5・4・7番へは行けない(2026-10-07 ユーザー指示)
       var s6 = cfg.slots['6'];
       if (s6.maxWidthNoTireM && !fm.MECH.tireOut && (car.entry.width || 0) > s6.maxWidthNoTireM && car.arc && car.arc['6'] !== undefined && car.progress > car.arc['6'] + TIRE_PASS_MARGIN_PX) {
-        out.push({ key: 'tirepass', msg: '台車のタイヤを突出させていないので、6番の横は軽自動車しか通れません。アウトリガーでタイヤを浮かせて突出させてください。' });
+        out.push({ key: 'tirepass', phys: true, msg: '台車のタイヤを突出させていないので、6番の横は軽自動車しか通れません。アウトリガーでタイヤを浮かせて突出させてください。' });
       }
-      if (id === 'L' && !fm.atTravel('F5') && car.arc['6'] !== undefined && car.progress > car.arc['6'] - 20) out.push({ key: 'f5flat', msg: fm.f5Slope() && !fm.bridgeReady() ? '5番フロアがスロープのままです。4番へ積むなら扇動板を出して、5番へ積むなら5番フロアを平らに戻してください。' : '5番フロアが平らになっていません。' });
+      // 5番フロアが平らでない(持ち上がっている途中など)のに、5番フロアの後端から先へ進もうとした(実際の5番フロアの縁で止まる)
+      if (id === 'L' && !fm.atTravel('F5') && car.f5EdgeArc !== undefined && car.progress >= car.f5EdgeArc - 1) out.push({ key: 'f5flat', phys: true, stopAt: car.f5EdgeArc, msg: '5番フロアが平らになっていません。5番フロアを平らに戻すか、スロープにして扇動板を出してください。' });
     }
     return out;
   }
@@ -713,6 +722,8 @@
     car.f3RearArc = car.route.id === 'U' ? car.pathTool.arcOf(pts[3]) : undefined;   // 3番フロアの後端
     car.rampArc = car.pathTool.arcOf(pts[2]);   // 道板の上端まで(上段・下段の道が分かれる前の共通部分)
     car.f2FrontArc = car.route.extra.f2front ? car.pathTool.arcOf(resolvePoint(car.route.extra.f2front)) : undefined;
+    car.bridgeWallArc = car.route.extra.bridgeWall ? car.pathTool.arcOf(resolvePoint(car.route.extra.bridgeWall)) : undefined;
+    car.f5EdgeArc = car.route.extra.f5Edge ? car.pathTool.arcOf(resolvePoint(car.route.extra.f5Edge)) : undefined;
   }
   function attachRoute(car, id) {
     car.route = buildRoute(id);
@@ -1003,17 +1014,28 @@
     probs.forEach(function (p) {
       present[p.key] = true;
       if (state.freeMode) {
-        // シミュレーション(自由に操作できる練習用): 道板が出ていない・扇動板が出ていない等でも、動作は制限しない。進んでぶつかったら、その時にぶつかったアニメーション(揺れ・グシャッ)と理由を表示する(減点なし)
+        // シミュレーション(自由に操作できる練習用): 道板が出ていない等の「決まりごと」では、動作を制限しない。進んでぶつかったら、その時にぶつかったアニメーション(揺れ・グシャッ)と理由を表示する(減点なし)。
+        // 実物(フロア・扇動板・宙段・タイヤ)に当たる理由(phys)は、その位置で止まる(通り抜けない)
         if (pressedDir > 0 && !car.missedKeys[p.key]) {
           car.missedKeys[p.key] = true;
           triggerShake(9, 700); triggerSquash(car, 0.16, 600);
           setStatus('ぶつかった!' + p.msg.split('。')[0] + '。');
         }
+        if (p.phys && !blocked) blocked = p;
       }
       else if (state.hints) { if (!blocked) blocked = p; }
-      else if (pressedDir > 0 && !car.missedKeys[p.key]) { car.missedKeys[p.key] = true; recordMiss(p.msg.split('。')[0], (p.key === 'ramp' || p.key === 'jack') ? 'minor' : 'major'); }
+      else if (pressedDir > 0 && !car.missedKeys[p.key]) {
+        car.missedKeys[p.key] = true;
+        recordMiss(p.msg.split('。')[0], (p.key === 'ramp' || p.key === 'jack') ? 'minor' : 'major');
+        if (p.phys) { triggerShake(9, 700); triggerSquash(car, 0.16, 600); }
+      }
+      // ノーマル・ハードも、実物に当たる理由(phys)では、その位置で止まる(ミスは上で1回記録)
+      if (!state.hints && !state.freeMode && p.phys && !blocked) blocked = p;
     });
     Object.keys(car.missedKeys).forEach(function (k) { if (!present[k]) delete car.missedKeys[k]; });
+    if (blocked && blocked.stopAt !== undefined && car.progress > blocked.stopAt) {   // 実物の縁(扇動板・5番フロアの端)を少し行き過ぎていたら、縁の位置まで戻す
+      car.progress = blocked.stopAt; var pq = car.pathTool.at(car.progress); car.x = pq.x; car.y = pq.y;
+    }
     if (blocked && pressedDir > 0) {
       car.velocity = Math.min(0, car.velocity);
       if (car.blockedMsg !== blocked.msg) { car.blockedMsg = blocked.msg; setStatus(blocked.msg); }
