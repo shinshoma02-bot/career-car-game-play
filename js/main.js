@@ -763,16 +763,6 @@
     var fm = window.FLOOR_MECH;
     if (!fm) return;
 
-    // シリンダー(f2mid / f3rear / midvert)
-    var mlArt = midLinkArt();
-    if (mlArt) drawMidLink(mlArt, fm);
-    fm.CYLS.forEach(function (c) {
-      if (mlArt && c.id === 'midvert') return;   // 新しい機構(金具+リンク+専用の二段シリンダー)で描く
-      var r = fm.cylLen(c);
-      if (NA && images.cyl_barrel) drawCylinderArt(c, r.L, r.deg);
-      else drawCylinder(c.anchor, r.L, r.deg, c.thick, Math.min(c.barrel, r.L - 6));
-    });
-
     drawPulley(fm.WIRE_TOP); // 1番後ろのワイヤーが掛かる、後ろの柱のてっぺんの滑車
 
   }
@@ -790,6 +780,16 @@
   function drawMechanismBehindFg() {
     var fm = window.FLOOR_MECH;
     if (!fm) return;
+
+    // シリンダー(f2mid / f3rear / midvert)と3番前の金具: 実車では柱・梁の内側に取り付けてあるので、前景フレームの奥に描く(付け根が梁・柱の陰に隠れる。2026-10-08 ユーザー指示)
+    var mlArt = midLinkArt();
+    if (mlArt) drawMidLink(mlArt, fm);
+    fm.CYLS.forEach(function (c) {
+      if (mlArt && c.id === 'midvert') return;   // 新しい機構(金具+リンク+専用の二段シリンダー)で描く
+      var r = fm.cylLen(c);
+      if (NA && images.cyl_barrel) drawCylinderArt(c, r.L, r.deg);
+      else drawCylinder(c.anchor, r.L, r.deg, c.thick, Math.min(c.barrel, r.L - 6));
+    });
 
     // 1番後ろの昇降リグ(β版準拠): 1番フロアに横向きに付いたシリンダー → ワイヤー(2本掛け)→ フロア後端の滑車 → 後ろの柱のてっぺんの滑車。
     // シリンダーはフロアと一緒に動き・傾く。後ろが上がるほどシリンダーが縮んでワイヤーを巻き取る
