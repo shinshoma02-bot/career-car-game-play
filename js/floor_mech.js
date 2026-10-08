@@ -489,6 +489,11 @@
     ENDS.F5f.off = MECH.hook ? Math.min(-MECH.lift, HOOK_OFF) : -MECH.lift;
   }
   function f5Slope() { return MECH.hook && ENDS.F5f.off === HOOK_OFF; }
+  // 5番ストッパー(5番フロアの前を4番の高さに掛けておく引っかけ金具)を、画面に出す時: 5番がスロープで金具に掛かっている間(外すため)と、外してある間(掛け直すため)。
+  // 平らで金具が掛かっている普段の状態は、しまってあるので出さない(2026-10-08 ユーザー指示: ボタンをやめて、画面上で操作する)
+  function stopperVisible() { return !!(MECH.hook || !MECH.stopper); }
+  // 金具の位置(画面座標): 5番フロアの前端の下面。5番フロアの今の姿勢に付いていく
+  function stopperPos() { return onFloor('F5', FLOORS.F5.front.pt[0] + 28, FLOORS.F5.front.pt[1] + 10); }
   function toggleStopper() {
     if (MECH.stopper) {
       if (MECH.hook && MECH.lift < -HOOK_OFF) { onWarn('5番フロアを4番の高さより上げてから外してください'); return; }
@@ -956,7 +961,7 @@
     poseOf: poseOf, tf: tf, onFloor: onFloor, curOffs: curOffs,
     holeNo: holeNo, holeRange: holeRange, pinTarget: pinTarget, snapToHole: snapToHole,
     stepPinTarget: stepPinTarget, togglePin: togglePin,
-    toggleStopper: toggleStopper, toggleBridge: toggleBridge, f5Slope: f5Slope,
+    toggleStopper: toggleStopper, stopperVisible: stopperVisible, stopperPos: stopperPos, toggleBridge: toggleBridge, f5Slope: f5Slope,
     toggleRamp: toggleRamp, rampUpdate: rampUpdate, rampReady: rampReady, rampT: function () { rampUpdate(); return RAMP.t; },
     toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, carTiresOn: carTiresOn, bridgeSeg: bridgeSeg, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
     holdStart: holdStart, holdStop: holdStop,

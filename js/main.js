@@ -765,7 +765,31 @@
     if (!fm) return;
 
     drawPulley(fm.WIRE_TOP); // 1番後ろのワイヤーが掛かる、後ろの柱のてっぺんの滑車
+    if (fm.stopperVisible && fm.stopperVisible()) drawStopperHook(fm);
 
+  }
+
+  // 5番ストッパー(5番フロア前端の下面の引っかけ金具。黄黒の縞)。掛かっている時は床の縁を受ける形、外してある時は横へ跳ね上げた形。
+  // タップできる印として、まわりをゆっくり光らせる(タップは game.js の mechanismAt)
+  function drawStopperHook(fm) {
+    var p = fm.stopperPos(), ang = fm.poseOf('F5').ang * Math.PI / 180, set = fm.MECH.stopper;
+    var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260);
+    ctx.save();
+    ctx.translate(p[0], p[1]); ctx.rotate(ang);
+    ctx.fillStyle = 'rgba(255,214,80,' + (0.18 + 0.22 * pulse) + ')';
+    ctx.beginPath(); ctx.arc(0, 4, 17 + 3 * pulse, 0, Math.PI * 2); ctx.fill();
+    if (!set) ctx.rotate(-1.15);   // 外してある時は、ヒンジ(根元)を軸に、上へ跳ね上げる
+    // 金具の板(黄黒の縞)
+    ctx.save(); ctx.beginPath(); ctx.rect(-5, 0, 10, 22); ctx.clip();
+    ctx.fillStyle = '#f2c230'; ctx.fillRect(-5, 0, 10, 22);
+    ctx.fillStyle = '#1b1f22';
+    for (var k = -2; k < 5; k++) { ctx.beginPath(); ctx.moveTo(-5, k * 8); ctx.lineTo(5, k * 8 - 8); ctx.lineTo(5, k * 8 - 3); ctx.lineTo(-5, k * 8 + 5); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    ctx.strokeStyle = '#1b1f22'; ctx.lineWidth = 1.3; ctx.strokeRect(-5, 0, 10, 22);
+    // 床の縁を受ける爪(掛かっている時は縁の下へ、外してある時は開く)
+    ctx.fillStyle = '#9aa3a9'; ctx.beginPath(); ctx.moveTo(5, 16); ctx.lineTo(13, 16); ctx.lineTo(13, 22); ctx.lineTo(5, 22); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#5c646a'; ctx.beginPath(); ctx.arc(0, 2, 2.2, 0, Math.PI * 2); ctx.fill();   // ヒンジのボルト
+    ctx.restore();
   }
 
   function drawPulley(p) {

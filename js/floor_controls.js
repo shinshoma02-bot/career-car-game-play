@@ -33,10 +33,8 @@
     statusEl.style.color = fm.upperConnected() ? '#8f8' : (msgs.length ? '#ffd080' : '#9c9');
   }
 
-  // ---- 機構のボタン(道板・4番扇動板・ストッパー)は常に表示 ----
-  var btnStopper = document.getElementById('btnStopper');
+  // ---- 機構のボタン(道板・4番扇動板・ストッパー無し)は常に表示 ----
   var btnBridge = document.getElementById('btnBridge');
-  btnStopper.addEventListener('click', function () { fm.toggleStopper(); renderMechButtons(); });
   btnBridge.addEventListener('click', function () { fm.toggleBridge(); renderMechButtons(); });
   var btnRamp = document.getElementById('btnRamp');
   btnRamp.addEventListener('click', function () { fm.toggleRamp(); renderMechButtons(); });
@@ -95,8 +93,6 @@
   function renderMechButtons() {
     btnAutoSw.textContent = '昇降ボタン自動切りかえ ' + (autoSw ? 'ON' : 'OFF');
     btnAutoSw.classList.toggle('on', autoSw);
-    btnStopper.textContent = fm.MECH.stopper ? '5番ストッパーを外す' : '5番ストッパーを掛ける';
-    btnStopper.classList.toggle('on', fm.MECH.stopper);
     btnBridge.textContent = fm.MECH.bridge ? '4番扇動板を格納' : '4番扇動板を搬出';
     btnBridge.classList.toggle('on', fm.MECH.bridge);
     btnRamp.textContent = fm.MECH.ramp ? '道板をしまう' : '道板を出す';

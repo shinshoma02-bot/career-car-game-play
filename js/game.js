@@ -813,6 +813,8 @@
     var up = 62 * fm.flapT(), dfx = x < pa[0] ? pa[0] - x : (x > pb[0] ? x - pb[0] : 0), dfy = y < pa[1] - up ? pa[1] - up - y : (y > pa[1] + 10 ? y - pa[1] - 10 : 0);
     var df = Math.hypot(dfx, dfy);
     if (df <= tol) cand(df + 2, function () { fm.toggleF2Flap(); });
+    // 5番ストッパー(画面に出ている間だけ。ボタンは無い): タップで外す/掛ける
+    if (fm.stopperVisible && fm.stopperVisible()) { var spp = fm.stopperPos(), dsp = Math.hypot(x - spp[0], y - (spp[1] + 8)) - 13; if (dsp <= tol) cand(Math.max(0, dsp), function () { fm.toggleStopper(); }); }
     // 落し蓋(落とし穴)と輪止め
     Object.keys(cfg.slots).forEach(function (num) {
       var slot = cfg.slots[num];
@@ -1419,7 +1421,7 @@
     // トレーラー上の機構(4番扇動板・スライド板・2番扇動板・落し蓋・輪止め)を直接タップして、開閉・格納・セット/外す(2026-10-08)。
     // 優先順位: スイッチ本体 → 車 → 機構 → スイッチの周り(指の太さ分の広い判定)。機構の判定は細く(指の太さを少しだけ足す)、スイッチ・車を取り合わないようにする
     var mechTol = 10 * scaleX;
-    if (!tightSwitchAt(x, y, 5 * scaleX) && !carAt(x, y)) {
+    if (!tightSwitchAt(x, y, 3 * scaleX) && !carAt(x, y)) {
       var mh = mechanismAt(x, y, mechTol);
       if (mh) { mh.run(); return; }
     }
