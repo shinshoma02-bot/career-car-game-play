@@ -205,6 +205,8 @@
 .roadcv { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .scene.cvroad .road3d .strip { display: none; }
 .scene.cvroad .road3d .roadcv { display: block; }
+.scene.cvroad .sl { width: 100%; animation-name: none; will-change: auto; background-size: 0 0; background-repeat: no-repeat; }   /* 景色の層も canvas で描く(下の script)。巨大な横長レイヤー(近景は約5000px)がスマホのGPUの上限を超えて、ループのたびに白/黒に塗られるのを避ける */
+.slcv { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
 @keyframes slide { from { transform: translate3d(calc(-1 * var(--tw)), 0, 0); } to { transform: translate3d(0, 0, 0); } }
 .scene:not(.ready) .sl, .scene:not(.ready) .road3d { opacity: 0; }
 .scene .sl, .scene .road3d { transition: opacity .35s ease; }
@@ -457,6 +459,54 @@
     requestAnimationFrame(frame);
   })();
 
+  // 景色の層(.sl: 遠景・中景・近景・ガードレール)を canvas で描く。1枚の絵を横に並べて、時間でずらす(従来の translateX ループと同じ動き・同じ速さ)
+  (function () {
+    var layers = [].slice.call(scene.querySelectorAll('.sl')), dpr = 1;
+    if (!layers.length || !scene.classList.contains('cvroad')) return;
+    layers.forEach(function (el) {
+      var cvs = document.createElement('canvas'); cvs.className = 'slcv'; el.appendChild(cvs);
+      var L = { el: el, cv: cvs, g: cvs.getContext('2d'), img: null, url: '', phase: Math.random(), w: 0, h: 0 };
+      el._L = L;
+    });
+    function load(L) {
+      var m = /url\(["']?([^"')]+)["']?\)/.exec(getComputedStyle(L.el).backgroundImage || '');
+      if (!m || m[1] === L.url) return;
+      L.url = m[1];
+      var im = new Image();
+      im.onload = function () {
+        if (L.url !== m[1]) return;
+        var c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;   // 画像データをブラウザに捨てられないよう canvas にコピーして使う
+        c.getContext('2d').drawImage(im, 0, 0);
+        L.img = c;
+      };
+      im.src = L.url;
+    }
+    function size(L) {
+      var w = L.el.clientWidth, h = L.el.clientHeight; dpr = Math.min(2, window.devicePixelRatio || 1);
+      var cw = Math.round(w * dpr), ch = Math.round(h * dpr);
+      if (L.cv.width !== cw || L.cv.height !== ch) { L.cv.width = cw; L.cv.height = ch; L.dirty = true; }
+      L.w = w; L.h = h;
+    }
+    function draw(L) {
+      if (!L.img || !(L.w > 0) || !(L.h > 0)) return;
+      var tw = L.h * L.img.width / L.img.height * dpr, off = -tw + tw * L.phase, g = L.g;   // 絵1枚の幅(canvasのpx)。ずらし量は -tw → 0
+      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, L.cv.width, L.cv.height);
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+      for (var x = off; x < L.cv.width; x += tw) g.drawImage(L.img, Math.round(x), 0, Math.ceil(tw) + 1, L.cv.height);
+    }
+    var last = 0, reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function frame(now) {
+      var dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
+      layers.forEach(function (el) {
+        var L = el._L; load(L); size(L);
+        if (!reduce) L.phase = (L.phase + dt / (parseFloat(getComputedStyle(el).animationDuration) || 60)) % 1;
+        try { draw(L); } catch (e) {}
+      });
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+
   var mode = null, leaving = false, trailer = 'semi-6';
   var PANELS = ['mode', 'diff', 'ts', 'trailer'], cur = 'mode';
   function show(panel) {
@@ -520,6 +570,6 @@
   });
 })();
 </script>
-<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 252</div>
+<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 253</div>
 </body>
 </html>
