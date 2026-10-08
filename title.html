@@ -199,6 +199,12 @@
    (3) 画像を読み込み終えてからアニメーションを始める(.ready が付くまでは路面・景色を出さない。3秒で打ち切り) */
 .road3d { background: #3b4046; backface-visibility: hidden; }
 .road3d .strip, .sl { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+/* ---- 2026-10-08 道路を canvas で描く(CSS の3D変形のループで、実機の GPU が一瞬白く塗る対策) ----
+   同じ見た目(奥へ60度傾けた路面)を、1行ずつ計算して描く。3D のレイヤーを使わないので、折り返しでレイヤーが作り直されて白くなることがない。
+   canvas が使えない・失敗した時だけ、従来の CSS(.strip)に戻る */
+.roadcv { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.scene.cvroad .road3d .strip { display: none; }
+.scene.cvroad .road3d .roadcv { display: block; }
 @keyframes slide { from { transform: translate3d(calc(-1 * var(--tw)), 0, 0); } to { transform: translate3d(0, 0, 0); } }
 .scene:not(.ready) .sl, .scene:not(.ready) .road3d { opacity: 0; }
 .scene .sl, .scene .road3d { transition: opacity .35s ease; }
@@ -284,7 +290,7 @@
 <body>
 <div class="scene" id="scene" aria-hidden="true">
   <div class="sun"></div>
-  <div class="stars"></div><div class="sl far"></div><div class="sl mid"></div><div class="sl near"></div><div class="road3d"><div class="strip"></div></div><div class="sl grail"></div>
+  <div class="stars"></div><div class="sl far"></div><div class="sl mid"></div><div class="sl near"></div><div class="road3d"><div class="strip"></div><canvas class="roadcv"></canvas></div><div class="sl grail"></div>
   <div class="rig" id="rig">
     <div class="shadow"></div>
     <img class="body" src="assets/ui/rig.png?v=120" alt="">
@@ -386,6 +392,64 @@
     setTimeout(ok, 3000);
   })();
 
+  // 道路を canvas で描く(上の CSS コメント参照)。幾何: 路面の絵(幅 tw × 高さ ph)を rotateX(60deg) して perspective をかけたものを、画面の1行ごとに逆算して描く
+  (function () {
+    var road = scene.querySelector('.road3d'), cv = road && road.querySelector('.roadcv'), strip = road && road.querySelector('.strip');
+    if (!cv || !strip || !cv.getContext) return;
+    var g = cv.getContext('2d'), probe = document.createElement('div'), img = null, imgUrl = '', phase = 0, last = 0, W = 0, Hr = 0, dpr = 1, geo = null;
+    probe.style.cssText = 'position:absolute;visibility:hidden;height:100vh;width:0;pointer-events:none';
+    document.body.appendChild(probe);
+    function vh(name) {
+      var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(), m = /^([\d.]+)vh$/.exec(v);
+      return m ? parseFloat(m[1]) / 100 * probe.offsetHeight : NaN;
+    }
+    function layout() {
+      W = road.clientWidth; Hr = road.clientHeight; dpr = Math.min(2, window.devicePixelRatio || 1);
+      var cw = Math.round(W * dpr), ch = Math.round(Hr * dpr);
+      if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+      geo = { p: vh('--rd-p'), oy: vh('--rd-oy'), ph: vh('--rd-ph') };
+    }
+    function loadImg() {
+      var m = /url\(["']?([^"')]+)["']?\)/.exec(getComputedStyle(strip).backgroundImage || '');
+      if (!m || m[1] === imgUrl) return;
+      imgUrl = m[1];
+      var im = new Image(); im.onload = function () { if (imgUrl === m[1]) img = im; }; im.src = imgUrl;
+    }
+    function draw() {
+      if (!img || !geo || !(geo.p > 0) || !(W > 0) || !(Hr > 0) || !img.naturalWidth) return;
+      var p = geo.p, oy = geo.oy, ph = geo.ph, tw = ph * 2.4, ox = W / 2, c60 = 0.5, s60 = Math.sqrt(3) / 2;
+      var iw = img.naturalWidth, ih = img.naturalHeight, t = -tw + tw * phase, rows = cv.height;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.fillStyle = '#3b4046'; g.fillRect(0, 0, cv.width, cv.height);
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+      for (var r = 0; r < rows; r++) {
+        var Y = (r + 0.5) / dpr, y = Y * p / (c60 * p + (Y - oy) * s60);   // 画面の行 Y に映る、絵の行 y(CSS px)
+        if (!(y >= 0 && y < ph)) continue;
+        var sc = p / (p - y * s60);   // その行の拡大率
+        var x0 = ox + (0 - ox) / sc - t, u0 = (((x0 / tw) % 1) + 1) % 1 * iw, sw = W / sc / tw * iw, v = y / ph * ih;
+        var vv = Math.min(ih - 1, Math.max(0, v - 0.5));
+        if (u0 + sw <= iw) g.drawImage(img, u0, vv, sw, 1, 0, r, cv.width, 1);
+        else {   // 絵の右端をまたぐ: 2回に分けて描く
+          var w1 = iw - u0, d1 = cv.width * w1 / sw;
+          g.drawImage(img, u0, vv, w1, 1, 0, r, d1, 1);
+          g.drawImage(img, 0, vv, sw - w1, 1, d1, r, cv.width - d1, 1);
+        }
+      }
+    }
+    function frame(now) {
+      var dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
+      var d = parseFloat(getComputedStyle(strip).animationDuration) || 3.2;
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) phase = (phase + dt / d) % 1;
+      loadImg();
+      try { draw(); } catch (e) { scene.classList.remove('cvroad'); return; }
+      requestAnimationFrame(frame);
+    }
+    layout(); loadImg();
+    window.addEventListener('resize', layout);
+    scene.classList.add('cvroad');
+    requestAnimationFrame(frame);
+  })();
+
   var mode = null, leaving = false, trailer = 'semi-6';
   var PANELS = ['mode', 'diff', 'ts', 'trailer'], cur = 'mode';
   function show(panel) {
@@ -449,6 +513,6 @@
   });
 })();
 </script>
-<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 250</div>
+<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 251</div>
 </body>
 </html>
