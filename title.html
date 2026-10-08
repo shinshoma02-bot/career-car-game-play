@@ -394,6 +394,16 @@
     setTimeout(ok, 3000);
   })();
 
+  // 読み込んだ画像を、ブラウザに捨てられない形(ImageBitmap。使えなければ canvas にコピー)にして渡す。大きい絵(近景 8192px 幅など)を canvas にコピーすると、
+  // 古い端末の canvas の大きさの上限(4096px など)に当たって描けなくなる(天気・時間帯によって景色や白線が欠ける)ので、ImageBitmap を先に使う
+  function keep(im, cb) {
+    function viaCanvas() {
+      try { var c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); cb(c); }
+      catch (e) { cb(im); }
+    }
+    if (window.createImageBitmap) createImageBitmap(im).then(cb, viaCanvas); else viaCanvas();
+  }
+
   // 道路を canvas で描く(上の CSS コメント参照)。幾何: 路面の絵(幅 tw × 高さ ph)を rotateX(60deg) して perspective をかけたものを、画面の1行ごとに逆算して描く
   (function () {
     var road = scene.querySelector('.road3d'), cv = road && road.querySelector('.roadcv'), strip = road && road.querySelector('.strip');
@@ -418,10 +428,7 @@
       var im = new Image();
       im.onload = function () {
         if (imgUrl !== m[1]) return;
-        // 画像をそのまま使うと、スマホのブラウザがメモリ節約で画像のデータを捨てた時に、描画が空振りして画面が暗くなる。canvas にコピーして使う(canvas は捨てられない)
-        var src = document.createElement('canvas'); src.width = im.naturalWidth; src.height = im.naturalHeight;
-        src.getContext('2d').drawImage(im, 0, 0);
-        img = src;
+        keep(im, function (src) { if (imgUrl === m[1]) img = src; });
       };
       im.src = imgUrl;
     }
@@ -436,12 +443,14 @@
         if (!(y >= 0 && y < ph)) continue;
         var sc = p / (p - y * s60);   // その行の拡大率
         var x0 = ox + (0 - ox) / sc - t, u0 = (((x0 / tw) % 1) + 1) % 1 * iw, sw = W / sc / tw * iw, v = y / ph * ih;
-        var vv = Math.min(ih - 1, Math.max(0, v - 0.5));
-        if (u0 + sw <= iw) g.drawImage(img, u0, vv, sw, 1, 0, r, cv.width, 1);
+        var Y2 = (r + 1.5) / dpr, y2 = Y2 * p / (c60 * p + (Y2 - oy) * s60);
+        var sh = Math.max(1, (y2 - y) / ph * ih);   // この1行に映る絵の行数(奥ほど多い)。1行だけ拾うと細い白線が抜けるので、その範囲を平均して描く
+        var vv = Math.min(ih - sh, Math.max(0, v - sh / 2));
+        if (u0 + sw <= iw) g.drawImage(img, u0, vv, sw, sh, 0, r, cv.width, 1);
         else {   // 絵の右端をまたぐ: 2回に分けて描く
           var w1 = iw - u0, d1 = cv.width * w1 / sw;
-          g.drawImage(img, u0, vv, w1, 1, 0, r, d1, 1);
-          g.drawImage(img, 0, vv, sw - w1, 1, d1, r, cv.width - d1, 1);
+          g.drawImage(img, u0, vv, w1, sh, 0, r, d1, 1);
+          g.drawImage(img, 0, vv, sw - w1, sh, d1, r, cv.width - d1, 1);
         }
       }
     }
@@ -475,9 +484,7 @@
       var im = new Image();
       im.onload = function () {
         if (L.url !== m[1]) return;
-        var c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;   // 画像データをブラウザに捨てられないよう canvas にコピーして使う
-        c.getContext('2d').drawImage(im, 0, 0);
-        L.img = c;
+        keep(im, function (src) { if (L.url === m[1]) L.img = src; });
       };
       im.src = L.url;
     }
@@ -570,6 +577,6 @@
   });
 })();
 </script>
-<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 253</div>
+<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 254</div>
 </body>
 </html>
