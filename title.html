@@ -406,21 +406,28 @@
     function layout() {
       W = road.clientWidth; Hr = road.clientHeight; dpr = Math.min(2, window.devicePixelRatio || 1);
       var cw = Math.round(W * dpr), ch = Math.round(Hr * dpr);
-      if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+      if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; g.fillStyle = '#3b4046'; g.fillRect(0, 0, cw, ch); }   // 大きさが変わると canvas は空になるので、路面色で塗り直す
       geo = { p: vh('--rd-p'), oy: vh('--rd-oy'), ph: vh('--rd-ph') };
     }
     function loadImg() {
       var m = /url\(["']?([^"')]+)["']?\)/.exec(getComputedStyle(strip).backgroundImage || '');
       if (!m || m[1] === imgUrl) return;
       imgUrl = m[1];
-      var im = new Image(); im.onload = function () { if (imgUrl === m[1]) img = im; }; im.src = imgUrl;
+      var im = new Image();
+      im.onload = function () {
+        if (imgUrl !== m[1]) return;
+        // 画像をそのまま使うと、スマホのブラウザがメモリ節約で画像のデータを捨てた時に、描画が空振りして画面が暗くなる。canvas にコピーして使う(canvas は捨てられない)
+        var src = document.createElement('canvas'); src.width = im.naturalWidth; src.height = im.naturalHeight;
+        src.getContext('2d').drawImage(im, 0, 0);
+        img = src;
+      };
+      im.src = imgUrl;
     }
     function draw() {
-      if (!img || !geo || !(geo.p > 0) || !(W > 0) || !(Hr > 0) || !img.naturalWidth) return;
+      if (!img || !geo || !(geo.p > 0) || !(W > 0) || !(Hr > 0) || !img.width) return;
       var p = geo.p, oy = geo.oy, ph = geo.ph, tw = ph * 2.4, ox = W / 2, c60 = 0.5, s60 = Math.sqrt(3) / 2;
-      var iw = img.naturalWidth, ih = img.naturalHeight, t = -tw + tw * phase, rows = cv.height;
+      var iw = img.width, ih = img.height, t = -tw + tw * phase, rows = cv.height;
       g.setTransform(1, 0, 0, 1, 0, 0);
-      g.fillStyle = '#3b4046'; g.fillRect(0, 0, cv.width, cv.height);
       g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
       for (var r = 0; r < rows; r++) {
         var Y = (r + 0.5) / dpr, y = Y * p / (c60 * p + (Y - oy) * s60);   // 画面の行 Y に映る、絵の行 y(CSS px)
@@ -513,6 +520,6 @@
   });
 })();
 </script>
-<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 251</div>
+<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 252</div>
 </body>
 </html>
