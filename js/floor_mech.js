@@ -71,15 +71,18 @@
   // ピンの高さは柱で固定(1穴=post.pitch)。棚がピンに載る=柱の位置の棚が P(穴) になる。だから、3番前(MID)を動かすと、同じ穴に載る3番後ろの高さも変わる。
   // PINS.F3r は、今の3番前で換算した「3番後ろの載る高さ」(他の棚と同じ意味)を返す(getter)。差してある穴の柱での高さは F3_PIN_POST に持つ。
   var F3P = floorsCfg.ends.F3r.post || null, F3 = null, F3_PIN_POST = null, F3_PT = 0;
-  if (F3P) F3 = { r: (F3P.x - floorsCfg.mid[0]) / (floorsCfg.defs.F3.rearPt[0] - floorsCfg.mid[0]), pp: F3P.pitch };
+  if (F3P) F3 = { r: (F3P.x - floorsCfg.mid[0]) / (floorsCfg.defs.F3.rearPt[0] - floorsCfg.mid[0]), pp: F3P.pitch, pd: F3P.pitchDown || F3P.pitch };
   function f3Post(R, mid) { return mid + (R - mid) * F3.r; }
   function f3R(P, mid) { return mid + (P - mid) / F3.r; }
-  function f3PostOfHole(h) { return F3_PT - (h - ENDS.F3r.hole) * F3.pp; }
+  // 走行位置(10番)より上は1穴=pp(柱の実際の穴の間隔)、下(1〜9番)は pitchDown(下の穴は広く取り、1番を柱のずっと下=下段の床のすぐ上にする。2026-10-08 ユーザー指示)
+  function f3PostOfHole(h) { var d = h - ENDS.F3r.hole; return F3_PT - d * (d >= 0 ? F3.pp : F3.pd); }
+  function f3HoleOfPost(P) { var d = F3_PT - P; return ENDS.F3r.hole + d / (d >= 0 ? F3.pp : F3.pd); }
   if (F3) {
     F3_PT = f3Post(ENDS.F3r.travel, ENDS.MID.travel);   // 走行位置(10番)のピンの、柱での高さ
     Object.defineProperty(PINS, 'F3r', { enumerable: true, get: function () { return F3_PIN_POST === null ? null : f3R(F3_PIN_POST, ENDS.MID.off); }, set: function (v) { F3_PIN_POST = v === null ? null : f3Post(v, ENDS.MID.off); } });
   }
   // 描画用: 差したピンの(走行位置の穴を0とした)柱での高さ(下向きが正)。F3r 以外は null
+  function pinPostOfHole(h) { return F3 ? f3PostOfHole(h) - F3_PT : 0; }   // 描画用: 穴hの柱での高さ(走行位置の穴=0、下向きが正)
   function pinPostRel(k) { return k === 'F3r' && F3 && F3_PIN_POST !== null ? F3_PIN_POST - F3_PT : null; }
   // 柱の穴番号(実車の番号): 最下段=0番(ピンなし)、走行位置=hole番、ピンを差せる最大=holeMax番(棚の上限の1穴下)。
   // 棚の絵(off=0)は変えずに番号を当てはめるので、走行位置より上と下で1穴の間隔が違う(上は細かい)。
@@ -87,7 +90,7 @@
   function pitchDown(k) { if (k === 'F3r' && F3) return F3.pp / F3.r; var e = ENDS[k]; return e.pitchDownPx || (e.hole > 0 ? (e.r[1] - e.travel) / e.hole : 0); }   // pitchDown(設定): 走行位置より下の穴の間隔を決めている棚(3番後ろ。設定が無ければ、下の可動域を穴の数で割る)
   function holeNo(k, off, mid) {
     var e = ENDS[k];
-    if (k === 'F3r' && F3) return Math.max(0, Math.round(e.hole + (F3_PT - f3Post(off, mid === undefined ? ENDS.MID.off : mid)) / F3.pp));   // 柱での高さで穴を決める(3番前の高さで変わる)
+    if (k === 'F3r' && F3) return Math.max(0, Math.round(f3HoleOfPost(f3Post(off, mid === undefined ? ENDS.MID.off : mid))));   // 柱での高さで穴を決める(3番前の高さで変わる)
     if (off > e.travel) return pitchDown(k) > 0 ? Math.max(0, e.hole - Math.round((off - e.travel) / pitchDown(k))) : e.hole;
     return e.hole + Math.round((e.travel - off) / pitchUp(k));
   }
@@ -934,7 +937,7 @@
     resetAll: resetAll,
     stopPinResolve: stopPinSolve, stopPin: SP, stopPinHoles: SP_CFG ? SP_CFG.pts.length : 0, stopPinCfg: SP_CFG, setStopPinHole: setStopPinHole, toggleStopPin: toggleStopPin,
     rearPin: RP, rearPinHoles: RP_CFG.holes || 1, rearPinPitch: RP_CFG.pitch || 0, setRearPinHole: setRearPinHole, rearPinLen: function () { return RP.len; },
-    FLOORS: FLOORS, FIDS: FIDS, ENDS: ENDS, PINS: PINS, MECH: MECH, pinPostRel: pinPostRel, CYLS: CYLS, initPins: initPins, FRAME_GAP_PX: FRAME_GAP_PX, hangPose: hangPose, hangSlope: hangSlope, hangReachable: hangReachable, hangHits: hangHits, carTopY: carTopY, hangFit: hangFit, hangLowerFit: hangLowerFit, hangUpperFit: hangUpperFit, hangUpperEnvelope: hangUpperEnvelope, envFits: envFits, envAt: envAt, ENV: { x0: ENV_X0, dx: ENV_DX, n: ENV_N }, hangVsUpperX: hangVsUpperX, FIT_OFFS: FIT_OFFS, hangProblem: hangProblem, hangStuck: hangStuck, hangEnds: hangEnds, hangSolve: hangSolve, hangRebuild: hangRebuild, pinned: pinned, rested: rested, floorPinsOk: floorPinsOk, offOfHole: offOfHole, poseProblem: poseProblem, staticPoseProblem: staticPoseProblem,
+    FLOORS: FLOORS, FIDS: FIDS, ENDS: ENDS, PINS: PINS, MECH: MECH, pinPostRel: pinPostRel, pinPostOfHole: pinPostOfHole, CYLS: CYLS, initPins: initPins, FRAME_GAP_PX: FRAME_GAP_PX, hangPose: hangPose, hangSlope: hangSlope, hangReachable: hangReachable, hangHits: hangHits, carTopY: carTopY, hangFit: hangFit, hangLowerFit: hangLowerFit, hangUpperFit: hangUpperFit, hangUpperEnvelope: hangUpperEnvelope, envFits: envFits, envAt: envAt, ENV: { x0: ENV_X0, dx: ENV_DX, n: ENV_N }, hangVsUpperX: hangVsUpperX, FIT_OFFS: FIT_OFFS, hangProblem: hangProblem, hangStuck: hangStuck, hangEnds: hangEnds, hangSolve: hangSolve, hangRebuild: hangRebuild, pinned: pinned, rested: rested, floorPinsOk: floorPinsOk, offOfHole: offOfHole, poseProblem: poseProblem, staticPoseProblem: staticPoseProblem,
     BR_ANCHOR: BR_ANCHOR, BRIDGE_STOWED_X: BRIDGE_STOWED_X,
     F1_CYL: F1_CYL, SHEAVE: SHEAVE, WIRE_TOP: WIRE_TOP, f1CylLen: f1CylLen,
     poseOf: poseOf, tf: tf, onFloor: onFloor, curOffs: curOffs,

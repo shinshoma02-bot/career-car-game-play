@@ -972,24 +972,25 @@
   // ※画像wheel_v2.b64.txtは応援サイトが部品取りに使っているため差し替えず、ゲームではこちらを描く
   function drawTrailerWheel() {
     var w = cfg.outrigger.wheel, t = tireOutT, e = t * t * (3 - 2 * t);
-    var r = w.r * (1 + (cfg.outrigger.tireOutScale - 1) * e);
+    var s0 = cfg.outrigger.tireStowScale || 1, r = w.r * (s0 + (cfg.outrigger.tireOutScale - s0) * e);   // 格納時は奥に収まって小さく、突出すると手前に出て大きく(2026-10-08 実写を参考に)
     // エアサスで車高が下がる時、接地しているタイヤとフェンダー(足回り)はその位置に固定し、奥の台車だけが沈む。
     // → エアサス分の傾きを打ち消した位置に描く(タイヤとフェンダーは一体なので被らない)
     var fm = window.FLOOR_MECH, jt = fm ? fm.jackTiltDeg() : 0;
     var fixed = worldToRig(rigToWorld([w.cx, w.cy], jt), curTilt);
     var ox = fixed[0] - w.cx, oy = fixed[1] - w.cy;
-    var cx = w.cx, cy = w.cy + (w.r - r);
+    var cx = w.cx, cy = w.cy + (w.r - r);   // 接地点(下端)は変えない
     ctx.save();
     ctx.translate(ox, oy);
     // フェンダー(黄黒の縞・泥よけ)もタイヤと一緒に突出する: タイヤと同じ倍率・同じ中心で拡大して描く(タイヤだけが大きくなって、フェンダーが取り残されないように)
-    var sc = r / w.r;
-    if (e < 0.5) { drawTire(cx, cy, r); drawFender(w, cx, cy, sc); }
-    else { drawFender(w, cx, cy, sc); drawTire(cx, cy, r); }
-    // タイヤとフェンダーの隙間は、奥なので黒い影にする(2026-10-08 ユーザー指示)。タイヤの外側の細い輪(上半分の弧)を、タイヤ側ほど濃く塗る
-    var ri = r * 0.995, ro = r + 9 * sc, sg = ctx.createRadialGradient(cx, cy, ri, cx, cy, ro);
-    sg.addColorStop(0, 'rgba(6,8,9,0.96)'); sg.addColorStop(0.7, 'rgba(10,13,14,0.9)'); sg.addColorStop(1, 'rgba(10,13,14,0.55)');
+    // フェンダーはトレーラー側に付いているので、タイヤが出入りしても大きさ・位置は変えない(フェンダーの中心=タイヤの走行時の中心)
+    var sc = 1, fcy = w.cy;
+    // タイヤとフェンダーの隙間は、奥なので黒い影にする(2026-10-08 ユーザー指示)。フェンダーの内側(半径64)の上半分を、タイヤ側ほど濃い黒で塗ってから、タイヤを重ねる
+    var sg = ctx.createRadialGradient(cx, cy, r * 0.9, cx, cy, r + 14);
+    sg.addColorStop(0, 'rgba(5,7,8,0.97)'); sg.addColorStop(0.6, 'rgba(8,10,11,0.93)'); sg.addColorStop(1, 'rgba(10,13,14,0.6)');
     ctx.fillStyle = sg;
-    ctx.beginPath(); ctx.arc(cx, cy, ro, Math.PI * 1.04, Math.PI * 1.96); ctx.arc(cx, cy, ri, Math.PI * 1.96, Math.PI * 1.04, true); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, fcy, 64 * sc, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
+    if (e < 0.5) { drawTire(cx, cy, r); drawFender(w, cx, fcy, sc); }
+    else { drawFender(w, cx, fcy, sc); drawTire(cx, cy, r); }
     ctx.restore();
   }
   function drawFender(w, cx, cy, sc) {
@@ -1358,7 +1359,7 @@
     Object.keys(cfg.pinMarks).forEach(function (k) {
       var m = cfg.pinMarks[k], v = fm.PINS[k], img = images.pin;
       var rel = fm.pinPostRel(k);   // 3番後ろ: 柱での高さ(3番前の高さに関係なく、穴の位置)
-      if (rel === null && k === 'F3r' && v === null) rel = fm.pinPostRel('F3r') === null ? (function () { var h = fm.pinTarget(k), e = fm.ENDS.F3r; return -(h - e.hole) * cfg.floors.ends.F3r.post.pitch; })() : null;
+      if (rel === null && k === 'F3r' && v === null) rel = fm.pinPostRel('F3r') === null ? (function () { var h = fm.pinTarget(k), e = fm.ENDS.F3r; return fm.pinPostOfHole(h); })() : null;
       var off = v !== null ? v : fm.offOfHole(k, fm.pinTarget(k));
       // 穴の絵の間隔(柱の上で等間隔)は、棚の動き(off)と同じとは限らない。pinScale があれば、走行位置の穴(m[1])を基準に、穴1つあたりの描画の間隔を拡大して描く(3番後ろ: 棚は1穴3.13pxだが、柱の穴は実写どおり約7px間隔)
       var sc = (cfg.pinScale && cfg.pinScale[k]) || 1, y = rel !== null ? m[1] + rel : (sc === 1 ? m[1] + off : m[1] + (off - fm.ENDS[k].travel) * sc);
