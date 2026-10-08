@@ -21,9 +21,13 @@
     dispatchFalsePenalty: 150,   // 積める荷物なのに「積めない」と連絡した時の減点(難易度の倍率を掛ける)
     dispatchLimitSec: 90     // 積めない荷物に気づいて連絡するまでの制限時間(超えるとそのターンの稼ぎ(積込み点)が0点になる)
   };
-  var TIME_ATTACK_SEC = 360;   // 6分(6台・7台のサイクルを含めて。2026-10-03 ユーザー決定)
+  // スコアアタック(旧タイムアタック。2026-10-08 ユーザー提案: 積み終わっても終われない・待つだけになる問題)。
+  // 持ち時間は最初 startSec。サイクルを完了するたびに延長ボーナス(base 秒。回を重ねるごとに shrink 秒ずつ減って、min 秒まで)がもらえる。
+  // そのサイクルのミス1回につき missCost 秒引く(下限 floor 秒)。持ち時間が0になるか、「ここで終了」を押すと終わり、スコアで競う
+  var EXT = { startSec: 240, base: 180, shrink: 15, min: 90, missCost: 10, floor: 30 };
+  var limitSec = EXT.startSec;
   var MODES = {
-    time: { name: 'タイムアタック', desc: '制限時間内に何サイクルこなせるか(' + TIME_ATTACK_SEC / 60 + '分)' },
+    time: { name: 'スコアアタック', desc: '時間延長しながら、どこまでスコアを伸ばせるか(最初' + EXT.startSec / 60 + '分。サイクル完了で延長)' },
     real: { name: 'リアルモード', desc: 'ミスした時点で終了。何がダメだったかを表示' },
     sim: { name: 'シミュレーション', desc: '自由に操作できる練習用。時間制限・終了なし' }
   };
@@ -38,7 +42,7 @@
   // 難易度による加点・減点の倍率(積込み・ミス・高さ超過の全てに掛ける。シミュレーションは1倍)
   var DIFF_MULT = { easy: 1, normal: 1.5, hard: 2 };
   function mult() { return mode === 'sim' ? 1 : (DIFF_MULT[diff] || 1); }
-  var lastHeightM = null;
+  var lastHeightM = null, cycleStartMisses = 0;
 
   // 今のサイクルの高さ制限(7台サイクルは宙段の分だけ緩める)
   function limitM() {
@@ -57,7 +61,7 @@
 
   function refreshBar() {
     if (!mode) return;
-    var t = mode === 'time' ? '残り ' + fmtTime(TIME_ATTACK_SEC - elapsed()) : '経過 ' + fmtTime(elapsed());
+    var t = mode === 'time' ? '残り ' + fmtTime(limitSec - elapsed()) : '経過 ' + fmtTime(elapsed());
     $('modeBarName').textContent = (isTut ? 'チュートリアル' : MODES[mode].name) + (mode === 'sim' ? '' : '・' + DIFFS[diff] + '(×' + mult() + ')') + (window.TRAILER_CONFIG && window.TRAILER_CONFIG.id === 'semi-6b' ? '・6台積み' : '');   // 2台目のトレーラーを選んでいる時は、バーに出して区別する
     $('modeBarTime').textContent = t;
     $('modeBarCycles').textContent = 'サイクル ' + stats.cycles;
@@ -123,6 +127,12 @@
     stats.heightPenalty += pen;
     var msg = 'サイクル完了! 荷姿の高さ ' + h.toFixed(2) + 'm' + (pen ? '(' + lim.toFixed(1) + 'mを超過 -' + pen + '点)' : '(満点)');
     if (mode === 'real') { finish(true, msg); return; }
+    if (mode === 'time') {   // 延長ボーナス: 回を重ねるほど少なく、このサイクルのミスが多いほど少ない
+      var missesNow = stats.majors + stats.minors, missesCycle = missesNow - cycleStartMisses;
+      var ext = Math.max(EXT.floor, Math.max(EXT.min, EXT.base - EXT.shrink * (stats.cycles - 1)) - EXT.missCost * missesCycle);
+      limitSec += ext; cycleStartMisses = missesNow;
+      msg += ' / 時間延長 +' + ext + '秒';
+    }
     if (isTut) { if (window.TUTORIAL && window.TUTORIAL.onCycleComplete) window.TUTORIAL.onCycleComplete(); }
     else banner(msg);
     fm.initPins && fm.initPins();
@@ -132,7 +142,7 @@
 
   function tick() {
     if (ended || !mode) return;
-    if (mode === 'time' && elapsed() >= TIME_ATTACK_SEC) {
+    if (mode === 'time' && elapsed() >= limitSec) {
       if (state.deckImpossible && !state.dispatchDone) { stats.dispatchMissed++; rollbackTurn(); }   // 積めない荷物に気づかないまま時間切れ: そのターンの稼ぎは0点
       finish(false, '時間切れ' + (state.deckImpossible && !state.dispatchDone ? '(積めない荷物に気づけませんでした。そのターンの積込み点は0点)' : '')); return;
     }
@@ -169,6 +179,8 @@
 
   window.GAME_MODE = {
     cycleComplete: cycleComplete,   // (確認用)
+    limitSec: function () { return limitSec; },   // (確認用)持ち時間(秒)
+    forceCycle: function () { onCycleComplete(); },   // (確認用)サイクル完了を強制する
     limitM: limitM,   // (確認用)
     onAccident: function (reason) { if (!mode || ended) return; finish(false, reason, true); },
     get mode() { return mode; },
@@ -233,6 +245,7 @@
     state.setDifficulty && state.setDifficulty(diff); ended = false; startedAt = Date.now();
     $('modeOverlay').style.display = 'none';
     $('modeBar').style.display = 'flex';
+    var be = $('btnEnd'); if (be) be.style.display = (m === 'time' && !tut) ? '' : 'none';   // 「ここで終了」はスコアアタックだけ
     refreshBar();
     timerId = setInterval(tick, 250);
   }
@@ -267,6 +280,17 @@
     $('diffOverlay').style.display = 'none';
     $('modeOverlay').style.display = 'flex';
   });
+  // 「ここで終了」: 積み終わって、もう続けない時に、自分で終われる。誤タップ防止に、もう一度押して確定(3秒以内)
+  (function () {
+    var b = $('btnEnd'), armed = 0, t = 0;
+    if (!b) return;
+    b.addEventListener('click', function () {
+      if (!mode || ended || mode !== 'time') return;
+      if (!armed) { armed = 1; b.textContent = '本当に終了?(もう一度)'; clearTimeout(t); t = setTimeout(function () { armed = 0; b.textContent = 'ここで終了'; }, 3000); return; }
+      armed = 0; clearTimeout(t); b.textContent = 'ここで終了';
+      finish(false, '自分で終了しました(残り ' + fmtTime(limitSec - elapsed()) + ')');
+    });
+  })();
   $('btnRetry').addEventListener('click', function () { location.reload(); });
   $('btnModeSelect').addEventListener('click', function () { location.href = 'title.html'; });   // メイン画面(title.html)へ戻る
 

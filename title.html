@@ -321,7 +321,7 @@
 
   <section class="panel" id="modePanel" aria-labelledby="modeTitle">
     <h2 id="modeTitle">ゲームモード</h2>
-    <button class="card" data-mode="time"><span class="ico">⏱</span><span><b>タイムアタック</b><small>制限時間内に何サイクルこなせるか(6分)</small></span><span class="go">›</span></button>
+    <button class="card" data-mode="time"><span class="ico">⏱</span><span><b>スコアアタック</b><small>時間を延ばしながらスコアを伸ばす(最初4分・サイクル完了で延長)</small></span><span class="go">›</span></button>
     <button class="card" data-mode="real"><span class="ico">⚠</span><span><b>リアルモード</b><small>ミスした時点で終了。何がダメだったかを表示</small></span><span class="go">›</span></button>
     <button class="card" data-mode="tutsim"><span class="ico">学</span><span><b>チュートリアル/シミュレーション</b><small>操作を覚える・自由に練習する</small></span><span class="go">›</span></button>
   </section>
@@ -366,7 +366,7 @@
     return (c.length ? c[Math.floor(Math.random() * c.length)] : TRAILERS[0]).id;
   }
   window.TITLE_TRAILERS = TRAILERS; window.pickTrailer = pickTrailer;   // 確認用
-  var NAMES = { tutorial: 'チュートリアル', time: 'タイムアタック', real: 'リアルモード', sim: 'シミュレーション' };
+  var NAMES = { tutorial: 'チュートリアル', time: 'スコアアタック', real: 'リアルモード', sim: 'シミュレーション' };
   var $ = function (id) { return document.getElementById(id); };
   var rig = $('rig'), menu = $('menu'), scene = $('scene');
 
@@ -461,6 +461,6 @@
   });
 })();
 </script>
-<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 260</div>
+<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 261</div>
 </body>
 </html>
