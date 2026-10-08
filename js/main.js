@@ -978,7 +978,7 @@
     var fm = window.FLOOR_MECH, jt = fm ? fm.jackTiltDeg() : 0;
     var fixed = worldToRig(rigToWorld([w.cx, w.cy], jt), curTilt);
     var ox = fixed[0] - w.cx, oy = fixed[1] - w.cy;
-    var cx = w.cx, cy = w.cy + (w.r - r);   // 接地点(下端)は変えない
+    var cx = w.cx, cy = w.cy;   // 中心は動かさない(タイヤとフェンダーが下に落ちて見えないように。格納時は、下端が地面から数px浮くだけ)
     ctx.save();
     ctx.translate(ox, oy);
     // フェンダー(黄黒の縞・泥よけ)もタイヤと一緒に突出する: タイヤと同じ倍率・同じ中心で拡大して描く(タイヤだけが大きくなって、フェンダーが取り残されないように)
