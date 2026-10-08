@@ -12,12 +12,16 @@
     // タイヤの径は、参考車種の純正タイヤサイズから出した実寸(js/car_tires.js)に合わせる。絵のタイヤは fitTires で同じ比率に拡大縮小する
     var t = window.CAR_TIRE_REAL && window.CAR_TIRE_REAL[e.id];
     if (t) {
-      e._rw0 = e.rw;
+      // 絵の中の実際のタイヤ(t.w)の位置を使い、半径は実寸の径に置き換える(接地点=画像の下端は変えない)
+      e._tw = t.w;
       e.rw = (t.dia / 2) / e.len;
-      e.rh = (t.dia / 2) / (e.len * e.aspect);
-      e._tireF = e.rw / e._rw0;
+      e.rh = e.rw / e.aspect;
+      e.tl = t.w[0][0];
+      e.tr = t.w[1][0];
     }
   });
+  // 車種不明で形が崩れている絵は出さない(sports-6)。ライブラリには残してあるが、抽選には入れない
+  lib = lib.filter(function (e) { return e.id !== 'sports-6'; });
 
   var canvas = document.getElementById('stage');
   var gameStatusEl = document.getElementById('gameStatus');
@@ -244,22 +248,23 @@
   }
   // 絵のタイヤを実寸の径に合わせる(f倍)。タイヤの接地点は動かさず、縮める時は元のタイヤの跡を暗いホイールハウスで塗る
   function fitTires(img, entry) {
-    var f = entry._tireF;
-    if (!f || Math.abs(f - 1) < 0.02) return img;
-    var W = img.width, H = img.height, R = entry._rw0 * W;
+    var tw = entry._tw;
+    if (!tw) return img;
+    var W = img.width, H = img.height, Rn = entry.rw * W;   // 新しい半径(px)
     var cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     var g = cv.getContext('2d');
     g.drawImage(img, 0, 0);
-    [entry.tl, entry.tr].forEach(function (fx) {
-      var cx = fx * W, cy = H - R;
-      if (f < 1) {
+    tw.forEach(function (t) {
+      var cx = t[0] * W, cy = t[1] * W, R = t[2] * W;
+      if (Math.abs(Rn / R - 1) < 0.02 && Math.abs(cy - (H - Rn)) < 1.5) return;
+      if (Rn < R) {   // 縮める: 元のタイヤの跡を暗いホイールハウスで塗る
         g.fillStyle = '#16181b';
         g.beginPath(); g.arc(cx, cy, R * 1.04, 0, Math.PI * 2); g.fill();
       }
       g.save();
-      g.beginPath(); g.arc(cx, H - R * f, R * f, 0, Math.PI * 2); g.clip();
-      g.drawImage(img, cx - R, cy - R, R * 2, R * 2, cx - R * f, H - R * f * 2, R * 2 * f, R * 2 * f);
+      g.beginPath(); g.arc(cx, H - Rn, Rn, 0, Math.PI * 2); g.clip();
+      g.drawImage(img, cx - R, cy - R, R * 2, R * 2, cx - Rn, H - Rn * 2, Rn * 2, Rn * 2);
       g.restore();
     });
     return cv;
