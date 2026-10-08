@@ -198,15 +198,12 @@
    (2) backface-visibility と translate3d で、継ぎ目(ループの折り返し)で GPU のレイヤーが作り直されないようにする
    (3) 画像を読み込み終えてからアニメーションを始める(.ready が付くまでは路面・景色を出さない。3秒で打ち切り) */
 .road3d { background: #3b4046; backface-visibility: hidden; }
-.road3d .strip, .sl { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-/* ---- 2026-10-08 道路を canvas で描く(CSS の3D変形のループで、実機の GPU が一瞬白く塗る対策) ----
-   同じ見た目(奥へ60度傾けた路面)を、1行ずつ計算して描く。3D のレイヤーを使わないので、折り返しでレイヤーが作り直されて白くなることがない。
-   canvas が使えない・失敗した時だけ、従来の CSS(.strip)に戻る */
-.roadcv { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-.scene.cvroad .road3d .strip { display: none; }
-.scene.cvroad .road3d .roadcv { display: block; }
-.scene.cvroad .sl { width: 100%; animation-name: none; will-change: auto; background-size: 0 0; background-repeat: no-repeat; }   /* 景色の層も canvas で描く(下の script)。巨大な横長レイヤー(近景は約5000px)がスマホのGPUの上限を超えて、ループのたびに白/黒に塗られるのを避ける */
-.slcv { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+.road3d .strip { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+/* ---- 2026-10-08 景色の層は background-position でずらす(巨大レイヤーをやめる) ----
+   従来は「画面幅+1枚分」の巨大な横長レイヤーを translateX でループしていた。近景は1枚が約5000px(スマホ縦)で、スマホのGPUのテクスチャ上限を超え、ループの折り返しで白/黒に塗られていた。
+   今は層を画面幅のままにして、背景の位置(background-position-x)だけを -tw → 0 でずらす(見た目と速さは同じ。-tw と 0 は同じ絵の位置なので継ぎ目なし) */
+.sl { width: 100%; will-change: auto; animation-name: slidebg; }
+@keyframes slidebg { from { background-position-x: calc(-1 * var(--tw)); } to { background-position-x: 0; } }
 @keyframes slide { from { transform: translate3d(calc(-1 * var(--tw)), 0, 0); } to { transform: translate3d(0, 0, 0); } }
 .scene:not(.ready) .sl, .scene:not(.ready) .road3d { opacity: 0; }
 .scene .sl, .scene .road3d { transition: opacity .35s ease; }
@@ -292,7 +289,7 @@
 <body>
 <div class="scene" id="scene" aria-hidden="true">
   <div class="sun"></div>
-  <div class="stars"></div><div class="sl far"></div><div class="sl mid"></div><div class="sl near"></div><div class="road3d"><div class="strip"></div><canvas class="roadcv"></canvas></div><div class="sl grail"></div>
+  <div class="stars"></div><div class="sl far"></div><div class="sl mid"></div><div class="sl near"></div><div class="road3d"><div class="strip"></div></div><div class="sl grail"></div>
   <div class="rig" id="rig">
     <div class="shadow"></div>
     <img class="body" src="assets/ui/rig.png?v=120" alt="">
@@ -394,126 +391,6 @@
     setTimeout(ok, 3000);
   })();
 
-  // 読み込んだ画像を、ブラウザに捨てられない形(ImageBitmap。使えなければ canvas にコピー)にして渡す。大きい絵(近景 8192px 幅など)を canvas にコピーすると、
-  // 古い端末の canvas の大きさの上限(4096px など)に当たって描けなくなる(天気・時間帯によって景色や白線が欠ける)ので、ImageBitmap を先に使う
-  function keep(im, cb) {
-    function viaCanvas() {
-      try { var c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); cb(c); }
-      catch (e) { cb(im); }
-    }
-    if (window.createImageBitmap) createImageBitmap(im).then(cb, viaCanvas); else viaCanvas();
-  }
-
-  // 道路を canvas で描く(上の CSS コメント参照)。幾何: 路面の絵(幅 tw × 高さ ph)を rotateX(60deg) して perspective をかけたものを、画面の1行ごとに逆算して描く
-  (function () {
-    var road = scene.querySelector('.road3d'), cv = road && road.querySelector('.roadcv'), strip = road && road.querySelector('.strip');
-    if (!cv || !strip || !cv.getContext) return;
-    var g = cv.getContext('2d'), probe = document.createElement('div'), img = null, imgUrl = '', phase = 0, last = 0, W = 0, Hr = 0, dpr = 1, geo = null;
-    probe.style.cssText = 'position:absolute;visibility:hidden;height:100vh;width:0;pointer-events:none';
-    document.body.appendChild(probe);
-    function vh(name) {
-      var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(), m = /^([\d.]+)vh$/.exec(v);
-      return m ? parseFloat(m[1]) / 100 * probe.offsetHeight : NaN;
-    }
-    function layout() {
-      W = road.clientWidth; Hr = road.clientHeight; dpr = Math.min(2, window.devicePixelRatio || 1);
-      var cw = Math.round(W * dpr), ch = Math.round(Hr * dpr);
-      if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; g.fillStyle = '#3b4046'; g.fillRect(0, 0, cw, ch); }   // 大きさが変わると canvas は空になるので、路面色で塗り直す
-      geo = { p: vh('--rd-p'), oy: vh('--rd-oy'), ph: vh('--rd-ph') };
-    }
-    function loadImg() {
-      var m = /url\(["']?([^"')]+)["']?\)/.exec(getComputedStyle(strip).backgroundImage || '');
-      if (!m || m[1] === imgUrl) return;
-      imgUrl = m[1];
-      var im = new Image();
-      im.onload = function () {
-        if (imgUrl !== m[1]) return;
-        keep(im, function (src) { if (imgUrl === m[1]) img = src; });
-      };
-      im.src = imgUrl;
-    }
-    function draw() {
-      if (!img || !geo || !(geo.p > 0) || !(W > 0) || !(Hr > 0) || !img.width) return;
-      var p = geo.p, oy = geo.oy, ph = geo.ph, tw = ph * 2.4, ox = W / 2, c60 = 0.5, s60 = Math.sqrt(3) / 2;
-      var iw = img.width, ih = img.height, t = -tw + tw * phase, rows = cv.height;
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-      for (var r = 0; r < rows; r++) {
-        var Y = (r + 0.5) / dpr, y = Y * p / (c60 * p + (Y - oy) * s60);   // 画面の行 Y に映る、絵の行 y(CSS px)
-        if (!(y >= 0 && y < ph)) continue;
-        var sc = p / (p - y * s60);   // その行の拡大率
-        var x0 = ox + (0 - ox) / sc - t, u0 = (((x0 / tw) % 1) + 1) % 1 * iw, sw = W / sc / tw * iw, v = y / ph * ih;
-        var Y2 = (r + 1.5) / dpr, y2 = Y2 * p / (c60 * p + (Y2 - oy) * s60);
-        var sh = Math.max(1, (y2 - y) / ph * ih);   // この1行に映る絵の行数(奥ほど多い)。1行だけ拾うと細い白線が抜けるので、その範囲を平均して描く
-        var vv = Math.min(ih - sh, Math.max(0, v - sh / 2));
-        if (u0 + sw <= iw) g.drawImage(img, u0, vv, sw, sh, 0, r, cv.width, 1);
-        else {   // 絵の右端をまたぐ: 2回に分けて描く
-          var w1 = iw - u0, d1 = cv.width * w1 / sw;
-          g.drawImage(img, u0, vv, w1, sh, 0, r, d1, 1);
-          g.drawImage(img, 0, vv, sw - w1, sh, d1, r, cv.width - d1, 1);
-        }
-      }
-    }
-    function frame(now) {
-      var dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
-      var d = parseFloat(getComputedStyle(strip).animationDuration) || 3.2;
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) phase = (phase + dt / d) % 1;
-      loadImg();
-      try { draw(); } catch (e) { scene.classList.remove('cvroad'); return; }
-      requestAnimationFrame(frame);
-    }
-    layout(); loadImg();
-    window.addEventListener('resize', layout);
-    scene.classList.add('cvroad');
-    requestAnimationFrame(frame);
-  })();
-
-  // 景色の層(.sl: 遠景・中景・近景・ガードレール)を canvas で描く。1枚の絵を横に並べて、時間でずらす(従来の translateX ループと同じ動き・同じ速さ)
-  (function () {
-    var layers = [].slice.call(scene.querySelectorAll('.sl')), dpr = 1;
-    if (!layers.length || !scene.classList.contains('cvroad')) return;
-    layers.forEach(function (el) {
-      var cvs = document.createElement('canvas'); cvs.className = 'slcv'; el.appendChild(cvs);
-      var L = { el: el, cv: cvs, g: cvs.getContext('2d'), img: null, url: '', phase: Math.random(), w: 0, h: 0 };
-      el._L = L;
-    });
-    function load(L) {
-      var m = /url\(["']?([^"')]+)["']?\)/.exec(getComputedStyle(L.el).backgroundImage || '');
-      if (!m || m[1] === L.url) return;
-      L.url = m[1];
-      var im = new Image();
-      im.onload = function () {
-        if (L.url !== m[1]) return;
-        keep(im, function (src) { if (L.url === m[1]) L.img = src; });
-      };
-      im.src = L.url;
-    }
-    function size(L) {
-      var w = L.el.clientWidth, h = L.el.clientHeight; dpr = Math.min(2, window.devicePixelRatio || 1);
-      var cw = Math.round(w * dpr), ch = Math.round(h * dpr);
-      if (L.cv.width !== cw || L.cv.height !== ch) { L.cv.width = cw; L.cv.height = ch; L.dirty = true; }
-      L.w = w; L.h = h;
-    }
-    function draw(L) {
-      if (!L.img || !(L.w > 0) || !(L.h > 0)) return;
-      var tw = L.h * L.img.width / L.img.height * dpr, off = -tw + tw * L.phase, g = L.g;   // 絵1枚の幅(canvasのpx)。ずらし量は -tw → 0
-      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, L.cv.width, L.cv.height);
-      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-      for (var x = off; x < L.cv.width; x += tw) g.drawImage(L.img, Math.round(x), 0, Math.ceil(tw) + 1, L.cv.height);
-    }
-    var last = 0, reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function frame(now) {
-      var dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
-      layers.forEach(function (el) {
-        var L = el._L; load(L); size(L);
-        if (!reduce) L.phase = (L.phase + dt / (parseFloat(getComputedStyle(el).animationDuration) || 60)) % 1;
-        try { draw(L); } catch (e) {}
-      });
-      requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
-  })();
-
   var mode = null, leaving = false, trailer = 'semi-6';
   var PANELS = ['mode', 'diff', 'ts', 'trailer'], cur = 'mode';
   function show(panel) {
@@ -577,6 +454,6 @@
   });
 })();
 </script>
-<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 254</div>
+<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 255</div>
 </body>
 </html>
