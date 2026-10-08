@@ -24,10 +24,11 @@
   // スコアアタック(旧タイムアタック。2026-10-08 ユーザー提案: 積み終わっても終われない・待つだけになる問題)。
   // 持ち時間は最初 startSec。サイクルを完了するたびに延長ボーナス(base 秒。回を重ねるごとに shrink 秒ずつ減って、min 秒まで)がもらえる。
   // そのサイクルのミス1回につき missCost 秒引く(下限 floor 秒)。持ち時間が0になるか、「ここで終了」を押すと終わり、スコアで競う
-  var EXT = { startSec: 240, base: 180, shrink: 15, min: 90, missCost: 10, floor: 30 };
-  var limitSec = EXT.startSec;
+  // 難易度ごとに、最初の持ち時間(startSec)と延長の初めの値(base)を変える。2026-10-08 ユーザー指示: 全体に +20秒、イージーはもう少し猶予
+  var EXT = { start: { easy: 300, normal: 260, hard: 260 }, base: { easy: 210, normal: 180, hard: 180 }, shrink: 15, min: 90, missCost: 10, floor: 30 };
+  var limitSec = EXT.start.normal;
   var MODES = {
-    time: { name: 'スコアアタック', desc: '時間延長しながら、どこまでスコアを伸ばせるか(最初' + EXT.startSec / 60 + '分。サイクル完了で延長)' },
+    time: { name: 'スコアアタック', desc: '時間延長しながら、どこまでスコアを伸ばせるか(最初4〜5分。サイクル完了で延長)' },
     real: { name: 'リアルモード', desc: 'ミスした時点で終了。何がダメだったかを表示' },
     sim: { name: 'シミュレーション', desc: '自由に操作できる練習用。時間制限・終了なし' }
   };
@@ -129,7 +130,7 @@
     if (mode === 'real') { finish(true, msg); return; }
     if (mode === 'time') {   // 延長ボーナス: 回を重ねるほど少なく、このサイクルのミスが多いほど少ない
       var missesNow = stats.majors + stats.minors, missesCycle = missesNow - cycleStartMisses;
-      var ext = Math.max(EXT.floor, Math.max(EXT.min, EXT.base - EXT.shrink * (stats.cycles - 1)) - EXT.missCost * missesCycle);
+      var ext = Math.max(EXT.floor, Math.max(EXT.min, (EXT.base[diff] || EXT.base.normal) - EXT.shrink * (stats.cycles - 1)) - EXT.missCost * missesCycle);
       limitSec += ext; cycleStartMisses = missesNow;
       msg += ' / 時間延長 +' + ext + '秒';
     }
@@ -243,6 +244,7 @@
     state.freeMode = m === 'sim' && !tut;   // シミュレーション(チュートリアルを除く)は、道板・4番扇動板などの状態で動作を制限しない。ぶつかった時にアニメーションを出す
     mode = m; diff = m === 'sim' ? 'easy' : (d || 'easy'); turn.startedAt = Date.now(); turn.snap = { carPoints: stats.carPoints, docks: stats.docks };
     state.setDifficulty && state.setDifficulty(diff); ended = false; startedAt = Date.now();
+    limitSec = EXT.start[diff] || EXT.start.normal;
     $('modeOverlay').style.display = 'none';
     $('modeBar').style.display = 'flex';
     var be = $('btnEnd'); if (be) be.style.display = (m === 'time' && !tut) ? '' : 'none';   // 「ここで終了」はスコアアタックだけ

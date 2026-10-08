@@ -593,6 +593,18 @@
     }
     return false;
   }
+  // 出している4番扇動板(根元〜先端の線)が、動いている車の車体に当たるか(格納で下に垂れている間は、従来どおり当たらない)。
+  // 板が車のタイヤの高さにある(タイヤが板に載る)時は当たらず、板が車体の高さにある時(板の先に、下段を走る車の前が当たる)だけ当たる
+  function bridgeHitsBody(x0, x1, top, y) {
+    if (!MECH.bridge && bridgeT() <= 0.02) return false;
+    var g = bridgeSeg(), w = g.b[0] - g.a[0];
+    if (w < 6) return false;
+    for (var x = Math.max(g.a[0], x0); x <= Math.min(g.b[0], x1); x += 4) {
+      var ty = g.a[1] + (g.b[1] - g.a[1]) * (x - g.a[0]) / w;
+      if (ty < y - 16 && ty + 7 > top(x) + 2) return true;
+    }
+    return false;
+  }
   function slideHitsCar2(offs, t) {
     var gsn = window.GAME_STATE, o = gsn && gsn.occupied[2];
     if (!o) return false;
@@ -963,7 +975,7 @@
     stepPinTarget: stepPinTarget, togglePin: togglePin,
     toggleStopper: toggleStopper, stopperVisible: stopperVisible, stopperPos: stopperPos, toggleBridge: toggleBridge, f5Slope: f5Slope,
     toggleRamp: toggleRamp, rampUpdate: rampUpdate, rampReady: rampReady, rampT: function () { rampUpdate(); return RAMP.t; },
-    toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, carTiresOn: carTiresOn, bridgeSeg: bridgeSeg, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
+    toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, carTiresOn: carTiresOn, bridgeSeg: bridgeSeg, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, bridgeHitsBody: bridgeHitsBody, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
     holdStart: holdStart, holdStop: holdStop,
     atTravel: atTravel, upperConnected: upperConnected, f1Connected: f1Connected,
     cylPin: cylPin, cylLen: cylLen,

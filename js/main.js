@@ -1248,7 +1248,7 @@
       if (car.pathTool && (car.phase === 'ready' || car.phase === 'moving')) {
         var L = car.pathTool.at(car.progress);
         var R = car.pathTool.at(car.progress - car.wbPx);
-        rotDeg = Math.atan2(-(L.y - R.y), -(L.x - R.x)) * 180 / Math.PI;
+        rotDeg = car.groundRun ? 0 : Math.atan2(-(L.y - R.y), -(L.x - R.x)) * 180 / Math.PI;
       }
       if (curTilt) {
         var rb = cfg.ramp.bottom[0], rt = cfg.ramp.top[0];

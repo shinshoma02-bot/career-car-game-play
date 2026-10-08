@@ -306,11 +306,27 @@
     var fm = window.FLOOR_MECH, x0 = car.x - car.leftTireX;
     return fm.hangHits(x0, x0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), fm.MECH.hang);
   }
+  // 道板が出ていない時: 車は地面を走って、トレーラーの後端(newArt.tail.x1)に車の先端が当たって止まる。その進行距離(無ければ undefined)
+  function rampBlockArc(car) {
+    var fm = window.FLOOR_MECH;
+    if (T6 || !fm || typeof fm.rampReady !== 'function' || fm.rampReady() || !car.pathTool) return undefined;
+    var tail = (cfg.newArt && cfg.newArt.tail && cfg.newArt.tail.x1) || 2070, limX = tail + 3 + car.leftTireX;
+    var lo = 0, hi = car.rampArc !== undefined ? car.rampArc : car.pathLen;
+    if (car.pathTool.at(lo).x <= limX) return 0;
+    if (car.pathTool.at(hi).x > limX) return hi;
+    for (var i = 0; i < 22; i++) { var m = (lo + hi) / 2; if (car.pathTool.at(m).x > limX) lo = m; else hi = m; }
+    return lo;
+  }
   var TIRE_PASS_MARGIN_PX = 30;   // 6番のタイヤ基準点からこれ以上通り過ぎたら「通過」とみなす(6番に止まる車は輪止めの手前で止まる)
   function routeProblems(car) {
     if (T6) return window.FLOOR_MECH.routeProblems6b(car);
     var fm = window.FLOOR_MECH, out = [], id = car.route.id;
-    if (!fm.rampReady()) out.push({ key: 'ramp', msg: '道板が出ていません。フロア昇降パネルの「道板を出す」で出してから進めてください。' });
+    if (!fm.rampReady()) {
+      // 道板が出ていない: 地面を走って、トレーラーの後端にぶつかって止まる(宙に浮いて進まない)
+      var rba = rampBlockArc(car);
+      if (rba !== undefined && car.progress >= rba - 1) out.push({ key: 'ramp', phys: true, stopAt: rba, msg: '道板が出ていないので、トレーラーの後ろにぶつかります。フロア昇降パネルの「道板を出す」で出してから進めてください。' });
+      else if (rba === undefined) out.push({ key: 'ramp', msg: '道板が出ていません。フロア昇降パネルの「道板を出す」で出してから進めてください。' });
+    }
     if (fm.tireOffGround()) out.push({ key: 'jack', msg: 'ジャッキで台車が浮いている間は車を動かせません。ジャッキを縮めて接地させてください。' });
     if (id === 'U') {
       // 出しているスライド板(1番フロアの後端)が、2番へ入る車の前に当たる(1番へ渡る時は、板の上を走るので当たらない)
@@ -322,6 +338,11 @@
         out.push({ key: 'f1link', msg: fm.MECH.f2Flap ? '2番扇動板が開いているので1番へは通れません。閉じてください。' : '1番へはまだ2番↔1番がつながっていません。フロア昇降パネルでつなげてください。' });
       }
     } else {
+      // 出している4番扇動板が、下段を走る車の前に当たる(実物の板)
+      var bx0 = car.x - car.leftTireX;
+      if (fm.bridgeHitsBody && fm.bridgeHitsBody(bx0, bx0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), car.y)) {
+        out.push({ key: 'bridgehit', phys: true, msg: '4番扇動板が出ているので、車の前が当たります。4番扇動板を格納してください。' });
+      }
       var hb = (id === 'L' || id === '4') && hangBlocksCar(car);
       // phys: true = 実物(フロア・4番扇動板・宙段・タイヤ)に当たる理由。シミュレーションでも、その位置で止まる(ぶつかった演出つき)。道板が出ていない・ジャッキで浮いている、は止めない(下の phys 無し)
       if (hb) out.push({ key: 'hang', phys: true, msg: '宙段フロアが上がっていて通れません。宙段を下げてから(格納してから)通ってください。' });
@@ -1214,6 +1235,8 @@
     var applied = car.progress - before;
     var p = car.pathTool.at(car.progress);
     car.x = p.x; car.y = p.y;
+    car.groundRun = rampBlockArc(car) !== undefined;   // 道板が出ていない間は、地面を水平に走る(道板の斜面を宙で上らない)
+    if (car.groundRun) car.y = cfg.ramp.groundY;
     car.spinDeg += (applied / car.wheelRPx) * (180 / Math.PI) * SPIN_SIGN;
     if (applied !== 0) car.phase = 'moving';
     if (car.seated && applied < -0.2) car.contacted = false;   // 輪止めから離れる向きに動かしたら、OK(固定でない限り)を外す
