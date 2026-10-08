@@ -393,6 +393,7 @@
       drawCarOcclusion();
       drawMechanismBehindFg();
     }
+    drawBogiePanel();   // 台車のタイヤの上: 反対側のフレームも重なって見えるので、くり抜かず緑で塗りつぶす
     if (chk.fg.checked) ctx.drawImage(images.fg, 0, 0);
     drawPillarScale();
     if (chk.floors.checked) drawJack('leg');
@@ -957,6 +958,15 @@
     ctx.restore();
   }
 
+  // 台車のタイヤの上(梁の下〜下の梁、後ろの柱の間)の緑のパネル。前景フレームの奥・タイヤの奥に描くので、柱・梁・フェンダー・タイヤが手前に重なる(2026-10-08 ユーザー指示)
+  function drawBogiePanel() {
+    var yT = 426, yB = 508, xL = 1795, xR0 = 1923 + 0.105 * (yT - 360), xR1 = 1923 + 0.105 * (yB - 360);   // 右は斜めの柱の中心線(柱の幅の内側に収まる)
+    var g = ctx.createLinearGradient(0, yT, 0, yB);
+    g.addColorStop(0, '#2fb9a2'); g.addColorStop(1, '#23917f');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(xL, yT); ctx.lineTo(xR0, yT); ctx.lineTo(xR1, yB); ctx.lineTo(xL, yB); ctx.closePath(); ctx.fill();
+  }
+
   // 台車タイヤ(実車写真準拠): 黒いタイヤ+トレッド、銀色のスチールディスクホイール(飾り穴10・ナット10・黒いハブキャップ)、フェンダー。
   // タイヤを突出させると手前(外側)に出るので、接地点はそのままで少し大きく見え、フェンダーより手前に来る。
   // ※画像wheel_v2.b64.txtは応援サイトが部品取りに使っているため差し替えず、ゲームではこちらを描く
@@ -975,6 +985,11 @@
     var sc = r / w.r;
     if (e < 0.5) { drawTire(cx, cy, r); drawFender(w, cx, cy, sc); }
     else { drawFender(w, cx, cy, sc); drawTire(cx, cy, r); }
+    // タイヤとフェンダーの隙間は、奥なので黒い影にする(2026-10-08 ユーザー指示)。タイヤの外側の細い輪(上半分の弧)を、タイヤ側ほど濃く塗る
+    var ri = r * 0.995, ro = r + 9 * sc, sg = ctx.createRadialGradient(cx, cy, ri, cx, cy, ro);
+    sg.addColorStop(0, 'rgba(6,8,9,0.96)'); sg.addColorStop(0.7, 'rgba(10,13,14,0.9)'); sg.addColorStop(1, 'rgba(10,13,14,0.55)');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(cx, cy, ro, Math.PI * 1.04, Math.PI * 1.96); ctx.arc(cx, cy, ri, Math.PI * 1.96, Math.PI * 1.04, true); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
   function drawFender(w, cx, cy, sc) {
