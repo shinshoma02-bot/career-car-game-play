@@ -76,7 +76,7 @@ window.TRAILER_CONFIG = {
   "hangFloor": {
     "len": 325, "speed": 0.4, "rearPin": { "holes": 6, "pitch": 7, "hole": 1 }, "stopPin": { "hole": 1, "us": [1.86, 1.82, 1.78, 1.75, 1.71, 1.67], "pts": [[1301.4, 427.5], [1306.8, 425.0], [1312.1, 422.5], [1317.4, 419.9], [1322.7, 417.4], [1328, 414.8]], "thick": 16, "note": "フレーム側の固定ピン(赤い板)。pts=ピンの上面の位置[x,y](前→後ろの5段階。斜めの柱に沿って並ぶ)、thick=フロア下面までの厚み。フロア下面がピンに当たる u が loadU になる(0.01刻み)。前から u2.0/1.84/1.76/1.70/1.60。ユーザー指定: 斜めの柱(フロア先端のすぐ後ろ。x1300〜1380)に付ける" }, "tol": 80, "tolLower": 40, "loadU": 1.9, "localX0": 1427, "localY": 510,
     "linkage": {
-      "frontLen": 114, "pinSpan": 293, "pinOffset": [16, 18], "pinOffsetF": [0, 0], "pinOffsetR": [309, 18], "theta0": 0, "groundY": 528,
+      "frontLen": 140, "pinSpan": 293, "pinOffset": [16, 18], "pinOffsetF": [0, 0], "pinOffsetR": [309, 18], "theta0": 0, "groundY": 528,
       "theta1": 20.48, "theta2": 121, "lockU": 1, "rearMin": 90, "rearMax": 135, "rearGrowTheta": 180, "tableStep": 0.01,
       "note": "宙段の四節リンク(付け根 pivotF/pivotR は newArt.chuudan から読む。後ろの付け根は下段の5番・6番の床の上)。theta1 は後ろの柱が rearMin になる角度(pivotR を変えたら求め直す: 後ろの取付点が地面上で pivotR.x+rearMin に来る θ)。リンク=車体(pivotF-pivotR)・前の柱(frontLen固定)・フロア(取付点の間 pinSpan)・後ろの柱(伸縮)。pinOffset=フロア上面の前端Fから前の取付点までのずれ。u=0→lockU はθ 0→theta1(後ろの取付点は地面groundYを滑り、後ろの柱が縮む)。lockU(=後ろの柱の可動部が固定される位置)で後ろの柱は縮みきって rearMin。lockU→2 はθ theta1→theta2(後ろの柱は固定長の柱として前の柱に連動、θが rearGrowTheta を超えると rearMax まで再び伸びる)"
     },

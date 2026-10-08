@@ -185,7 +185,8 @@
   var LK = HANG.linkage, CH = cfg.newArt.chuudan;   // 付け根(pivotF/pivotR)は描画と同じ newArt.chuudan の値
   // 後ろの柱のセットピン: 内側の角パイプの穴(RP_CFG.holes個、pitch px間隔)に差す。1番穴=一番縮む(rearMin)、番号が増えるほど縮み幅が小さい(長さ rearMin+(n-1)×pitch)。
   var RP_CFG = HANG.rearPin || { holes: 1, pitch: 0, hole: 1 };
-  var RP = { hole: RP_CFG.hole || 1, len: LK.rearMin, theta1: LK.theta1 };
+  var RP = { hole: RP_CFG.hole || 1, len: LK.rearMin + ((RP_CFG.hole || 1) - 1) * (RP_CFG.pitch || 0), theta1: LK.theta1 };
+  var REAR_LEN_MAX = LK.rearMax || (LK.rearMin + (RP_CFG.holes || 1) * (RP_CFG.pitch || 0));   // 後ろの柱を伸ばせる上限(2026-10-08 ユーザー指示: 柱はシリンダーのように連続で伸び縮みさせる)
   function hangSolve(u) {
     u = Math.max(0, Math.min(2, u));
     // theta0=格納時(u=0)の前の柱の角度(水平=0。前の取付点が付け根より低い時は負。無ければ0)
@@ -213,7 +214,7 @@
   var HANG_N = Math.round(2 / LK.tableStep), HANG_TAB = [];
   // ピン穴から固定長を決め、その長さまで縮む角度 theta1 を求める(段階1は後ろの取付点が地面を滑るので、角度に対し柱の長さは単調に縮む)
   function rearPinSolve() {
-    RP.len = LK.rearMin + (RP.hole - 1) * (RP_CFG.pitch || 0);
+    // RP.len(後ろの柱をロックする長さ)は連続値。ピン穴(setRearPinHole)で決める時は、rearMin+(穴-1)×pitch に設定する
     var th0 = LK.theta0 || 0, lo = th0, hi = LK.theta1 + 40, i;
     RP.theta1 = hi;
     function len(th) { var s = RP.theta1; RP.theta1 = th; var p = hangSolve(LK.lockU); RP.theta1 = s; return p.rear; }
@@ -241,6 +242,7 @@
     return { F: e.F, R: e.R, ang: Math.atan2(e.R[1] - e.F[1], e.R[0] - e.F[0]) * 180 / Math.PI };
   }
   function hangTop(u, x) { var e = hangEnds(u); return e.F[1] + (e.R[1] - e.F[1]) * (x - e.F[0]) / (e.R[0] - e.F[0]); }
+  var HANG_REAR_SPEED = 30;   // 後ろの柱の伸縮の速さ(px/秒。約0.26m/秒)
   var HANG_PIN_PX = 60;   // 宙段のピンの仮想の上下量: u=1あたり60px(0〜19番の20穴で120px、1穴6px)
   function syncHangEnd() { if (ENDS.F7) ENDS.F7.off = -MECH.hang * HANG_PIN_PX; }
   // 床の下面(上面+10px)がy(x)・x範囲[x0,x1]・屋根の高さtopYの車とぶつかるか(枠の内側5cmは隙間)
@@ -370,7 +372,7 @@
   //  loadU までの動きだけを調べる(2026-10-07: 以前は loadU より上〜u=2 も調べていた。ピンを抜かない限り行かない範囲なので、判定が実車より厳しかった)
   function hangUsList() {
     var us = [0.05, 0.1, 0.15, 0.2], loadU = (HANG && HANG.loadU) || 2;
-    for (var ui = 0.24; ui <= 2 + 1e-9; ui += 0.04) us.push(Math.round(ui * 100) / 100);
+    for (var ui = 0.22; ui <= 2 + 1e-9; ui += 0.02) us.push(Math.round(ui * 100) / 100);   // 0.02 刻み(2026-10-08: 0.04 刻みでは、u=0.50 付近のごく狭い範囲でだけ当たる組み合わせ(SUV・3段寄せ)を見逃して、5番に積んだ後に宙段が上がらなかった)
     us = us.filter(function (x) { return x < loadU - 1e-9; }); us.push(loadU);
     return us;
   }
@@ -946,10 +948,27 @@
   }
   function setRearPinHole(n) {
     n = Math.max(1, Math.min(RP_CFG.holes || 1, Math.round(n)));
-    if (n === RP.hole) return true;
+    if (n === RP.hole && Math.abs(RP.len - (LK.rearMin + (n - 1) * (RP_CFG.pitch || 0))) < 0.01) return true;
     if (MECH.hang > 0.05) { onWarn('宙段を格納位置に戻してから、後ろの柱のピンを差し替えてください'); return false; }
-    RP.hole = n; hangRebuild(); syncHangEnd();
+    RP.hole = n; RP.len = LK.rearMin + (n - 1) * (RP_CFG.pitch || 0); hangRebuild(); syncHangEnd();
     onInfo('後ろの柱のピン: ' + n + '番穴(柱の縮み幅 ' + Math.round(hangSolve(0).rear - RP.len) + 'px)');
+    return true;
+  }
+  // 後ろの柱の長さを、シリンダーのように連続で伸び縮みさせる(押している間 dir=+1 伸ばす / -1 縮める)。
+  // 宙段が格納〜スロープの姿勢(u ≦ lockU)の間だけ動かせる(それより上げた後は、柱の長さは固定)。宙段に車が載っている・乗りかけている間、動かした結果フロアが下段の車に当たる時は動かさない
+  function rearLenStep(dir, dt) {
+    var gs = window.GAME_STATE;
+    if (MECH.hang > (LK.lockU || 1) + 0.02) { onWarn('宙段を上げた後は、後ろの柱の長さは変えられません。スロープの位置か格納位置まで戻してください'); return false; }
+    if (gs && gs.occupied && gs.occupied['7']) { onWarn('宙段に車が載っているので、後ろの柱の長さは変えられません'); return false; }
+    var nl = Math.max(LK.rearMin, Math.min(REAR_LEN_MAX, RP.len + dir * (HANG_REAR_SPEED || 30) * dt));
+    if (Math.abs(nl - RP.len) < 1e-6) return false;
+    var old = RP.len; RP.len = nl;
+    RP.hole = Math.max(1, Math.min(RP_CFG.holes || 1, Math.round((nl - LK.rearMin) / (RP_CFG.pitch || 1)) + 1));
+    hangRebuild(); syncHangEnd();
+    if (MECH.hang > 0.05) {   // スロープなどの姿勢で動かした結果、下段の車(5番・6番)にフロアが当たるなら、戻す
+      var why = hangProblem(MECH.hang);
+      if (why) { RP.len = old; RP.hole = Math.max(1, Math.min(RP_CFG.holes || 1, Math.round((old - LK.rearMin) / (RP_CFG.pitch || 1)) + 1)); hangRebuild(); syncHangEnd(); onWarn(why); return false; }
+    }
     return true;
   }
   // 荷物の変更(配車担当への連絡・時間切れ)で、トレーラーを積み始めの状態に戻す: 道板・4番扇動板・ジャッキ・タイヤ・ロック・5番フロア・宙段・セットピンを初期位置へ
@@ -966,7 +985,7 @@
   window.FLOOR_MECH = {
     resetAll: resetAll,
     stopPinResolve: stopPinSolve, stopPin: SP, stopPinHoles: SP_CFG ? SP_CFG.pts.length : 0, stopPinCfg: SP_CFG, setStopPinHole: setStopPinHole, toggleStopPin: toggleStopPin,
-    rearPin: RP, rearPinHoles: RP_CFG.holes || 1, rearPinPitch: RP_CFG.pitch || 0, setRearPinHole: setRearPinHole, rearPinLen: function () { return RP.len; },
+    rearPin: RP, rearPinHoles: RP_CFG.holes || 1, rearPinPitch: RP_CFG.pitch || 0, setRearPinHole: setRearPinHole, rearPinLen: function () { return RP.len; }, hangHits: hangHits, hangProblem: hangProblem, hangContacts: hangContacts, rearLenStep: rearLenStep, rearLenRange: function () { return [LK.rearMin, REAR_LEN_MAX]; },
     FLOORS: FLOORS, FIDS: FIDS, ENDS: ENDS, PINS: PINS, MECH: MECH, pinPostRel: pinPostRel, pinPostOfHole: pinPostOfHole, CYLS: CYLS, initPins: initPins, FRAME_GAP_PX: FRAME_GAP_PX, hangPose: hangPose, hangSlope: hangSlope, hangReachable: hangReachable, hangHits: hangHits, carTopY: carTopY, hangFit: hangFit, hangLowerFit: hangLowerFit, hangUpperFit: hangUpperFit, hangUpperEnvelope: hangUpperEnvelope, envFits: envFits, envAt: envAt, ENV: { x0: ENV_X0, dx: ENV_DX, n: ENV_N }, hangVsUpperX: hangVsUpperX, FIT_OFFS: FIT_OFFS, hangProblem: hangProblem, hangStuck: hangStuck, hangEnds: hangEnds, hangSolve: hangSolve, hangRebuild: hangRebuild, pinned: pinned, rested: rested, floorPinsOk: floorPinsOk, offOfHole: offOfHole, poseProblem: poseProblem, staticPoseProblem: staticPoseProblem,
     BR_ANCHOR: BR_ANCHOR, BRIDGE_STOWED_X: BRIDGE_STOWED_X,
     F1_CYL: F1_CYL, SHEAVE: SHEAVE, WIRE_TOP: WIRE_TOP, f1CylLen: f1CylLen,

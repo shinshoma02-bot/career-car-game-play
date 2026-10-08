@@ -135,24 +135,33 @@
   }
 
   // 2ボタン押ボタン(上・下)。押している間、その棚(ジャッキ・宙段)が動く
-  // 後ろの柱のセットピン(内側パイプの穴に差す。番号が大きいほど縮み幅が小さい)
+  // 後ろの柱(宙段): シリンダーのように、押している間だけ連続で伸び縮みする(2026-10-08 ユーザー指示。以前は内側パイプの穴にピンを差す6段階)
   function rearPinCard(item) {
     var card = document.createElement('div'); card.className = 'swCard';
     var lab = document.createElement('div'); lab.className = 'swLabel'; lab.textContent = item.label; card.appendChild(lab);
     var row = document.createElement('div'); row.className = 'pinRow';
-    var m = document.createElement('button'); m.className = 'pinStep'; m.textContent = '−';
+    var m = document.createElement('button'); m.className = 'pinStep'; m.textContent = '縮';
     var p = document.createElement('button'); p.className = 'pinBtn on'; p.id = 'rearPinLabel';
-    var pl = document.createElement('button'); pl.className = 'pinStep'; pl.textContent = '＋';
-    m.addEventListener('click', function () { fm.setRearPinHole(fm.rearPin.hole - 1); renderRearPin(); });
-    pl.addEventListener('click', function () { fm.setRearPinHole(fm.rearPin.hole + 1); renderRearPin(); });
+    var pl = document.createElement('button'); pl.className = 'pinStep'; pl.textContent = '伸';
+    function hold(btn, dir) {
+      var iv = null, last = 0;
+      function stop() { if (iv) { clearInterval(iv); iv = null; } renderRearPin(); }
+      btn.addEventListener('pointerdown', function (e) {
+        e.preventDefault(); if (iv) return; last = performance.now();
+        iv = setInterval(function () { var n = performance.now(); var ok = fm.rearLenStep(dir, Math.min(0.1, (n - last) / 1000)); last = n; renderRearPin(); if (!ok) stop(); }, 40);
+      });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { btn.addEventListener(ev, stop); });
+    }
+    hold(m, -1); hold(pl, +1);
     row.appendChild(m); row.appendChild(p); row.appendChild(pl); card.appendChild(row);
     var note = document.createElement('div'); note.style.cssText = 'font-size:12px;color:#aab;line-height:1.5;margin-top:6px;max-width:150px;';
-    note.textContent = '1番=一番縮む。番号が大きいほど縮み幅が小さい(宙段が格納位置の時だけ変更可)'; card.appendChild(note);
+    note.textContent = '押している間、後ろの柱が伸び縮み(縮=スロープが急に・伸=ゆるやかに)。宙段が格納〜スロープの位置の時だけ'; card.appendChild(note);
+    setTimeout(renderRearPin, 0);
     return card;
   }
   function renderRearPin() {
-    var b = document.getElementById('rearPinLabel');
-    if (b) b.textContent = 'ピン' + fm.rearPin.hole + '/' + fm.rearPinHoles;
+    var b = document.getElementById('rearPinLabel'), r = fm.rearLenRange ? fm.rearLenRange() : [0, 1];
+    if (b) b.textContent = '柱 ' + Math.round(fm.rearPinLen() / window.TRAILER_CONFIG.pxPerMeter * 100) + 'cm';
   }
   // フレーム側の固定ピン(赤い板): 位置を前後5段階で変える・抜き差し。刺してあると、上げた宙段のフロアがピンに当たって止まる
   function stopPinCard(item) {
