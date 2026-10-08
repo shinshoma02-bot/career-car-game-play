@@ -58,7 +58,7 @@
   function refreshBar() {
     if (!mode) return;
     var t = mode === 'time' ? '残り ' + fmtTime(TIME_ATTACK_SEC - elapsed()) : '経過 ' + fmtTime(elapsed());
-    $('modeBarName').textContent = (isTut ? 'チュートリアル' : MODES[mode].name) + (mode === 'sim' ? '' : '・' + DIFFS[diff] + '(×' + mult() + ')');
+    $('modeBarName').textContent = (isTut ? 'チュートリアル' : MODES[mode].name) + (mode === 'sim' ? '' : '・' + DIFFS[diff] + '(×' + mult() + ')') + (window.TRAILER_CONFIG && window.TRAILER_CONFIG.id === 'semi-6b' ? '・6台積み' : '');   // 2台目のトレーラーを選んでいる時は、バーに出して区別する
     $('modeBarTime').textContent = t;
     $('modeBarCycles').textContent = 'サイクル ' + stats.cycles;
     $('modeBarCars').textContent = '積込 ' + stats.docks + '台' + (state.deckSize >= 7 ? '(今回7台・宙段あり)' : '');

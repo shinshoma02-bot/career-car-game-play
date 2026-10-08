@@ -79,10 +79,11 @@
     if (!fm || !gs) return;
     var car = gs.car, moving = !!(car && !car.seated && car.phase !== 'docked');
     var rid = car && car.route && car.route.id;
+    var hasTires = typeof fm.carTiresOn === 'function';   // semi-6b の floor_mech_6b には、タイヤの位置を調べる関数(carTiresOn)も板の部品も無い
     if (btnRamp) btnRamp.classList.toggle('na', !!(fm.MECH.ramp && moving && !(car.phase === 'ready' && !(car.progress > 0))));   // 道板の上・作業中の車がいる
-    if (btnBridge) btnBridge.classList.toggle('na', !!(fm.MECH.bridge && fm.carTiresOn(fm.BR_ANCHOR[0], window.TRAILER_CONFIG.bridgePlate.tipX)));          // 4番へ向かう車が4番扇動板を渡る
-    if (btnSlide) btnSlide.classList.toggle('na', !!(fm.MECH.slide && fm.carTiresOn(fm.FLOORS.F1.x1 - 10, fm.FLOORS.F1.x1 + fm.SLIDE.len)));   // 1番・2番へ向かう車が板の近くにいる
-    if (btnFlap) btnFlap.classList.toggle('na', !!(!fm.MECH.f2Flap && fm.carTiresOn(fm.FLOORS.F2.x0 - 6, fm.FLOORS.F2.x0 + fm.F2_FLAP_LEN)));   // 1番へ向かう車が2番扇動板の上を通る
+    if (btnBridge && hasTires) btnBridge.classList.toggle('na', !!(fm.MECH.bridge && fm.carTiresOn(fm.BR_ANCHOR[0], window.TRAILER_CONFIG.bridgePlate.tipX)));          // 4番へ向かう車が4番扇動板を渡る
+    if (btnSlide && hasTires) btnSlide.classList.toggle('na', !!(fm.MECH.slide && fm.carTiresOn(fm.FLOORS.F1.x1 - 10, fm.FLOORS.F1.x1 + fm.SLIDE.len)));   // 1番・2番へ向かう車が板の近くにいる
+    if (btnFlap && hasTires) btnFlap.classList.toggle('na', !!(!fm.MECH.f2Flap && fm.carTiresOn(fm.FLOORS.F2.x0 - 6, fm.FLOORS.F2.x0 + fm.F2_FLAP_LEN)));   // 1番へ向かう車が2番扇動板の上を通る
   }, 200);
 
   // 今やるべき操作(道板):車を積む前に道板を出す・積み終わったら道板をしまう → 緑(go)で目立たせる
