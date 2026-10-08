@@ -575,7 +575,7 @@
   // 出している間(MECH.slide=true・既定)は、1番フロアの後端から2番側へ板が出て、1番↔2番を渡れる。
   // しまうと1番フロアの下に入り、1番の後端が板の分だけ短くなる(1番へは通れなくなる)。1番を上げて2番に長い車を積む時は、板が車に当たるのでしまう。
   var SLIDE = cfg.slidePlate || { len: 50, thick: 7 };
-  function f1DeckYAt(x) { return floorsCfg.f1DeckYAt625 + floorsCfg.f1DeckYSlope * (x - 625); }
+  function f1DeckYAt(x) { return floorsCfg.f1DeckYAt625 + floorsCfg.f1DeckYSlope * (x - (floorsCfg.f1DeckYAt625X || 625)); }
   // 板の上面の、付け根 a と 先端 b(画面座標)。t=出ている割合(省略=今の進み具合)
   function slideGeom(offs, t) {
     var x1 = FLOORS.F1.x1, len = SLIDE.len * (t === undefined ? slideT() : t);
@@ -684,7 +684,7 @@
   function staticPoseProblem(ids, offs) {
     for (var k in ENDS) { if (offs[k] < ENDS[k].r[0] || offs[k] > ENDS[k].r[1]) return '可動範囲いっぱい'; }
     if (onFloor('F3', FLOORS.F3.x1, 312, offs)[1] > RAMP_TOP[1] + 2) return '下段に当たる';   // 3番の後端(延長板の先)が道板の高さより下がらない
-    var fr = onFloor('F2', 885, 314, offs);
+    var fr = onFloor('F2', 953, 314, offs);
     if (fr[1] < 215) return 'フレームに当たる';
     if (fr[1] > 440) return '下段に当たる';
     for (var i = 0; i < CYLS.length; i++) {
@@ -745,7 +745,7 @@
     if (nl > LIFT_MAX) return '可動範囲いっぱい';
     if (nl > liftMaxAt(ENDS.F2f.off) && nl > MECH.lift) return 'シリンダーが伸びきりました。2番前のセットピンを上の穴に差し直すと、もっと持ち上がります';
     if (nl > MECH.lift) {
-      var f2b = onFloor('F2', 980, 347)[1], top5 = 510 - nl - 22;
+      var f2b = onFloor('F2', 1039, 347)[1], top5 = 510 - nl - 22;
       if (top5 < f2b + 2) return '2番フロアに当たる(2番を上げた位置でセットピンを入れて)';
     }
     return null;
@@ -853,8 +853,8 @@
   // 3番後ろのフロアが道板の高さまで下がって接地していれば、上段へ積む状態(それより上に浮いていれば下段へ積む状態)
   function upperConnected() { var r = onFloor('F3', FLOORS.F3.x1, 312); return r[1] >= RAMP_TOP[1] - 24; }   // 3番の後端(延長板の先 x=2010)が道板の高さ付近まで下がって接地
   function f1Connected() {
-    var f1DeckY = function (x) { return floorsCfg.f1DeckYAt625 + floorsCfg.f1DeckYSlope * (x - 625); };
-    var a = onFloor('F1', 850, f1DeckY(850)), b = onFloor('F2', 885, 314);
+    var f1DeckY = function (x) { return floorsCfg.f1DeckYAt625 + floorsCfg.f1DeckYSlope * (x - (floorsCfg.f1DeckYAt625X || 625)); };
+    var a = onFloor('F1', 920, f1DeckY(920)), b = onFloor('F2', 953, 314);
     return !MECH.f2Flap && flapT() <= 0 && slideReady() && Math.abs(a[1] - b[1]) <= 14; // 2番扇動板を開いている間は1番への道が切れる
   }
 

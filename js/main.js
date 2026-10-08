@@ -586,7 +586,7 @@
     var C = chuudanArt();
     if (C) drawChuudan(C, fm);   // 宙段の素材が読めていなければ描かない(素材は全て読み込んでからゲームが始まる)
   }
-  var F2_TIP_CUT_X = 900;   // 2番フロアの先端(x=885〜)は、スライド板が入る分、ここ(柱の手前)まで切り取って描く(2026-10-07 ユーザー許可)
+  var F2_TIP_CUT_X = 966;   // 2番フロアの先端(x=953〜。R24 で 885→953、900→966)は、スライド板が入る分、ここ(柱の手前)まで切り取って描く(2026-10-07 ユーザー許可)
   function drawTransformedFloor(id, img) {
     var fm = window.FLOOR_MECH;
     if (!fm) { ctx.drawImage(img, 0, 0); return; }
