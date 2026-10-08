@@ -57,9 +57,14 @@
     for (h = 1; h <= E.MID.holeMax; h++) D.M.push(fm.offOfHole('MID', h));
     for (h = 1; h <= E.F2f.holeMax; h++) D.F2.push(fm.offOfHole('F2f', h));
     D.F2.push(E.F2f.freeTop); D.F2.sort(function (a, b) { return b - a; });
-    for (h = 1; h <= E.F3r.holeMax; h++) D.F3.push(fm.offOfHole('F3r', h));
-    D.F3.sort(function (a, b) { return b - a; });
   })();
+  // 3番後ろの穴の高さは、3番前(MID)の高さで変わる(ピンは柱で固定のため)。MID の高さ m ごとに、届く範囲の穴の高さを低い順に返す
+  function f3Dom(m) {
+    var E = fm.ENDS, a = [], h, v;
+    for (h = 1; h <= E.F3r.holeMax; h++) { v = fm.offOfHole('F3r', h, m); if (v >= E.F3r.r[0] - 0.01 && v <= E.F3r.r[1]) a.push(v); }
+    return a.sort(function (x, y) { return y - x; });
+  }
+  D.F3 = f3Dom;
   // 5番の輪止めは前(キャビン側)へ最大 chockRange.front(cm)まで、step(cm)刻みで動かせる。車をその分前へ寄せると、宙段の前端に車の鼻が当たらなくなる
   var CR5 = cfg.slots['5'].chockRange || {}, STEP5 = (CR5.step || 4) / 100 * PX, MAXSTEP5 = Math.round((CR5.front || 0) / (CR5.step || 4));
   var CAR_GAP_PX = 2;   // 4番の車の後ろ端と5番の車の前端の最小の間隔(重なると「駐車中の車にぶつかる」)
@@ -82,7 +87,7 @@
   }
   // 1つの制約(包絡線 L)について、MID の穴ごとに、その棚(end='F2f' か 'F3r')を下げられる最も低い高さを求める(表。入れられない MID は null)
   //  棚を上げるほど余裕が増える(単調)ので、二分探索。傾き(TILT_MAX_DEG)も条件に入れる
-  function frontierOne(L, floorId, end, dom) {
+  function frontierOne(L, floorId, end, domIn) {
     var E = fm.ENDS, out = [], base = baseOffs();
     function ok(m, v) {
       var o = Object.assign({}, base); o.MID = m; o[end] = v;
@@ -90,7 +95,9 @@
       return !L || fm.envFits([L], [floorId], o);
     }
     D.M.forEach(function (m) {
+      var dom = typeof domIn === 'function' ? domIn(m) : domIn;
       var lo = 0, hi = dom.length - 1;
+      if (hi < 0) { out.push(null); return; }
       if (!ok(m, dom[hi])) { out.push(null); return; }
       while (lo < hi) { var mid = (lo + hi) >> 1; if (ok(m, dom[mid])) hi = mid; else lo = mid + 1; }
       out.push(dom[lo]);
@@ -187,7 +194,7 @@
     if (fm.stopPin) { fm.stopPin.hole = hole0; fm.stopPinResolve(); }
     if (!fit) return { ok: false, why: '宙段に載せて6番・5番も積める組み合わせが無い(車が高い・長い)' };
     var shelf = { F2f: fitShelf.F2f, MID: fitShelf.MID, F3r: fitShelf.F3r };
-    shelf.holes = { F2f: holeOf('F2f', shelf.F2f), MID: holeOf('MID', shelf.MID), F3r: holeOf('F3r', shelf.F3r) };
+    shelf.holes = { F2f: holeOf('F2f', shelf.F2f), MID: holeOf('MID', shelf.MID), F3r: fm.holeNo('F3r', shelf.F3r, shelf.MID) };
     return { ok: true, assign: fit, order: fitOrder, H: best7, pins: pins, bestPin: fitPin, flip5: fitFlip5, chock5: fitSteps5, shelf: shelf };   // order = 1〜4番に載せる車(デッキの番号)
   }
 

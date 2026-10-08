@@ -51,7 +51,7 @@
     var p = plan();
     if (p && p.shelf) return p.shelf;
     var f2 = E.F2f.freeTop !== undefined ? Math.max(FIT.F2f, E.F2f.freeTop) : FIT.F2f;
-    return { F2f: f2, MID: FIT.MID, F3r: FIT.F3r, holes: { F2f: fm.holeNo('F2f', f2), MID: fm.holeNo('MID', FIT.MID), F3r: fm.holeNo('F3r', FIT.F3r) } };
+    return { F2f: f2, MID: FIT.MID, F3r: FIT.F3r, holes: { F2f: fm.holeNo('F2f', f2), MID: fm.holeNo('MID', FIT.MID), F3r: fm.holeNo('F3r', FIT.F3r, FIT.MID) } };
   }
   function f2Ok() { return E.F2f.off <= shelfT().F2f + 3 && fm.rested('F2f'); }
   function midOk() { return E.MID.off <= shelfT().MID + 3 && fm.rested('MID'); }

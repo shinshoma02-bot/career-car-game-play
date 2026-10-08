@@ -1342,9 +1342,11 @@
     if (!NA || !images.pin || !fm || !fm.PINS) return;
     Object.keys(cfg.pinMarks).forEach(function (k) {
       var m = cfg.pinMarks[k], v = fm.PINS[k], img = images.pin;
+      var rel = fm.pinPostRel(k);   // 3番後ろ: 柱での高さ(3番前の高さに関係なく、穴の位置)
+      if (rel === null && k === 'F3r' && v === null) rel = fm.pinPostRel('F3r') === null ? (function () { var h = fm.pinTarget(k), e = fm.ENDS.F3r; return -(h - e.hole) * cfg.floors.ends.F3r.post.pitch; })() : null;
       var off = v !== null ? v : fm.offOfHole(k, fm.pinTarget(k));
       // 穴の絵の間隔(柱の上で等間隔)は、棚の動き(off)と同じとは限らない。pinScale があれば、走行位置の穴(m[1])を基準に、穴1つあたりの描画の間隔を拡大して描く(3番後ろ: 棚は1穴3.13pxだが、柱の穴は実写どおり約7px間隔)
-      var sc = (cfg.pinScale && cfg.pinScale[k]) || 1, y = sc === 1 ? m[1] + off : m[1] + (off - fm.ENDS[k].travel) * sc;
+      var sc = (cfg.pinScale && cfg.pinScale[k]) || 1, y = rel !== null ? m[1] + rel : (sc === 1 ? m[1] + off : m[1] + (off - fm.ENDS[k].travel) * sc);
       if (v === null) img = images.pin_out;
       if (img) ctx.drawImage(img, m[0] - 4, y - 6);
     });

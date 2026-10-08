@@ -66,17 +66,34 @@
   var FRAME_GAP_PX = 0.05 * cfg.pxPerMeter;
   var PINS = {}; Object.keys(floorsCfg.ends).forEach(function (k) { PINS[k] = null; });
   var PIN_TARGET = {};
+  // ---- 3番後ろ(F3r)のピンは、柱(x=post.x)で3番フロアを受ける(2026-10-08 ユーザー指摘「棚とピンの動きが連動していない」)----
+  // 3番フロアは、前=3番前(MID。x=1520)・後ろ=3番後ろ(F3r。x=2055)の2点で決まる直線。柱の位置(x=1795)の棚の上下量は P = MID + (F3r − MID)×r(r=(柱−前)/(後ろ−前)≒0.514)。
+  // ピンの高さは柱で固定(1穴=post.pitch)。棚がピンに載る=柱の位置の棚が P(穴) になる。だから、3番前(MID)を動かすと、同じ穴に載る3番後ろの高さも変わる。
+  // PINS.F3r は、今の3番前で換算した「3番後ろの載る高さ」(他の棚と同じ意味)を返す(getter)。差してある穴の柱での高さは F3_PIN_POST に持つ。
+  var F3P = floorsCfg.ends.F3r.post || null, F3 = null, F3_PIN_POST = null, F3_PT = 0;
+  if (F3P) F3 = { r: (F3P.x - floorsCfg.mid[0]) / (floorsCfg.defs.F3.rearPt[0] - floorsCfg.mid[0]), pp: F3P.pitch };
+  function f3Post(R, mid) { return mid + (R - mid) * F3.r; }
+  function f3R(P, mid) { return mid + (P - mid) / F3.r; }
+  function f3PostOfHole(h) { return F3_PT - (h - ENDS.F3r.hole) * F3.pp; }
+  if (F3) {
+    F3_PT = f3Post(ENDS.F3r.travel, ENDS.MID.travel);   // 走行位置(10番)のピンの、柱での高さ
+    Object.defineProperty(PINS, 'F3r', { enumerable: true, get: function () { return F3_PIN_POST === null ? null : f3R(F3_PIN_POST, ENDS.MID.off); }, set: function (v) { F3_PIN_POST = v === null ? null : f3Post(v, ENDS.MID.off); } });
+  }
+  // 描画用: 差したピンの(走行位置の穴を0とした)柱での高さ(下向きが正)。F3r 以外は null
+  function pinPostRel(k) { return k === 'F3r' && F3 && F3_PIN_POST !== null ? F3_PIN_POST - F3_PT : null; }
   // 柱の穴番号(実車の番号): 最下段=0番(ピンなし)、走行位置=hole番、ピンを差せる最大=holeMax番(棚の上限の1穴下)。
   // 棚の絵(off=0)は変えずに番号を当てはめるので、走行位置より上と下で1穴の間隔が違う(上は細かい)。
-  function pitchUp(k) { var e = ENDS[k]; return e.pitchUpPx || (e.travel - e.r[0]) / (e.holeMax - e.hole + 1); }   // pitchUp(設定): 穴の間隔を実車に合わせて決めている棚(2番前)
-  function pitchDown(k) { var e = ENDS[k]; return e.pitchDownPx || (e.hole > 0 ? (e.r[1] - e.travel) / e.hole : 0); }   // pitchDown(設定): 走行位置より下の穴の間隔を決めている棚(3番後ろ。設定が無ければ、下の可動域を穴の数で割る)
-  function holeNo(k, off) {
+  function pitchUp(k) { if (k === 'F3r' && F3) return F3.pp / F3.r; var e = ENDS[k]; return e.pitchUpPx || (e.travel - e.r[0]) / (e.holeMax - e.hole + 1); }   // pitchUp(設定): 穴の間隔を実車に合わせて決めている棚(2番前)
+  function pitchDown(k) { if (k === 'F3r' && F3) return F3.pp / F3.r; var e = ENDS[k]; return e.pitchDownPx || (e.hole > 0 ? (e.r[1] - e.travel) / e.hole : 0); }   // pitchDown(設定): 走行位置より下の穴の間隔を決めている棚(3番後ろ。設定が無ければ、下の可動域を穴の数で割る)
+  function holeNo(k, off, mid) {
     var e = ENDS[k];
+    if (k === 'F3r' && F3) return Math.max(0, Math.round(e.hole + (F3_PT - f3Post(off, mid === undefined ? ENDS.MID.off : mid)) / F3.pp));   // 柱での高さで穴を決める(3番前の高さで変わる)
     if (off > e.travel) return pitchDown(k) > 0 ? Math.max(0, e.hole - Math.round((off - e.travel) / pitchDown(k))) : e.hole;
     return e.hole + Math.round((e.travel - off) / pitchUp(k));
   }
-  function offOfHole(k, h) {
+  function offOfHole(k, h, mid) {
     var e = ENDS[k];
+    if (k === 'F3r' && F3) return f3R(f3PostOfHole(h), mid === undefined ? ENDS.MID.off : mid);
     return h >= e.hole ? e.travel - (h - e.hole) * pitchUp(k) : e.travel + (e.hole - h) * pitchDown(k);
   }
   function pinLimitOff(k) { return offOfHole(k, ENDS[k].holeMax); }
@@ -344,7 +361,7 @@
   // 実際に棚をピンで固定できる、一番高い位置(ピン最大の穴の高さ)。【2026-10-07〜: LOADABLE.check は棚を最小の高さまで下げて評価する(loadable.js の check7)。FIT_OFFS は hangFit の shelf を省略した時の既定(最も余裕のある高さ)】判定(LOADABLE・hangFit)は、実際に届かない高さを前提にすると、
   // 判定は通るのに本物では2・3番の棚に当たって宙段が上がり切らない組み合わせが出るので、この値で行う(2026-10-06。3番後ろは -60 でなく -58.5、3番前は -72 でなく -71.7)。
   // 2番前は、ピンを刺さずに(freeTop)可動域の上限まで上げて、5番フロアを持ち上げる時の固定位置にできるので、上限の -60
-  var FIT_OFFS = { F2f: -60, MID: offOfHole('MID', ENDS.MID.holeMax), F3r: offOfHole('F3r', ENDS.F3r.holeMax) };
+  var FIT_OFFS = { F2f: -60, MID: offOfHole('MID', ENDS.MID.holeMax), F3r: Math.max(ENDS.F3r.r[0], offOfHole('F3r', ENDS.F3r.holeMax, offOfHole('MID', ENDS.MID.holeMax))) };   // 3番後ろの上限は、可動範囲の上限か、ピン最大の穴(3番前もピン最大の時)の高い方
   // 宙段の動き(格納に近い所から固定ピンの高さ loadU まで)を調べる u の一覧。0.04 刻み(0.1 刻みでは、間で当たる組み合わせを見逃した 2026-10-06)
   //  7台目を載せた宙段は、一番上(u=2)まで上げず、固定ピンで loadU(HANG.loadU)に止めて6番を積む。ピンは最初から刺さっていて loadU より上へは動かない(hangStep の onPin)ので、
   //  loadU までの動きだけを調べる(2026-10-07: 以前は loadU より上〜u=2 も調べていた。ピンを抜かない限り行かない範囲なので、判定が実車より厳しかった)
@@ -917,7 +934,7 @@
     resetAll: resetAll,
     stopPinResolve: stopPinSolve, stopPin: SP, stopPinHoles: SP_CFG ? SP_CFG.pts.length : 0, stopPinCfg: SP_CFG, setStopPinHole: setStopPinHole, toggleStopPin: toggleStopPin,
     rearPin: RP, rearPinHoles: RP_CFG.holes || 1, rearPinPitch: RP_CFG.pitch || 0, setRearPinHole: setRearPinHole, rearPinLen: function () { return RP.len; },
-    FLOORS: FLOORS, FIDS: FIDS, ENDS: ENDS, PINS: PINS, MECH: MECH, CYLS: CYLS, initPins: initPins, FRAME_GAP_PX: FRAME_GAP_PX, hangPose: hangPose, hangSlope: hangSlope, hangReachable: hangReachable, hangHits: hangHits, carTopY: carTopY, hangFit: hangFit, hangLowerFit: hangLowerFit, hangUpperFit: hangUpperFit, hangUpperEnvelope: hangUpperEnvelope, envFits: envFits, envAt: envAt, ENV: { x0: ENV_X0, dx: ENV_DX, n: ENV_N }, hangVsUpperX: hangVsUpperX, FIT_OFFS: FIT_OFFS, hangProblem: hangProblem, hangStuck: hangStuck, hangEnds: hangEnds, hangSolve: hangSolve, hangRebuild: hangRebuild, pinned: pinned, rested: rested, floorPinsOk: floorPinsOk, offOfHole: offOfHole, poseProblem: poseProblem, staticPoseProblem: staticPoseProblem,
+    FLOORS: FLOORS, FIDS: FIDS, ENDS: ENDS, PINS: PINS, MECH: MECH, pinPostRel: pinPostRel, CYLS: CYLS, initPins: initPins, FRAME_GAP_PX: FRAME_GAP_PX, hangPose: hangPose, hangSlope: hangSlope, hangReachable: hangReachable, hangHits: hangHits, carTopY: carTopY, hangFit: hangFit, hangLowerFit: hangLowerFit, hangUpperFit: hangUpperFit, hangUpperEnvelope: hangUpperEnvelope, envFits: envFits, envAt: envAt, ENV: { x0: ENV_X0, dx: ENV_DX, n: ENV_N }, hangVsUpperX: hangVsUpperX, FIT_OFFS: FIT_OFFS, hangProblem: hangProblem, hangStuck: hangStuck, hangEnds: hangEnds, hangSolve: hangSolve, hangRebuild: hangRebuild, pinned: pinned, rested: rested, floorPinsOk: floorPinsOk, offOfHole: offOfHole, poseProblem: poseProblem, staticPoseProblem: staticPoseProblem,
     BR_ANCHOR: BR_ANCHOR, BRIDGE_STOWED_X: BRIDGE_STOWED_X,
     F1_CYL: F1_CYL, SHEAVE: SHEAVE, WIRE_TOP: WIRE_TOP, f1CylLen: f1CylLen,
     poseOf: poseOf, tf: tf, onFloor: onFloor, curOffs: curOffs,
