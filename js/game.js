@@ -9,6 +9,14 @@
     ['len', 'width', 'aspect', 'wb', 'tl', 'tr', 'rw', 'rh'].forEach(function (k) { e[k] = d[k]; });
     e.imgSrc = d.img + '?v=' + (window.CAR_DIMS_V || 1);
     e.prof = d.prof;   // 車の輪郭(画像を読まずに、積める組み合わせを判定するため)
+    // タイヤの径は、参考車種の純正タイヤサイズから出した実寸(js/car_tires.js)に合わせる。絵のタイヤは fitTires で同じ比率に拡大縮小する
+    var t = window.CAR_TIRE_REAL && window.CAR_TIRE_REAL[e.id];
+    if (t) {
+      e._rw0 = e.rw;
+      e.rw = (t.dia / 2) / e.len;
+      e.rh = (t.dia / 2) / (e.len * e.aspect);
+      e._tireF = e.rw / e._rw0;
+    }
   });
 
   var canvas = document.getElementById('stage');
@@ -234,6 +242,29 @@
     if (car && car.entry && !car.seated && car.phase !== 'docked' && car.phase !== 'exiting') return car.entry;
     return state.pendingEntry && state.pendingEntry.entry;
   }
+  // 絵のタイヤを実寸の径に合わせる(f倍)。タイヤの接地点は動かさず、縮める時は元のタイヤの跡を暗いホイールハウスで塗る
+  function fitTires(img, entry) {
+    var f = entry._tireF;
+    if (!f || Math.abs(f - 1) < 0.02) return img;
+    var W = img.width, H = img.height, R = entry._rw0 * W;
+    var cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    var g = cv.getContext('2d');
+    g.drawImage(img, 0, 0);
+    [entry.tl, entry.tr].forEach(function (fx) {
+      var cx = fx * W, cy = H - R;
+      if (f < 1) {
+        g.fillStyle = '#16181b';
+        g.beginPath(); g.arc(cx, cy, R * 1.04, 0, Math.PI * 2); g.fill();
+      }
+      g.save();
+      g.beginPath(); g.arc(cx, H - R * f, R * f, 0, Math.PI * 2); g.clip();
+      g.drawImage(img, cx - R, cy - R, R * 2, R * 2, cx - R * f, H - R * f * 2, R * 2 * f, R * 2 * f);
+      g.restore();
+    });
+    return cv;
+  }
+  window.__fitTires = fitTires;   // 確認用(絵の見た目をスクリプトから確かめる)
   // 車を左右反転した画像(後ろ向き=バックで積む時用)。反転したので左タイヤは元の右タイヤの位置になる
   function flipImage(img) {
     var cv = document.createElement('canvas');
@@ -552,7 +583,7 @@
       var p = /\.webp(\?|$)/.test(src)
         ? loadImage(src, 2).catch(function () { return loadImage(src.replace(/\.webp(\?|$)/, '.png$1')); })
         : loadImage(src);
-      c = itemCache[entry.id] = p.then(function (img) { return { img: img, flipImg: flipImage(img) }; });
+      c = itemCache[entry.id] = p.then(function (img) { img = fitTires(img, entry); return { img: img, flipImg: flipImage(img) }; });
       c.catch(function () { delete itemCache[entry.id]; });   // 読み込みに失敗した車は、次の抽選でもう一度読み込めるように、覚えておかない
     }
     return c.then(function (v) { return { entry: entry, img: v.img, flipImg: v.flipImg, flip: false, status: 'wait' }; });
