@@ -22,12 +22,29 @@
   // 下段の車(slot=4/5/6)の屋根にぶつからないために、上のフロアを標準の高さからどれだけ上げる必要があるか(px)。
   // 標準の高さのフロアは、下段の床から REF_CLEAR(約1.54m)の高さに下面がある(走行位置・ピンの標準位置)。それより高い車は、超えた分だけ上げる。車の絵の形(屋根の一番高い所)で測る
   var REF_CLEAR = 176 + GAP;   // 標準の高さのフロアの下面は下段の床から 176px。実車は枠の内側に約5cm(GAP)の隙間があるので、車の屋根はその分(5cm)まで下面の中に入れる
+  var F1_DOWN = 30;   // 1番フロアを標準の高さから下げられる最大(px。走行位置までは約35〜75px下がるが、控えめに)
+  // 1番フロアを標準の高さ(BASE)から上げる量(px。負=下げられる量)。下の4番の車の屋根(lowerEnv)に、1番フロアの下面が当たらない最小の量を、実際の形で調べる(二分探索)
+  var f1Cache = {};
+  function f1Need(d, steps) {
+    var key = carKey({ entry: d.e }, d.flip) + '/' + (steps || 0);
+    if (f1Cache[key] !== undefined) return f1Cache[key];
+    var old = lowerNeed(d, '4').F1;   // 従来の式(標準の高さ基準)。上げる必要がある時は、従来どおりこの値(判定は今までと同じ厳しさ)。下げられるかどうかだけ、実際の形で調べる
+    if (old > 0) return (f1Cache[key] = old);
+    var L = lowerEnv(d, '4', 0), base = baseOffs();
+    function ok(s) { var o = Object.assign({}, base); o.F1f = BASE.F1f - s; o.F1r = BASE.F1r - s; return fm.envFits([L], ['F1'], o); }
+    var lo = -F1_DOWN, hi = 90, r;
+    if (ok(lo)) r = lo;
+    else if (!ok(hi)) r = hi;
+    else { while (hi - lo > 0.5) { var m = (lo + hi) / 2; if (ok(m)) hi = m; else lo = m; } r = hi; }
+    return (f1Cache[key] = Math.min(0, r));
+  }
   var COVER = { 4: ['F1', 'F2'], 5: ['F2'], 6: ['F3'] };   // その下段スロープの上にあるフロア
   function lowerNeed(d, slotNum) {
     var S = cfg.slots[slotNum], occ = { img: d.img, prof: d.prof, w: d.w, h: d.h, leftTireX: d.leftTireX };
     var tx = S.tireX + 8, pos = [tx, S.deckY], x0 = tx - d.leftTireX, top = fm.carTopY(occ, pos, 0), hmax = 0;   // 高さの計算では、宙段用の許容(tol)は使わない
     for (var x = x0; x <= x0 + d.w; x += 6) hmax = Math.max(hmax, S.deckY - top(x));
-    var n = Math.max(0, hmax - REF_CLEAR), need = { F1: 0, F2: 0, F3: 0 };
+    // n=標準の高さから上げる量(px。下げられる時は負)。1番フロアは、下の4番の車が低ければ標準より下げられる(F1_DOWN まで)。2・3番は呼び出し側で 0 以上に丸める
+    var n = Math.max(-F1_DOWN, hmax - REF_CLEAR), need = { F1: 0, F2: 0, F3: 0 };
     COVER[slotNum].forEach(function (id) { need[id] = n; });
     return need;
   }  // 上段の車(slot=1/2/3)の屋根の高さ(y。小さいほど高い)。フロアは標準の位置
@@ -140,7 +157,7 @@
 
   function check7(items, fx, fw) {
     var idx = items.map(function (_, i) { return i; });
-    var EPS = 0.004, bestCost = Infinity, best7 = Infinity, fit = null, fitOrder = null, fitPin = 1, fitFlip5 = true, fitSteps5 = 0, fitShelf = null, pins = [];
+    var EPS = 0.004, bestCost = Infinity, best7 = Infinity, fit = null, fitOrder = null, fitPin = 1, fitFlip5 = true, fitSteps5 = 0, fitShelf = null, fitNeedF1 = 0, pins = [];
     var hole0 = fm.stopPin ? fm.stopPin.hole : 1, nHoles = fm.stopPinHoles || 1, ph, ptilt = tiltFrontier();
     var S1 = cfg.slots['1'], S2 = cfg.slots['2'], S3 = cfg.slots['3'];
     function floorY(S, o) { return fm.onFloor(S.floor, S.tireX, S.deckY, o)[1]; }
@@ -167,7 +184,7 @@
             var x1of4 = cfg.slots['4'].tireX + 8 - fw[i4].leftTireX + fw[i4].w, x0of5 = cfg.slots['5'].tireX + 8 - st5 * STEP5 - d5.leftTireX;
             if (x0of5 < x1of4 + CAR_GAP_PX) return;
             var l4 = lowerFrontier(items[i4], fw[i4], '4', false);
-            var needF1 = lowerNeed(fw[i4], '4').F1;
+            var needF1 = f1Need(fw[i4]);
             var Y2 = [], Y3 = [], SH = [];
             for (var q = 0; q < D.M.length; q++) {
               var f2 = higher(higher(hf.f2[q], ptilt.f2[q]), higher(l5.f2[q], l4.f2[q])), f3 = higher(higher(hf.f3[q], ptilt.f3[q]), l6.f3[q]);
@@ -184,14 +201,14 @@
               var bestTop = -Infinity, bq = -1;   // top = 3台の屋根のうち一番高い所(y。小さいほど高い)。MID を選んで、これが一番低い(大きい)ものを探す
               for (var q = 0; q < D.M.length; q++) {
                 if (!SH[q]) continue;
-                var top = Math.min(floorY(S1, baseOffs()) - fw[a3[0]].h - Math.max(0, needF1), Y2[q] - fw[a3[1]].h, Y3[q] - fw[a3[2]].h);   // 小さいほど高い
+                var top = Math.min(floorY(S1, baseOffs()) - fw[a3[0]].h - needF1, Y2[q] - fw[a3[1]].h, Y3[q] - fw[a3[2]].h);   // 小さいほど高い
                 if (top > bestTop) { bestTop = top; bq = q; }
               }
               if (bq < 0) return;
               okHere = true;
               var Hm = (cfg.ramp.groundY - bestTop) / PX;
               var cost = fw[a3[0]].h + fw[i4].h + fw[i5].h + fw[i7].h + 0.5 * (fw[i5].w + fw[i7].w) + 0.5 * st5 + (flip5 ? 0 : 0.01);   // 1番・4番と、5番・宙段に入る車の高さ・長さ(同じ高さなら前向きの5番を好む)
-              if (Hm < best7 - EPS || (Hm < best7 + EPS && cost < bestCost)) { best7 = Math.min(best7, Hm); bestCost = cost; fit = t; fitOrder = a3.concat([i4]); fitPin = ph; fitFlip5 = flip5; fitShelf = SH[bq]; fitSteps5 = st5; }
+              if (Hm < best7 - EPS || (Hm < best7 + EPS && cost < bestCost)) { best7 = Math.min(best7, Hm); bestCost = cost; fit = t; fitOrder = a3.concat([i4]); fitPin = ph; fitFlip5 = flip5; fitShelf = SH[bq]; fitNeedF1 = needF1; fitSteps5 = st5; }
             });
           });
         });
@@ -202,7 +219,7 @@
     if (!fit) return { ok: false, why: '宙段に載せて6番・5番も積める組み合わせが無い(車が高い・長い)' };
     var shelf = { F2f: fitShelf.F2f, MID: fitShelf.MID, F3r: fitShelf.F3r };
     shelf.holes = { F2f: holeOf('F2f', shelf.F2f), MID: holeOf('MID', shelf.MID), F3r: fm.holeNo('F3r', shelf.F3r, shelf.MID) };
-    return { ok: true, assign: fit, order: fitOrder, H: best7, pins: pins, bestPin: fitPin, flip5: fitFlip5, chock5: fitSteps5, shelf: shelf };   // order = 1〜4番に載せる車(デッキの番号)
+    return { ok: true, assign: fit, order: fitOrder, H: best7, pins: pins, bestPin: fitPin, flip5: fitFlip5, chock5: fitSteps5, shelf: shelf, F1need: fitNeedF1 };   // order = 1〜4番に載せる車(デッキの番号)
   }
 
   // items: [{entry, img, flipImg}](6台か7台)。戻り値 { ok, H(最小の荷姿の高さm), why }
@@ -226,13 +243,13 @@
       if (!isNarrow(items[a[5]].entry)) return;
       if (!pair12Ok(fw[a[0]], fw[a[1]])) return;
       var c4 = a[3], c5 = a[4], c6 = a[5];
-      var L1 = Math.max(0, need[c4][4].F1), L2 = Math.max(0, need[c4][4].F2, need[c5][5].F2), L3 = Math.max(0, need[c6][6].F3);
+      var L1 = f1Need(fw[c4]), L2 = Math.max(0, need[c4][4].F2, need[c5][5].F2), L3 = Math.max(0, need[c6][6].F3);
       var top = Math.min(tops[a[0]][1] - L1, tops[a[1]][2] - L2, tops[a[2]][3] - L3);
       if (top < best) { best = top; bestAssign = a; }
     });
     // top が小さいほど高い。荷姿の高さ = 地面から屋根まで
     var H = bestAssign ? (cfg.ramp.groundY - best) / PX : Infinity;
-    return H <= limit ? { ok: true, H: H, assign: bestAssign } : { ok: false, H: H, why: '荷姿の高さが制限を超える(最も低く積んでも ' + H.toFixed(2) + 'm)' };
+    return H <= limit ? { ok: true, H: H, assign: bestAssign, F1need: f1Need(fw[bestAssign[3]]) } : { ok: false, H: H, why: '荷姿の高さが制限を超える(最も低く積んでも ' + H.toFixed(2) + 'm)' };
   }
   window.LOADABLE = { check: check, SLACK_M: SLACK_M, setTilt: function (deg) { TILT_MAX_DEG = deg; cache = {}; staticCache = {}; }, tilt: function () { return TILT_MAX_DEG; } };   // setTilt: 検証用(傾きの上限を変えて比べる)
 })();

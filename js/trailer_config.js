@@ -41,7 +41,7 @@ window.TRAILER_CONFIG = {
 
   "slots": {
     "1": { "tireX": 480.2, "deckY": 294.2, "rot": -1.8, "floor": "F1", "hit": [450, 87, 419, 203], "stopKind": "none", "chockRequired": true, "defaultChock": true, "chockRange": { "front": 0, "rear": 120, "divisions": 20, "step": 6 }, "note": "基準の輪止め(tireX)は1番フロアの先端(floors.defs.F1.x0=456。タイヤの中心はそこから24px(約0.2m)後ろ)に置く。前(キャビン側)へは動かせない。後ろ(手前)へ120cm(2026-10-06 ユーザー指示)" },
-    "2": { "tireX": 977, "deckY": 316, "rot": 0,    "floor": "F2", "hit": [890, 87, 586, 225], "stopKind": "hole", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
+    "2": { "tireX": 1005, "deckY": 316, "rot": 0,    "floor": "F2", "hit": [890, 87, 586, 225], "stopKind": "hole", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
     "3": { "tireX": 1650, "deckY": 312, "rot": 0,    "floor": "F3", "hit": [1560, 72, 591, 239], "stopKind": "hole", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
     "4": { "tireX": 474,  "deckY": 442, "rot": 0,    "floor": null, "hit": [434, 304, 500, 138], "stopKind": "stopper", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
     "5": { "tireX": 1030, "deckY": 510, "rot": 0,    "floor": null, "carrier": "F5", "hit": [956, 326, 608, 181], "stopKind": "none", "chockRequired": true, "chockRange": { "front": 44, "rear": 44, "divisions": 22, "step": 4 } },
