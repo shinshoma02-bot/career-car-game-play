@@ -204,6 +204,13 @@
    今は層を画面幅のままにして、背景の位置(background-position-x)だけを -tw → 0 でずらす(見た目と速さは同じ。-tw と 0 は同じ絵の位置なので継ぎ目なし) */
 .sl { width: 100%; will-change: auto; animation-name: slidebg; }
 @keyframes slidebg { from { background-position-x: calc(-1 * var(--tw)); } to { background-position-x: 0; } }
+/* ---- 2026-10-08 道路: 折り返しの無い方式 ----
+   従来は「画面幅+1枚分」の3D変形したレイヤーを、1周(約3秒)ごとに translateX(-tw→0) で折り返していた。実機(iPhone)で、折り返しのたびに3Dレイヤーが作り直されて、一瞬白/黒になる。
+   今は、レイヤーは動かさず(3D変形は固定)、背景の位置(background-position-x)を 0 → tw×600 まで一方向にずらす(600周分=約30分に1回しか折り返さない。絵は繰り返し)。
+   左右が足りなくならないよう、レイヤーは画面の2倍の幅で左に半分ずらして置く(奥の行は縮んで映るので、画面の外側まで絵が要る) */
+.road3d .strip { left: -50%; width: 200%; animation-name: road3dbg; animation-duration: calc(var(--rd-dur) * 600); transform: rotateX(60deg); }
+.scene.fast .road3d .strip { animation-duration: 600s; }
+@keyframes road3dbg { from { transform: rotateX(60deg); background-position-x: 0; } to { transform: rotateX(60deg); background-position-x: calc(var(--tw) * 600); } }
 @keyframes slide { from { transform: translate3d(calc(-1 * var(--tw)), 0, 0); } to { transform: translate3d(0, 0, 0); } }
 .scene:not(.ready) .sl, .scene:not(.ready) .road3d { opacity: 0; }
 .scene .sl, .scene .road3d { transition: opacity .35s ease; }
@@ -454,6 +461,6 @@
   });
 })();
 </script>
-<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 255</div>
+<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 256</div>
 </body>
 </html>
