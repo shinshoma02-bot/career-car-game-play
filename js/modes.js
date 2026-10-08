@@ -89,7 +89,7 @@
     banner.t = setTimeout(function () { el.style.display = 'none'; }, 4000);
   }
 
-  // ---- サイクル完了: 6台積込み済み + フロアが全て走行位置 + ジャッキ・扇動板を格納 ----
+  // ---- サイクル完了: 6台積込み済み + フロアが全て走行位置 + ジャッキ・4番扇動板を格納 ----
   function cycleComplete() {
     if (cfg.id === 'semi-6b') {   // semi-6b: 1〜6番がそろって全部固定・動作中の車がいない・2番が傾いたままでない・スロープを下げた・道板をしまった(fm.cycleReady)
       if (['1', '2', '3', '4', '5', '6'].some(function (n) { return !state.occupied[n]; })) return false;
@@ -228,7 +228,7 @@
 
   function start(m, d, tut) {
     isTut = !!tut; if (isTut) document.body.classList.add('tutorial');
-    state.freeMode = m === 'sim' && !tut;   // シミュレーション(チュートリアルを除く)は、道板・扇動板などの状態で動作を制限しない。ぶつかった時にアニメーションを出す
+    state.freeMode = m === 'sim' && !tut;   // シミュレーション(チュートリアルを除く)は、道板・4番扇動板などの状態で動作を制限しない。ぶつかった時にアニメーションを出す
     mode = m; diff = m === 'sim' ? 'easy' : (d || 'easy'); turn.startedAt = Date.now(); turn.snap = { carPoints: stats.carPoints, docks: stats.docks };
     state.setDifficulty && state.setDifficulty(diff); ended = false; startedAt = Date.now();
     $('modeOverlay').style.display = 'none';

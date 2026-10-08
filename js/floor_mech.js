@@ -1,4 +1,4 @@
-// 上段フロア(1・2・3番)の可動機構: シリンダー・セットピン・5番リフト・扇動板。
+// 上段フロア(1・2・3番)の可動機構: シリンダー・セットピン・5番リフト・4番扇動板。
 // old/tsumikomi-simulator-beta.html の機構ロジックを、現行アーキテクチャ(canvas描画・window.GAME_STATE)向けに移植したもの。
 (function () {
   var cfg = window.TRAILER_CONFIG;
@@ -520,7 +520,7 @@
     onInfo(MECH.ramp ? '道板を出した' : '道板をしまった');
   }
 
-  // ---- 扇動板(4-5番間の格納式プレート)----
+  // ---- 4番扇動板(4-5番間の格納式プレート)----
   var BR_ANCHOR = cfg.bridgePlate.anchor, BRIDGE_STOWED_X = cfg.bridgePlate.stowedX;
   // 開閉の進行度(0=閉/格納、1=開/搬出)。道板と同じく時間経過で進み、描画が止まっていても進む
   function makeAnim(key, sec, init) {
@@ -536,7 +536,7 @@
     return update;
   }
   var bridgeT = makeAnim('bridge', 0.9), flapT = makeAnim('f2Flap', 0.7), slideT = makeAnim('slide', 0.8, 1);
-  // 搬出時の扇動板の先端: 5番フロアの今の位置ではなく、5番をスロープにセットした時の前端の高さ(固定)
+  // 搬出時の4番扇動板の先端: 5番フロアの今の位置ではなく、5番をスロープにセットした時の前端の高さ(固定)
   function bridgeTip() {
     var offs = curOffs(); offs.F5f = HOOK_OFF; offs.F5r = 0;
     return onFloor('F5', cfg.bridgePlate.tipX, FLOORS.F5.front.pt[1], offs);
@@ -545,11 +545,11 @@
   function toggleBridge() {
     var st = window.GAME_STATE, car = st && st.car;
     if (MECH.bridge && car && !car.seated && car.phase !== 'docked' && car.route && car.route.id === '4' && car.progress > 0) {
-      onWarn('4番へ向かう車が扇動板を渡るので格納できません'); return;
+      onWarn('4番へ向かう車が4番扇動板を渡るので格納できません'); return;
     }
     bridgeT(); // 切り替え前の位置まで進めてから、新しい向きで動かし始める
     MECH.bridge = !MECH.bridge;
-    onInfo(MECH.bridge ? '扇動板を搬出した' : '扇動板を格納した');
+    onInfo(MECH.bridge ? '4番扇動板を搬出した' : '4番扇動板を格納した');
   }
 
   // ---- スライド板(1番フロア後端の下に滑り込ませて格納する、1番↔2番のつなぎ板)----
@@ -603,7 +603,7 @@
     var sp = lowerCarSpan('4');
     return sp && sp[1] > FLOORS.F2.x0 && sp[0] < FLOORS.F2.x0 + F2_FLAP_LEN;
   }
-  // 2番に車が積んである時、その車の先端が2番扇動板の範囲にかかっていると、扇動板を動かすと車にぶつかる。
+  // 2番に車が積んである時、その車の先端が2番扇動板の範囲にかかっていると、4番扇動板を動かすと車にぶつかる。
   // イージーは動かせない / ノーマル・ハードは動かせるがぶつかってミス
   function flapHitsCar2() {
     var gs = window.GAME_STATE, occ = gs && gs.occupied['2'];
@@ -616,7 +616,7 @@
   }
   function toggleF2Flap() {
     if (MECH.f2Flap) {
-      // 閉じる: 扇動板の真下に4番の車の屋根が入り込んでいる間は閉じられない
+      // 閉じる: 4番扇動板の真下に4番の車の屋根が入り込んでいる間は閉じられない
       if (flapHitsCar2()) return;
       if (lowerCarOverFlap()) { onWarn('4番の車の屋根に当たるので2番扇動板を閉じられません'); return; }
       flapT(); MECH.f2Flap = false; onInfo('2番扇動板を閉じた');
@@ -922,7 +922,7 @@
     onInfo('後ろの柱のピン: ' + n + '番穴(柱の縮み幅 ' + Math.round(hangSolve(0).rear - RP.len) + 'px)');
     return true;
   }
-  // 荷物の変更(配車担当への連絡・時間切れ)で、トレーラーを積み始めの状態に戻す: 道板・扇動板・ジャッキ・タイヤ・ロック・5番フロア・宙段・セットピンを初期位置へ
+  // 荷物の変更(配車担当への連絡・時間切れ)で、トレーラーを積み始めの状態に戻す: 道板・4番扇動板・ジャッキ・タイヤ・ロック・5番フロア・宙段・セットピンを初期位置へ
   function resetAll() {
     holdStop(); if (typeof jackHoldStop === 'function') jackHoldStop();
     MECH.ramp = false; RAMP.t = 0; RAMP.last = null;

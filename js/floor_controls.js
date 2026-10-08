@@ -25,15 +25,15 @@
     if (fm.f1Connected() && fm.upperConnected()) msgs.push('1番↔2番つながり');
     if (fm.upperConnected()) msgs.push('3番↔下段(道板)つながり');
     if (!fm.MECH.ramp) msgs.push('道板 格納中(積み込み前に出す)');
-    if (fm.MECH.bridge) msgs.push('4番↔5番(扇動板)つながり');
+    if (fm.MECH.bridge) msgs.push('4番扇動板 搬出(4番↔5番つながり)');
     if (!fm.MECH.slide) msgs.push('スライド板 格納(1番へは通れない)');
-    if (fm.MECH.f2Flap) msgs.push('2番扇動板 開(1番へは通れない)');
+    if (fm.MECH.f2Flap) msgs.push('2番扇動板 開');
     if (fm.tireOffGround()) msgs.push('台車タイヤ浮いています');
     statusEl.textContent = msgs.length ? msgs.join(' / ') : '全て走行位置';
     statusEl.style.color = fm.upperConnected() ? '#8f8' : (msgs.length ? '#ffd080' : '#9c9');
   }
 
-  // ---- 機構のボタン(道板・扇動板・ストッパー)は常に表示 ----
+  // ---- 機構のボタン(道板・4番扇動板・ストッパー)は常に表示 ----
   var btnStopper = document.getElementById('btnStopper');
   var btnBridge = document.getElementById('btnBridge');
   btnStopper.addEventListener('click', function () { fm.toggleStopper(); renderMechButtons(); });
@@ -97,13 +97,13 @@
     btnAutoSw.classList.toggle('on', autoSw);
     btnStopper.textContent = fm.MECH.stopper ? '5番ストッパーを外す' : '5番ストッパーを掛ける';
     btnStopper.classList.toggle('on', fm.MECH.stopper);
-    btnBridge.textContent = fm.MECH.bridge ? '扇動板を格納' : '扇動板を搬出';
+    btnBridge.textContent = fm.MECH.bridge ? '4番扇動板を格納' : '4番扇動板を搬出';
     btnBridge.classList.toggle('on', fm.MECH.bridge);
     btnRamp.textContent = fm.MECH.ramp ? '道板をしまう' : '道板を出す';
     btnRamp.classList.toggle('on', fm.MECH.ramp);
     btnSlide.textContent = fm.MECH.slide ? 'スライド板を格納' : 'スライド板を搬出';
     btnSlide.classList.toggle('on', fm.MECH.slide);
-    btnF2Flap.textContent = fm.MECH.f2Flap ? '2番扇動板を閉じる' : '2番扇動板を開く(4番の長い車用)';
+    btnF2Flap.textContent = fm.MECH.f2Flap ? '2番扇動板を閉じる' : '2番扇動板を開く';
     btnF2Flap.classList.toggle('on', fm.MECH.f2Flap);
   }
 

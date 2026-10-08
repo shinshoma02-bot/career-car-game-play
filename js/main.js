@@ -373,7 +373,7 @@
     var backImg = drawBackdrop();
 
     // z-order (back -> front) はβ版(old/tsumikomi-simulator-beta.html)のz-indexに合わせる:
-    // 背景 -> 道板 -> 車 -> フロア(柱) -> 扇動板・1番ワイヤー・ジャッキ -> 前景(手前のフレーム) -> 台車タイヤ -> シリンダー -> トラクタ -> デバッグ表示
+    // 背景 -> 道板 -> 車 -> フロア(柱) -> 4番扇動板・1番ワイヤー・ジャッキ -> 前景(手前のフレーム) -> 台車タイヤ -> シリンダー -> トラクタ -> デバッグ表示
     // 車は前景フレーム・後輪より奥にある(トレーラーの枠の内側に積まれている)ので、fg/台車タイヤは必ず車の後に描く。
     beginRig(tilt);
     ctx.drawImage(backImg, 0, 0);
@@ -707,7 +707,7 @@
       drawStrip('cyl2_barrel', b, at, deg, 0);
     }
   }
-  // 扇動板など平板状の部材(円柱の質感は不要、金属板のグラデーションのみ)
+  // 4番扇動板など平板状の部材(円柱の質感は不要、金属板のグラデーションのみ)
   function drawPlate(anchor, len, deg, thick) {
     ctx.save();
     ctx.translate(anchor[0], anchor[1]);
@@ -777,7 +777,7 @@
     ctx.beginPath(); ctx.arc(p[0], p[1], 2.2, 0, Math.PI * 2); ctx.fill();
   }
 
-  // 前景フレームの奥に隠れる機構(β版で z-index:3〜4 だったもの): 1番の昇降リグ・扇動板
+  // 前景フレームの奥に隠れる機構(β版で z-index:3〜4 だったもの): 1番の昇降リグ・4番扇動板
   function drawMechanismBehindFg() {
     var fm = window.FLOOR_MECH;
     if (!fm) return;

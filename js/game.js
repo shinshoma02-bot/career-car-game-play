@@ -125,7 +125,7 @@
   // 積み込み先は事前に選ばない。車は「今つながっている道」を矢印で走り、道の上で最初に当たる輪止め・タイヤ止め・落としで止まる。
   // 止まったスロットがその車の積み込み先になる。道は棚などの状態で決まる:
   //   U(上段) = 道板↔3番がつながっている: 3番 → 2番 → 1番の順に通る
-  //   4(5番スロープ) = 5番フロアをスロープにして扇動板を搬出済み: 6番 → 5番 → 4番の順に通る
+  //   4(5番スロープ) = 5番フロアをスロープにして4番扇動板を搬出済み: 6番 → 5番 → 4番の順に通る
   //   L(下段) = 上記以外: 6番 → 5番の順に通る
   // 経路の各点は world座標({x,y})か、可動フロア上のローカル座標({floor,x,y})のどちらか。
   // フロア上の点は毎フレーム window.FLOOR_MECH.onFloor() で現在の傾きに変換される(1〜3番は同時操作対応)。
@@ -189,11 +189,11 @@
       pts.splice(3, 0, { floor: 'F7', x: fm.hangEndLocal ? fm.hangEndLocal() : 1785, y: 510 });
       tg['6'] = slotPt('6'); tg['7'] = slotPt('7', 'F7');
     } else if (id === '4') {
-      // 5番フロアのスロープ(後端→持ち上がった前端)を上り、扇動板を渡って4番へ(β版のrouteToと同じ経路)
+      // 5番フロアのスロープ(後端→持ち上がった前端)を上り、4番扇動板を渡って4番へ(β版のrouteToと同じ経路)
       var f5 = fm.FLOORS.F5;
       pts.push({ floor: 'F5', x: f5.rear.pt[0], y: f5.rear.pt[1] });
       pts.push({ floor: 'F5', x: 962, y: f5.front.pt[1] });
-      extra.bridgeWall = { floor: 'F5', x: 962, y: f5.front.pt[1] };   // 5番フロアの前端(スロープの上端)。扇動板が出ていない間は、ここから先(4番との隙間)へ進めない(格納した扇動板が垂れ下がっている)
+      extra.bridgeWall = { floor: 'F5', x: 962, y: f5.front.pt[1] };   // 5番フロアの前端(スロープの上端)。4番扇動板が出ていない間は、ここから先(4番との隙間)へ進めない(格納した4番扇動板が垂れ下がっている)
       pts.push({ x: fm.BR_ANCHOR[0], y: fm.BR_ANCHOR[1] });
       pts.push(slotPt('4'));
       tg['6'] = slotPt('6'); tg['5'] = slotPt('5', 'F5'); tg['4'] = slotPt('4');
@@ -213,7 +213,7 @@
     if (fm.upperConnected()) return 'U';
     // 宙段は、少し斜めに上げた状態(後端が接地に近い)なら後端から乗れるので宙段の道。もっと高く上げてあれば下段の道(6・5番)のまま
     if (fm.hangReachable()) return '7';
-    // 5番フロアがスロープなら、扇動板が出ていなくても、スロープを上る道('4')を走る(扇動板が出ていなければ、スロープの上端で扇動板に当たって止まる。routeProblems の 'bridge')
+    // 5番フロアがスロープなら、4番扇動板が出ていなくても、スロープを上る道('4')を走る(4番扇動板が出ていなければ、スロープの上端で4番扇動板に当たって止まる。routeProblems の 'bridge')
     if (fm.f5Slope()) return '4';
     return 'L';
   }
@@ -227,7 +227,7 @@
   }
   function resolvePath(rawPts) { return rawPts.map(resolvePoint); }
 
-  // 積み込み先の道・機構が現在つながっているか(ランプ↔3番、2番↔1番、扇動板↔4番)
+  // 積み込み先の道・機構が現在つながっているか(ランプ↔3番、2番↔1番、4番扇動板↔4番)
   // いま舞台にいる(これから積む)車の車種。いなければ次の車
   function currentEntry() {
     var car = state.car;
@@ -281,13 +281,13 @@
       }
     } else {
       var hb = (id === 'L' || id === '4') && hangBlocksCar(car);
-      // phys: true = 実物(フロア・扇動板・宙段・タイヤ)に当たる理由。シミュレーションでも、その位置で止まる(ぶつかった演出つき)。道板が出ていない・ジャッキで浮いている、は止めない(下の phys 無し)
+      // phys: true = 実物(フロア・4番扇動板・宙段・タイヤ)に当たる理由。シミュレーションでも、その位置で止まる(ぶつかった演出つき)。道板が出ていない・ジャッキで浮いている、は止めない(下の phys 無し)
       if (hb) out.push({ key: 'hang', phys: true, msg: '宙段フロアが上がっていて通れません。宙段を下げてから(格納してから)通ってください。' });
       var lf = lowFloorBlocked(car);
       if (lf) out.push({ key: 'lowfloor', phys: true, msg: lf + 'が下がっていて通れません。下段の車が入れる高さまで棚を上げてください。' });
-      // 5番フロアがスロープなのに扇動板が出ていない: スロープを上って、上端で、垂れ下がった扇動板に当たって止まる
+      // 5番フロアがスロープなのに4番扇動板が出ていない: スロープを上って、上端で、垂れ下がった4番扇動板に当たって止まる
       if (id === '4' && !fm.bridgeReady() && car.bridgeWallArc !== undefined && car.progress >= car.bridgeWallArc - 1) {
-        out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '扇動板が出ていないので、スロープの先(4番との隙間)へは進めません。扇動板を搬出してください。' });
+        out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '4番扇動板が出ていないので、スロープの先(4番との隙間)へは進めません。4番扇動板を搬出してください。' });
       }
       // 台車のタイヤを突出させていないと、6番の横を通れるのは軽自動車(幅1.48m以下)だけ。それ以外(5ナンバー・3ナンバー)は、6番に止まる(積む)分には従来どおりだが、6番を通り過ぎて5・4・7番へは行けない(2026-10-07 ユーザー指示)
       var s6 = cfg.slots['6'];
@@ -295,7 +295,7 @@
         out.push({ key: 'tirepass', phys: true, msg: '台車のタイヤを突出させていないので、6番の横は軽自動車しか通れません。アウトリガーでタイヤを浮かせて突出させてください。' });
       }
       // 5番フロアが平らでない(持ち上がっている途中など)のに、5番フロアの後端から先へ進もうとした(実際の5番フロアの縁で止まる)
-      if (id === 'L' && !fm.atTravel('F5') && car.f5EdgeArc !== undefined && car.progress >= car.f5EdgeArc - 1) out.push({ key: 'f5flat', phys: true, stopAt: car.f5EdgeArc, msg: '5番フロアが平らになっていません。5番フロアを平らに戻すか、スロープにして扇動板を出してください。' });
+      if (id === 'L' && !fm.atTravel('F5') && car.f5EdgeArc !== undefined && car.progress >= car.f5EdgeArc - 1) out.push({ key: 'f5flat', phys: true, stopAt: car.f5EdgeArc, msg: '5番フロアが平らになっていません。5番フロアを平らに戻すか、スロープにして4番扇動板を出してください。' });
     }
     return out;
   }
@@ -1020,7 +1020,7 @@
       present[p.key] = true;
       if (state.freeMode) {
         // シミュレーション(自由に操作できる練習用): 道板が出ていない等の「決まりごと」では、動作を制限しない。進んでぶつかったら、その時にぶつかったアニメーション(揺れ・グシャッ)と理由を表示する(減点なし)。
-        // 実物(フロア・扇動板・宙段・タイヤ)に当たる理由(phys)は、その位置で止まる(通り抜けない)
+        // 実物(フロア・4番扇動板・宙段・タイヤ)に当たる理由(phys)は、その位置で止まる(通り抜けない)
         if (pressedDir > 0 && !car.missedKeys[p.key]) {
           car.missedKeys[p.key] = true;
           triggerShake(9, 700); triggerSquash(car, 0.16, 600);
@@ -1038,7 +1038,7 @@
       if (!state.hints && !state.freeMode && p.phys && !blocked) blocked = p;
     });
     Object.keys(car.missedKeys).forEach(function (k) { if (!present[k]) delete car.missedKeys[k]; });
-    if (blocked && blocked.stopAt !== undefined && car.progress > blocked.stopAt) {   // 実物の縁(扇動板・5番フロアの端)を少し行き過ぎていたら、縁の位置まで戻す
+    if (blocked && blocked.stopAt !== undefined && car.progress > blocked.stopAt) {   // 実物の縁(4番扇動板・5番フロアの端)を少し行き過ぎていたら、縁の位置まで戻す
       car.progress = blocked.stopAt; var pq = car.pathTool.at(car.progress); car.x = pq.x; car.y = pq.y;
     }
     if (blocked && pressedDir > 0) {
@@ -1273,7 +1273,7 @@
         if (car.progress <= (car.rampArc || 1) + 6) { if (!anyBeyond) attachRoute(car, want); }
         else if (lowRoute(want) && lowRoute(car.route.id) && car.arc && car.arc['5'] !== undefined && car.progress < car.arc['5'] + 120) {
           // 下段の道(5番行き'L'と4番行き'4')は、道板を過ぎて6番・5番付近まで進んでいても(ノーマル・ハードは「平らでない」ミスを出しつつ5番まで進める)、5番を少し過ぎるまでは切り替えられる。輪止めを越えた印(beyond)があっても切り替える(6番の輪止めを越えただけで道が固定されるのを防ぐ)
-          // (5番フロアを平らにして先へ進めた後でスロープ+扇動板にした時、車が通常の道のまま取り残されるため)。今いる位置を新しい道へ写して続ける
+          // (5番フロアを平らにして先へ進めた後でスロープ+4番扇動板にした時、車が通常の道のまま取り残されるため)。今いる位置を新しい道へ写して続ける
           var cx = car.x, cy = car.y;
           attachRoute(car, want);
           car.progress = car.pathTool.arcOf({ x: cx, y: cy });
