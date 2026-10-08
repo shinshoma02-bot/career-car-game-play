@@ -268,8 +268,10 @@
     floorTitle.textContent = 'スイッチ操作';
     swHint.style.display = '';
   }
-  document.getElementById('btnSwClose').addEventListener('click', close);
-  window.SWITCH_UI = { open: open, close: close, get current() { return current; } };
+  document.getElementById('btnSwClose').addEventListener('click', function () { chain = false; close(); });
+  // 画面から(スイッチをタップして)自分で開いた時は、自動切りかえを止める(次の車を積むまで、元のスイッチへ戻さない)。自動で次に開くはずのスイッチを自分で開いた時だけ、続ける
+  function userOpen(id) { if (!(chain && id === wantGroup())) chain = false; open(id); }
+  window.SWITCH_UI = { open: userOpen, close: close, get current() { return current; } };
 
   function renderPinButtons() {
     document.querySelectorAll('#swPanel .pinBtn[data-pin]').forEach(function (btn) {

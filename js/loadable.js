@@ -35,6 +35,12 @@
     var S = cfg.slots[slotNum];
     return fm.onFloor(S.floor, S.tireX, S.deckY, BASE)[1] - d.h;
   }
+  // 1番の車の後ろ端と、2番の車の鼻は、横から見て重ならない(2番の落とし穴が2番扇動板の後ろへ移って、2番の車が前に寄ったため。2026-10-08)。
+  // 1番は上のフロア(F1)で2番より約0.2m高いだけなので、車の高さ(1.4〜1.8m)では重なると当たる。余裕 12px(約0.1m)
+  function pair12Ok(d1, d2) {
+    var S1 = cfg.slots['1'], S2 = cfg.slots['2'];
+    return S2.tireX + 8 - d2.leftTireX >= S1.tireX + 8 - d1.leftTireX + d1.w + 12;
+  }
   function permute(arr, k, cb) {   // arr から k 個を並べる全ての並べ方
     var used = [], cur = [];
     (function rec() {
@@ -173,6 +179,7 @@
             }
             var three = rest.filter(function (i) { return i !== i4; });
             permute(three, 3, function (a3) {   // a3 = 1〜3番の車
+              if (!pair12Ok(fw[a3[0]], fw[a3[1]])) return;
               if (fx && fx.order && (a3[0] !== fx.order[0] || a3[1] !== fx.order[1] || a3[2] !== fx.order[2] || i4 !== fx.order[3])) return;
               var bestTop = -Infinity, bq = -1;   // top = 3台の屋根のうち一番高い所(y。小さいほど高い)。MID を選んで、これが一番低い(大きい)ものを探す
               for (var q = 0; q < D.M.length; q++) {
@@ -217,6 +224,7 @@
     var best = Infinity, bestAssign = null;
     permute(idx, 6, function (a) {   // a[0..5] = 1..6番に載せる車
       if (!isNarrow(items[a[5]].entry)) return;
+      if (!pair12Ok(fw[a[0]], fw[a[1]])) return;
       var c4 = a[3], c5 = a[4], c6 = a[5];
       var L1 = Math.max(0, need[c4][4].F1), L2 = Math.max(0, need[c4][4].F2, need[c5][5].F2), L3 = Math.max(0, need[c6][6].F3);
       var top = Math.min(tops[a[0]][1] - L1, tops[a[1]][2] - L2, tops[a[2]][3] - L3);

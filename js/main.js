@@ -820,7 +820,7 @@
     var outDx = tip[0] - fm.BR_ANCHOR[0], outDy = tip[1] - fm.BR_ANCHOR[1];
     var outLen = Math.max(40, Math.hypot(outDx, outDy)), outDeg = Math.atan2(outDy, outDx) * 180 / Math.PI;
     var stowLen = 62, stowDeg = 92;
-    drawBridgePlate(fm.BR_ANCHOR, stowLen + (outLen - stowLen) * be, stowDeg + (outDeg - stowDeg) * be);
+    if (bt > 0.01) drawBridgePlate(fm.BR_ANCHOR, stowLen + (outLen - stowLen) * be, stowDeg + (outDeg - stowDeg) * be);   // 完全に格納した状態は描かない(下に垂れた板が、スイッチ盤の近くで残像のように見えるため。2026-10-08 ユーザー指摘)
 
     drawF2Flap();
     drawJack();

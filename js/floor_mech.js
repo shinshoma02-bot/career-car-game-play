@@ -542,10 +542,24 @@
     return onFloor('F5', cfg.bridgePlate.tipX, FLOORS.F5.front.pt[1], offs);
   }
   function bridgeReady() { return MECH.bridge && bridgeT() >= 1; }
+  // 4番扇動板の今の根元 a と先端 b(画面座標。描画と同じ補間。タップの判定に使う)
+  function bridgeSeg() {
+    var bt = bridgeT(), be = bt * bt * (3 - 2 * bt), tip = bridgeTip(), a = BR_ANCHOR;
+    var outLen = Math.max(40, Math.hypot(tip[0] - a[0], tip[1] - a[1])), outDeg = Math.atan2(tip[1] - a[1], tip[0] - a[0]) * 180 / Math.PI;
+    var len = 62 + (outLen - 62) * be, deg = 92 + (outDeg - 92) * be, r = deg * Math.PI / 180;
+    return { a: [a[0], a[1]], b: [a[0] + len * Math.cos(r), a[1] + len * Math.sin(r)] };
+  }
+  // 動いている車(積み込み中)のタイヤが、横位置 x0〜x1 の板の上にあるか(pad=タイヤの幅ぶんの余裕)。板の格納・展開は、タイヤが載っている間だけ断る(周りに当たる物が無ければ動かせる)
+  function carTiresOn(x0, x1, pad) {
+    var st = window.GAME_STATE, car = st && st.car;
+    if (!car || car.seated || !(car.phase === 'ready' || car.phase === 'moving') || !(car.progress > 0)) return false;
+    var r = (car.wheelRPx || 18) + (pad === undefined ? 6 : pad), xs = [car.x, car.x + (car.wbPx || 0)];
+    return xs.some(function (tx) { return tx + r >= x0 && tx - r <= x1; });
+  }
   function toggleBridge() {
     var st = window.GAME_STATE, car = st && st.car;
-    if (MECH.bridge && car && !car.seated && car.phase !== 'docked' && car.route && car.route.id === '4' && car.progress > 0) {
-      onWarn('4番へ向かう車が4番扇動板を渡るので格納できません'); return;
+    if (MECH.bridge && carTiresOn(cfg.bridgePlate.anchor[0], cfg.bridgePlate.tipX)) {
+      onWarn('車のタイヤが4番扇動板の上にあるので格納できません'); return;
     }
     bridgeT(); // 切り替え前の位置まで進めてから、新しい向きで動かし始める
     MECH.bridge = !MECH.bridge;
@@ -584,8 +598,8 @@
     var st = window.GAME_STATE, car = st && st.car;
     slideT();
     if (MECH.slide) {
-      if (car && !car.seated && car.phase !== 'docked' && car.route && car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 150) {
-        onWarn('車がスライド板の上を通るので、しまえません'); return;
+      if (carTiresOn(FLOORS.F1.x1 - 10, FLOORS.F1.x1 + SLIDE.len)) {
+        onWarn('車のタイヤがスライド板の上にあるので、しまえません'); return;
       }
       MECH.slide = false; onInfo('スライド板を格納した(1番フロアの下へ)');
     } else {
@@ -622,9 +636,8 @@
       flapT(); MECH.f2Flap = false; onInfo('2番扇動板を閉じた');
     } else {
       if (flapHitsCar2()) return;
-      var car = window.GAME_STATE && window.GAME_STATE.car;
-      if (car && !car.seated && car.dynamicPath && (car.phase === 'ready' || car.phase === 'moving') && car.route && car.route.id === 'U' && car.progress > 0) {
-        onWarn('1番へ向かう車が2番扇動板の上を通るので開けられません'); return;
+      if (carTiresOn(FLOORS.F2.x0 - 6, FLOORS.F2.x0 + F2_FLAP_LEN)) {
+        onWarn('車のタイヤが2番扇動板の上にあるので開けられません'); return;
       }
       flapT(); MECH.f2Flap = true; onInfo('2番扇動板を開いた');
     }
@@ -945,7 +958,7 @@
     stepPinTarget: stepPinTarget, togglePin: togglePin,
     toggleStopper: toggleStopper, toggleBridge: toggleBridge, f5Slope: f5Slope,
     toggleRamp: toggleRamp, rampUpdate: rampUpdate, rampReady: rampReady, rampT: function () { rampUpdate(); return RAMP.t; },
-    toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
+    toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, carTiresOn: carTiresOn, bridgeSeg: bridgeSeg, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
     holdStart: holdStart, holdStop: holdStop,
     atTravel: atTravel, upperConnected: upperConnected, f1Connected: f1Connected,
     cylPin: cylPin, cylLen: cylLen,

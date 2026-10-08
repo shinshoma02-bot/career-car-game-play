@@ -783,6 +783,55 @@
     var fm = window.FLOOR_MECH;
     return occ.floor ? fm.onFloor(occ.floor, occ.localX, occ.localY) : [occ.localX, occ.localY];
   }
+  // 操作するスイッチ(bind付き)の本体の上か(本体の外側 pad まで)
+  function tightSwitchAt(x, y, pad) {
+    var NAx = cfg.newArt, lay = NAx && NAx.switchLayout, sc = (NAx && NAx.switchScale) || 0.27, imgsz = { sw_pendant2: [44, 105], sw_pendant6: [54, 211], lamp_panel_lock: [38, 108], sw_box2: [44, 70] };
+    return (lay || []).some(function (s) {
+      if (!s.bind) return false;
+      var sz = imgsz[s.body] || [60, 200], k = s.scale || sc, w = sz[0] * k, h = sz[1] * k, a = (s.rot || 0) * Math.PI / 180;
+      var cx = s.at[0] - Math.sin(a) * h / 2, cy = s.at[1] + Math.cos(a) * h / 2;   // 本体の中心(上端の中央から、傾きに沿って半分下)
+      return Math.hypot(x - cx, y - cy) <= Math.hypot(w / 2, h / 2) * 0.85 + pad;
+    });
+  }
+  function distSeg(px, py, a, b) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / l2)) : 0;
+    return Math.hypot(px - (a[0] + t * dx), py - (a[1] + t * dy));
+  }
+  // タップした位置にある機構(いちばん近いもの)。{ run: 実行する関数 }。無ければ null
+  function mechanismAt(x, y, tol) {
+    var fm = window.FLOOR_MECH; if (!fm) return null;
+    var best = null;
+    function cand(d, run) { if (!best || d < best.d) best = { d: Math.max(0, d), run: run }; }
+    // 4番扇動板: 根元から先端までの線(出ている時は5番側へ、格納中は下に垂れている)
+    var sg = fm.bridgeSeg(), db = distSeg(x, y, sg.a, sg.b);
+    if (db <= 9 + tol) cand(db, function () { fm.toggleBridge(); });
+    // スライド板: 1番フロア後端の、板が出る位置(格納中でもその位置をタップすると出る)
+    var sl = fm.slideGeom(undefined, 1), ds = distSeg(x, y, sl.a, sl.b);
+    if (ds <= 8 + tol) cand(ds, function () { fm.toggleSlide(); });
+    // 2番扇動板: 2番フロア前端。開いている間は、上へ立ち上がった板の範囲も
+    var f2 = fm.FLOORS.F2, pa = fm.onFloor('F2', f2.x0 + 6, f2.front.pt[1]), pb = fm.onFloor('F2', f2.x0 + fm.F2_FLAP_LEN, f2.front.pt[1]);
+    var up = 62 * fm.flapT(), dfx = x < pa[0] ? pa[0] - x : (x > pb[0] ? x - pb[0] : 0), dfy = y < pa[1] - up ? pa[1] - up - y : (y > pa[1] + 10 ? y - pa[1] - 10 : 0);
+    var df = Math.hypot(dfx, dfy);
+    if (df <= tol) cand(df + 2, function () { fm.toggleF2Flap(); });
+    // 落し蓋(落とし穴)と輪止め
+    Object.keys(cfg.slots).forEach(function (num) {
+      var slot = cfg.slots[num];
+      if (slot.noChock) return;
+      function at(dx) { var px = slot.tireX + dx, py = slot.deckY, c = slot.floor || slot.carrier; if (c) { var p = fm.onFloor(c, px, py); px = p[0]; py = p[1]; } return [px, py]; }
+      function pick() { if (state.targetSlot !== num) selectSlot(num); }
+      if (slot.stopKind === 'hole' && !slot.instantLid) {
+        var hc = at(0), top = lidOpen[num] ? 46 : 8, dxh = Math.max(0, Math.abs(x - hc[0]) - 24), dyh = y < hc[1] - top ? hc[1] - top - y : (y > hc[1] + 16 ? y - hc[1] - 16 : 0);
+        var dh = Math.hypot(dxh, dyh);
+        if (dh <= tol) cand(dh + 1, function () { pick(); btnLid.click(); });
+      }
+      var c = chocks[num], lim = chockLimits(num);
+      if (c && c.set) {
+        var cp = at(c.step * lim.stepCm / 100 * cfg.pxPerMeter), dc = Math.hypot(x - cp[0], y - (cp[1] - 6)) - 12;
+        if (dc <= tol) cand(Math.max(0, dc), function () { pick(); btnChockSet.click(); });
+      }
+    });
+    return best;
+  }
   function carAt(x, y) {
     function hit(cx, cy, c) { return x >= cx - c.leftTireX - 6 && x <= cx - c.leftTireX + c.w + 6 && y >= cy - c.h - 6 && y <= cy + 10; }
     var cur = state.car;
@@ -1367,6 +1416,13 @@
     var scaleX = pt.perCss;
     var x = pt.x;
     var y = pt.y;
+    // トレーラー上の機構(4番扇動板・スライド板・2番扇動板・落し蓋・輪止め)を直接タップして、開閉・格納・セット/外す(2026-10-08)。
+    // 優先順位: スイッチ本体 → 車 → 機構 → スイッチの周り(指の太さ分の広い判定)。機構の判定は細く(指の太さを少しだけ足す)、スイッチ・車を取り合わないようにする
+    var mechTol = 10 * scaleX;
+    if (!tightSwitchAt(x, y, 5 * scaleX) && !carAt(x, y)) {
+      var mh = mechanismAt(x, y, mechTol);
+      if (mh) { mh.run(); return; }
+    }
     // トレーラー上のスイッチ(とその周り)をタップ: そのグループの操作盤を出す
     var groups = (cfg.newArt && cfg.newArt.switchGroups) || [];
     // スマホでは画面縮小でスイッチが数pxになるので、指の太さ分(画面上24px)まで外側のタップも拾い、いちばん近いグループを選ぶ
