@@ -982,10 +982,10 @@
     ctx.save();
     ctx.translate(ox, oy);
     // フェンダー(黄黒の縞・泥よけ)もタイヤと一緒に突出する: タイヤと同じ倍率・同じ中心で拡大して描く(タイヤだけが大きくなって、フェンダーが取り残されないように)
-    // フェンダーはトレーラー側に付いているので、タイヤが出入りしても大きさ・位置は変えない(フェンダーの中心=タイヤの走行時の中心)
-    var sc = 1, fcy = w.cy;
+    // フェンダーはタイヤと一緒に出入りする(同じ倍率・同じ中心)。格納時はどちらも奥に収まって小さく、突出時は手前に出て大きい(2026-10-08 ユーザー指示)
+    var sc = r / w.r, fcy = cy;
     // タイヤとフェンダーの隙間は、奥なので黒い影にする(2026-10-08 ユーザー指示)。フェンダーの内側(半径64)の上半分を、タイヤ側ほど濃い黒で塗ってから、タイヤを重ねる
-    var sg = ctx.createRadialGradient(cx, cy, r * 0.9, cx, cy, r + 14);
+    var sg = ctx.createRadialGradient(cx, cy, r * 0.9, cx, cy, r + 14 * sc);
     sg.addColorStop(0, 'rgba(5,7,8,0.97)'); sg.addColorStop(0.6, 'rgba(8,10,11,0.93)'); sg.addColorStop(1, 'rgba(10,13,14,0.6)');
     ctx.fillStyle = sg;
     ctx.beginPath(); ctx.arc(cx, fcy, 64 * sc, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
