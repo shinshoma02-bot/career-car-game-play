@@ -175,7 +175,8 @@
       var asp = canvas.width > 0 && canvas.height > 0 ? canvas.height / canvas.width : SH / SW;
       var vw = SW / t.zoom, vh = vw * asp;
       t.cx = vw >= SW ? SW / 2 : Math.max(vw / 2, Math.min(SW - vw / 2, t.cx));
-      t.cy = vh >= SH ? SH / 2 : Math.max(vh / 2, Math.min(SH - vh / 2, t.cy));
+      var ov = close() ? 90 : 0;   // スマホでは、下のスイッチを画面の真ん中に置けるように、ステージの下端より少し先(背景色)まで動かせる
+      t.cy = vh >= SH ? SH / 2 : Math.max(vh / 2 - ov, Math.min(SH - vh / 2 + ov, t.cy));
     }
     function layout() {
       var w = wrap.clientWidth || window.innerWidth;
