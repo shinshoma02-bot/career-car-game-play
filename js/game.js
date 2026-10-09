@@ -46,6 +46,7 @@
   var SPIN_SIGN = -1; // 前進(進行量+)方向のホイール回転符号
   var CHOCK_OVERRIDE_SPEED_PX_S = 3.05 * cfg.pxPerMeter; // これ以上の勢いで当たると輪止めを乗り越える(高い輪止め=乗り越えにくい)
   var OVERRIDE_SPEED_KEEP = 0.55; // 乗り越えた瞬間、衝撃で失われず残る速度の割合
+  var CAB_DECEL = 420, CAB_X = 372, CAB_DECK_X = 491;   // 1番を乗り越えた車が、床の先端を越えて滑る時の減速(px/秒²)と、キャビンの後ろ面のx(ステージ座標)
   var OVERSHOOT_CAP_PX = 130; // 乗り越えて進める限界(その先は壁扱いでこれ以上進めない)
 
   var missCountEl = document.getElementById('missCount');
@@ -1196,6 +1197,7 @@
     if (!car) return false;
     if (state.frozen) { car.velocity = 0; return false; }
     if (car.phase !== 'ready' && car.phase !== 'moving') return false;
+    if (car.cab && !car.cab.done) { car.velocity = 0; return true; }   // キャビンへ滑っている間は操作できない
     if (car.locked) { car.velocity = 0; return false; }   // 固定した車は矢印で動かない(タップで操作対象にすると動かせる)
     if (!car.route) { car.velocity = 0; return false; }
 
@@ -1289,16 +1291,33 @@
     var vEnd = Math.abs(car.velocity);
     if (car.progress <= 0 || car.progress >= maxProgress) car.velocity = 0;
 
+    // 1番を乗り越えて、前のタイヤが1番の床の先端に来た: 勢いが残っていれば、床の先端を越えてキャビンへ向かって滑っていく(摩擦で減速)。
+    //  届かずに止まる(遅い) → 前のタイヤが床の端から落ちて脱輪だけ。 届く → その速さでキャビンにぶつかる(軽く当たる〜思いきりめり込んで大破)
+    if (car.route.id === 'U' && car.beyond['1'] && !car.cab && car.x <= CAB_DECK_X && vEnd >= 30) {
+      var A = CAB_DECEL, noseX = car.x - car.leftTireX, G = Math.max(0, noseX - CAB_X), reach = vEnd * vEnd / (2 * A), t0 = performance.now();
+      car.cab = { t0: t0, v0: vEnd, a: A, G: G, hit: reach >= G, done: false };
+      if (reach >= G) {
+        var tI = (vEnd - Math.sqrt(Math.max(0, vEnd * vEnd - 2 * A * G))) / A, vI = vEnd - A * tI;
+        car.cab.tImp = tI; car.cab.vImp = vI;
+        setTimeout(function () {
+          car.cab.done = true;
+          var sv = Math.min(1.2, vI / 200);
+          impact(car, 'cab', vI, { dmg: 0.08 + 0.9 * sv * sv + 0.15 * sv, recoil: false });
+          state.fx.cab = { t0: performance.now(), sev: Math.max(0.15, Math.min(1, sv)) };
+          recordMiss('1番を乗り越えて、キャビンにぶつかった');
+          setStatus((vI < 90 ? 'コツン…' : vI < 190 ? 'ドン!' : 'ドーン!') + '1番を乗り越えて、キャビンにぶつかりました!');
+        }, tI * 1000);
+      } else {
+        car.cab.tStop = vEnd / A;
+        setTimeout(function () {
+          car.cab.done = true;
+          if (!car.derailed) { car.derailed = true; impact(car, 'derail', 60, { recoil: false }); recordMiss('脱輪(床の端を越えた)'); setStatus('脱輪!1番の床の端から前のタイヤが落ちました。勢いが足りず、キャビンにはぶつかりませんでした。'); }
+        }, car.cab.tStop * 1000);
+      }
+    }
     var anyBeyond = Object.keys(car.beyond).some(function (k) { return car.beyond[k]; });
     if (car.progress >= maxProgress - 0.5) {
-      if (anyBeyond && car.route.id === 'U' && car.beyond['1'] && vEnd >= 60 && !car.cabHit) {
-        // 1番を乗り越えて、まだ勢いがある: 前のトラクタ(キャビン)にぶつかる。最悪、車は大破する(やり直し)
-        car.cabHit = true; car.cabHitT = performance.now();
-        impact(car, 'cab', vEnd, { dmg: 0.5 + 0.7 * Math.min(1, vEnd / 150), recoil: false });
-        state.fx.cab = { t0: performance.now(), sev: Math.min(1, vEnd / 150) };
-        recordMiss('1番を乗り越えて、キャビンにぶつかった');
-        setStatus('ドーン!1番を乗り越えて、キャビンにぶつかりました!');
-      } else if (anyBeyond) {
+      if (anyBeyond) {
         // 乗り越えた後、床の端(奥の限界)まで行ってしまったら脱輪
         if (!car.derailed) { car.derailed = true; impact(car, 'derail', Math.abs(car.velocity) + 40, { recoil: false }); recordMiss('脱輪(床の端を越えた)'); setStatus('脱輪!タイヤが床の端を越えました。(ミス: ' + state.misses + ')'); }
       } else if (!car.ranOut) {
