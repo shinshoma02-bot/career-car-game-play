@@ -109,11 +109,45 @@
       im.src = YARD[k] + (YARD.v ? '?v=' + YARD.v : '');
     });
   }
+  // ---- 積み込み場所のバリエーション(2026-10-09): 昼・夕方・曇り・夜。画面を開くたびにランダム(#...&yard=dusk で指定)。
+  // 背景の絵(yard_bg/yard_ground)は1種類なので、色の重ね(multiply)で時間・天気を変える。トレーラー・車にも同じ色が掛かる。新しい場所の絵が納品されたら、cfg.yards に足す(R25)
+  var YARD_LIST = [
+    { id: 'day', name: '昼のヤード', w: 4 },
+    { id: 'dusk', name: '夕方のヤード', w: 2, mul: [255, 196, 150], sky: [255, 140, 70, 0.4], mul2: [255, 222, 195] },
+    { id: 'cloudy', name: '曇りのヤード', w: 2, mul: [214, 220, 228], desat: 0.55, mul2: [236, 239, 243] },
+    { id: 'night', name: '夜のヤード', w: 2, mul: [78, 92, 142], mul2: [128, 142, 190], lamps: true }
+  ];
+  var YARD_PICK = (function () {
+    var m = /[?&#]yard=(\w+)/.exec(location.hash + location.search), want = m && m[1], i, tot = 0, r;
+    for (i = 0; i < YARD_LIST.length; i++) if (YARD_LIST[i].id === want) return YARD_LIST[i];
+    YARD_LIST.forEach(function (y) { tot += y.w; }); r = Math.random() * tot;
+    for (i = 0; i < YARD_LIST.length; i++) { r -= YARD_LIST[i].w; if (r < 0) return YARD_LIST[i]; }
+    return YARD_LIST[0];
+  })();
+  window.YARD_VARIANT = YARD_PICK;
+  var LAMPS = [[430, 352], [1157, 352], [1900, 352], [2430, 352]];   // 背景の街灯(夜の明かり)
+  function rgb(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (a === undefined ? 1 : a) + ')'; }
+  function drawYardBack() {   // 背景(+地面)を、場所の色で描く。夕方は空の地平線を赤く、曇りは色をくすませる
+    var Y = YARD_PICK;
+    if (yardImgs.bg) ctx.drawImage(yardImgs.bg, 0, 0);
+    if (Y.sky) { var g = ctx.createLinearGradient(0, 0, 0, 420); g.addColorStop(0, rgb(Y.sky, 0)); g.addColorStop(1, rgb(Y.sky, Y.sky[3])); ctx.fillStyle = g; ctx.fillRect(0, 0, cfg.stage.w, 420); }
+    if (yardImgs.ground) ctx.drawImage(yardImgs.ground, 0, 0);
+  }
+  function drawYardLight() {   // 全体に掛ける色(トレーラー・車も同じ光の下)と、夜の街灯の明かり
+    var Y = YARD_PICK; if (Y.id === 'day') return;
+    ctx.save();
+    if (Y.desat) { ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = 'rgba(128,128,128,' + Y.desat + ')'; ctx.fillRect(0, 0, cfg.stage.w, cfg.stage.h); }
+    ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgb(Y.mul2 || Y.mul); ctx.fillRect(0, 0, cfg.stage.w, cfg.stage.h);
+    if (Y.lamps) {
+      ctx.globalCompositeOperation = 'lighter';
+      LAMPS.forEach(function (L) { var g = ctx.createRadialGradient(L[0], L[1], 3, L[0], L[1], 105); g.addColorStop(0, 'rgba(255,225,150,.4)'); g.addColorStop(1, 'rgba(255,225,150,0)'); ctx.fillStyle = g; ctx.fillRect(L[0] - 105, L[1] - 105, 210, 210); });
+    }
+    ctx.restore();
+  }
   function drawBackdrop() {   // 背景(ベタ塗り or ヤード)を描いて、そのあとに描く奥の枠の画像を返す
     ctx.fillStyle = '#5a616c';
     ctx.fillRect(0, 0, cfg.stage.w, cfg.stage.h);
-    if (yardImgs.bg) ctx.drawImage(yardImgs.bg, 0, 0);
-    if (yardImgs.ground) ctx.drawImage(yardImgs.ground, 0, 0);
+    drawYardBack();
     return yardImgs.back || images.bg;
   }
   var loadList = IS6B ? loadList6b() : [
@@ -361,16 +395,16 @@
   }
 
   // ---- 出発・入場の演出(2026-10-09 ユーザー指示)----
-  // 入場: 画面を開いた時、トレーラーが左から入ってくる。出発: 終わり方(自分で出発・時間切れ・事故など)に関わらず、トレーラーが走り去る。
+  // 入場: 画面を開いた時、トレーラーが右から左へ入ってくる。出発: 終わり方(自分で出発・時間切れ・事故など)に関わらず、トレーラーが走り去る。
   // 道板を出したまま・道板の上に車がいる時は事故: 道板は地面に引っかかって置き去りになり、車は道板から落ちる。
-  var AN_OUT_X = -(cfg.stage.w + 420);
-  var AN = { off: IS6B ? 0 : AN_OUT_X, kind: null, t0: 0, dur: 0, unsafe: false, cb: null, joltDone: false };
+  var AN_OUT_X = -(cfg.stage.w + 420), AN_IN_X = cfg.stage.w + 420;   // 出発は左(進行方向)へ、入場は右から左へ(2026-10-09 ユーザー指示)
+  var AN = { off: IS6B ? 0 : AN_IN_X, kind: null, t0: 0, dur: 0, unsafe: false, cb: null, joltDone: false };
   function animStep() {
     if (!AN.kind) return;
     var t = (performance.now() - AN.t0) / 1000, gs = window.GAME_STATE;
     if (AN.kind === 'in') {
       var u = Math.min(1, t / AN.dur);
-      AN.off = AN_OUT_X * Math.pow(1 - u, 3);   // 勢いよく入って、ゆっくり止まる
+      AN.off = AN_IN_X * Math.pow(1 - u, 3);   // 右から勢いよく入って、ゆっくり止まる
       if (u >= 1) { AN.off = 0; AN.kind = null; if (AN.cb) { var f = AN.cb; AN.cb = null; f(); } }
       return;
     }
@@ -410,7 +444,7 @@
     enter: function (cb) {
       if (IS6B) { if (cb) cb(); return; }
       VIEW.fitAll();
-      AN.off = AN_OUT_X; AN.kind = 'in'; AN.t0 = performance.now(); AN.dur = 2.4; AN.unsafe = false; AN.cb = cb || null;
+      AN.off = AN_IN_X; AN.kind = 'in'; AN.t0 = performance.now(); AN.dur = 2.4; AN.unsafe = false; AN.cb = cb || null;
     },
     offset: function () { return AN.off; }   // (確認用)
   };
@@ -473,6 +507,7 @@
 
     if (chk.tractor.checked) ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0);
     ctx.restore();   // 演出のずらしの終わり
+    drawYardLight();   // 昼以外は、全体に色を掛ける
   }
 
   // 検証用(2026-10-09 ユーザー指摘「検証が無理やり積んでいる。屋根が貫通・フロアを無視していた」への対策): 積んだ車と、各フロア(1・2・3・5番と宙段)の絵が、実際に重なっている画素数を測る。
