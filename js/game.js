@@ -300,6 +300,15 @@
     });
     return name;
   }
+  // 下段(4〜6番)へ向かう車の屋根が、上のフロア(1〜3番)の下面に当たるか(車の絵の形で、フロアの今の位置・傾きに対して。2026-10-09 ユーザー指示「フロアと接触せず積めること」)。
+  // 以前は、棚が標準の高さにあれば通れて、背の高い車が1番フロアなどの下に入り込んで(貫通して)積めていた。当たる所では止まる(phys)
+  function lowRoofBlocked(car) {
+    var fm = window.FLOOR_MECH;
+    if (!fm || !fm.envFits || !fm.ENV || !car.img) return null;
+    var occ = { img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, top = fm.carTopY(occ, [car.x, car.y], 0), x0 = car.x - car.leftTireX, L = new Float32Array(fm.ENV.n);
+    for (var i = 0; i < L.length; i++) { var x = fm.ENV.x0 + i * fm.ENV.dx; L[i] = x >= x0 && x <= x0 + car.w ? top(x) + fm.FRAME_GAP_PX : 1e9; }
+    return fm.envFits([L], ['F1', 'F2', 'F3'], fm.curOffs()) ? null : true;
+  }
   // 宙段が上がっている(格納でない)間に、下段の車が宙段の下を通ろうとしていないか
   function hangBlocksCar(car) {
     // 車の前後の余白は取らない。余白を取ると、積める組み合わせの判定(hangFit、余白なし)を通った車が、実際には宙段の下の位置まで進めなくなる
@@ -343,6 +352,8 @@
       if (fm.bridgeHitsBody && fm.bridgeHitsBody(bx0, bx0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), car.y)) {
         out.push({ key: 'bridgehit', phys: true, msg: '4番扇動板が出ているので、車の前が当たります。4番扇動板を格納してください。' });
       }
+      // 積む場所(スロット)にほぼ着いた所だけ調べる(スロープを上る途中の通過は、従来どおり lowFloorBlocked で見る)
+      if (car.arc && state.targetSlot && car.arc[state.targetSlot] !== undefined && car.progress >= car.arc[state.targetSlot] - 60 && car.progress <= car.arc[state.targetSlot] + 6 && lowRoofBlocked(car)) out.push({ key: 'lowroof', phys: true, msg: 'この車は背が高くて、上のフロアの下に入れません(当たります)。上のフロアを上げるか、車の向きを変えてください。' });
       var hb = (id === 'L' || id === '4') && hangBlocksCar(car);
       // phys: true = 実物(フロア・4番扇動板・宙段・タイヤ)に当たる理由。シミュレーションでも、その位置で止まる(ぶつかった演出つき)。道板が出ていない・ジャッキで浮いている、は止めない(下の phys 無し)
       if (hb) out.push({ key: 'hang', phys: true, msg: '宙段フロアが上がっていて通れません。宙段を下げてから(格納してから)通ってください。' });
@@ -759,7 +770,7 @@
     var c = chocks[num] || (chocks[num] = { set: false, step: 0 }), lim = chockLimits(num);
     if (c.set) { c.set = false; afterStopEdit(num, '輪止めを外しました。'); return; }
     if (cfg.slots[num].stopKind === 'hole' && lidOpen[num]) { setStatus('落し蓋を開けたままでは輪止めを置けません。先に蓋を閉じてください。'); return; }
-    c.set = true; c.step = Math.max(lim.min, Math.min(lim.max, 0));   // 5・6番は基準位置の穴、1〜4番は後方1段目
+    c.set = true; c.step = Math.max(lim.min, Math.min(lim.max, cfg.slots[num].chockStart === 'front' ? lim.min : 0));   // 5・6番は基準位置の穴、1〜4番は後方1段目。5番は、一番前(キャビン側)の穴が標準(2026-10-09 ユーザー指示)
     afterStopEdit(num, '輪止めをセットしました。');
   });
   function moveChock(dir) {
@@ -812,6 +823,7 @@
     if (state.targetSlot) setStatus(num + '番の輪止め・落し蓋を操作できます。');
   }
   state.selectSlot = selectSlot;
+  state.routeProblems = routeProblems;   // (確認用)今の車が通れない理由の一覧
   Array.prototype.forEach.call(document.querySelectorAll('#slotSel button'), function (b) {
     b.addEventListener('click', function () { selectSlot(b.dataset.slot); });
   });

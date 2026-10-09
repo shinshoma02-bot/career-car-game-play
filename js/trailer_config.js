@@ -40,13 +40,13 @@ window.TRAILER_CONFIG = {
   },
 
   "slots": {
-    "1": { "tireX": 515.2, "deckY": 294.2, "rot": -1.8, "floor": "F1", "hit": [485, 87, 454.5, 203], "stopKind": "none", "chockRequired": true, "defaultChock": true, "chockRange": { "front": 0, "rear": 120, "divisions": 20, "step": 6 }, "note": "基準の輪止め(tireX)は1番フロアの先端(floors.defs.F1.x0=456。タイヤの中心はそこから24px(約0.2m)後ろ)に置く。前(キャビン側)へは動かせない。後ろ(手前)へ120cm(2026-10-06 ユーザー指示)" },
-    "2": { "tireX": 1061, "deckY": 316, "rot": 0,    "floor": "F2", "hit": [957.2, 87, 522.2, 225], "stopKind": "hole", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
-    "3": { "tireX": 1650, "deckY": 312, "rot": 0,    "floor": "F3", "hit": [1560, 72, 591, 239], "stopKind": "hole", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
-    "4": { "tireX": 509,  "deckY": 442, "rot": 0,    "floor": null, "hit": [469, 304, 528.9, 138], "stopKind": "stopper", "chockRange": { "rear": 60, "divisions": 10, "step": 6 } },
-    "5": { "tireX": 1083.2, "deckY": 510, "rot": 0,    "floor": null, "carrier": "F5", "hit": [1017.5, 326, 546.5, 181], "stopKind": "none", "chockRequired": true, "chockRange": { "front": 44, "rear": 44, "divisions": 22, "step": 4 } },
+    "1": { "tireX": 515.2, "deckY": 294.2, "rot": -1.8, "floor": "F1", "hit": [485, 87, 454.5, 203], "stopKind": "none", "chockRequired": true, "defaultChock": true, "chockRange": { "front": 0, "rear": 180, "divisions": 30, "step": 6 }, "note": "基準の輪止め(tireX)は1番フロアの先端(floors.defs.F1.x0=456。タイヤの中心はそこから24px(約0.2m)後ろ)に置く。前(キャビン側)へは動かせない。後ろ(手前)へ120cm(2026-10-06 ユーザー指示)" },
+    "2": { "tireX": 1061, "deckY": 316, "rot": 0,    "floor": "F2", "hit": [957.2, 87, 522.2, 225], "stopKind": "hole", "chockRange": { "rear": 120, "divisions": 20, "step": 6 } },
+    "3": { "tireX": 1650, "deckY": 312, "rot": 0,    "floor": "F3", "hit": [1560, 72, 591, 239], "stopKind": "hole", "chockRange": { "rear": 102, "divisions": 17, "step": 6 } },
+    "4": { "tireX": 509,  "deckY": 442, "rot": 0,    "floor": null, "hit": [469, 304, 528.9, 138], "stopKind": "stopper", "chockRange": { "rear": 120, "divisions": 20, "step": 6 } },
+    "5": { "tireX": 1083.2, "deckY": 510, "rot": 0,    "floor": null, "carrier": "F5", "hit": [1017.5, 326, 546.5, 181], "stopKind": "none", "chockRequired": true, "chockStart": "front", "chockRange": { "front": 44, "rear": 88, "divisions": 33, "step": 4 } },
     "7": { "tireX": 1458.1, "deckY": 510, "rot": 0,    "floor": null, "carrier": "F7", "hit": [1332, 300, 318, 150], "stopKind": "hole", "noChock": true, "instantLid": true, "note": "宙段フロア(7台目)。タイヤ位置は宙段フロアのローカル座標(格納時の平らな姿勢=下段の床の高さy510、前端x1427)。輪止めは無く、タイヤ落としの穴だけ。格納中は下段の窪みにはまっていて穴は関係なく、上げた時には最初から穴が空いている(落し蓋の操作は無い)" },
-    "6": { "tireX": 1626, "deckY": 510, "rot": 0,    "floor": null, "hit": [1564, 326, 486, 181], "maxWidthM": 1.755, "maxWidthNoTireM": 1.48, "restrictedNote": "6番は車幅1.75m以下(軽自動車・5ナンバー・ステップワゴンクラスまで)の車のみ。幅の広い車は6番に載せられません", "stopKind": "none", "chockRequired": true, "chockRange": { "front": 72, "rear": 72, "divisions": 18, "step": 8 } }
+    "6": { "tireX": 1626, "deckY": 510, "rot": 0,    "floor": null, "hit": [1564, 326, 486, 181], "maxWidthM": 1.755, "maxWidthNoTireM": 1.48, "restrictedNote": "6番は車幅1.75m以下(軽自動車・5ナンバー・ステップワゴンクラスまで)の車のみ。幅の広い車は6番に載せられません", "stopKind": "none", "chockRequired": true, "chockRange": { "front": 72, "rear": 104, "divisions": 22, "step": 8 } }
   },
   "chock": {
     "sizeCm": 8,
@@ -59,7 +59,7 @@ window.TRAILER_CONFIG = {
     "ends": {
       "F1f": { "off": 0, "range": [-12, 120], "travel": 32.3, "hole": 13, "holeMax": 18, "label": "1番の前", "note": "走行位置13番(travel=絵からの下げ量px)。ピン最大18番=棚の上限(赤テープ付近)の1穴下。0番=最下段(ピンなし)" },
       "F1r": { "off": 0, "range": [-66, 120], "travel": 72, "hole": 8, "holeMax": 31, "label": "1番の後ろ", "note": "走行位置8番。ピン最大31番" },
-      "F2f": { "off": 0, "range": [-60, 90], "travel": 35, "hole": 9, "holeMax": 18, "pitchUp": 3.654, "freeTop": -23.5, "label": "2番", "note": "走行位置9番。ピン最大18番(2026-10-03: ユーザーの説明と実車の写真)。柱の内側の支柱が短いので、ピン無しで上がるのは、下側の赤い線(穴25番あたり=freeTop)まで。ピンを18番に差して昇降させると、上側の赤い線(穴35番あたり=range上限)まで上がる。1穴=3.654px(上側の赤い線が35番)" },
+      "F2f": { "off": 0, "range": [-75, 90], "travel": 35, "hole": 9, "holeMax": 18, "pitchUp": 3.654, "freeTop": -23.5, "label": "2番", "note": "走行位置9番。ピン最大18番(2026-10-03: ユーザーの説明と実車の写真)。柱の内側の支柱が短いので、ピン無しで上がるのは、下側の赤い線(穴25番あたり=freeTop)まで。ピンを18番に差して昇降させると、上側の赤い線(穴35番あたり=range上限)まで上がる。1穴=3.654px(上側の赤い線が35番)" },
       "MID": { "off": 0, "range": [-78, 104], "travel": 104, "hole": 0, "holeMax": 28, "noTravelPin": true, "label": "3番の前", "note": "走行位置=一番下(0番・ピンは差さない)。そこから少し上げた位置がピンを差せる下限(1番)、最大28番(=支柱がピン28番の上に来ると、棚は柱の赤テープ付近=上限。宙段を使う時しか一番上までは上げない。2026-10-02: ユーザーの説明で確認)" },
       "F3r": { "off": 0, "range": [-96, 340], "travel": -24, "hole": 10, "holeMax": 33, "post": { "x": 1795, "pitch": 7.4, "pitchDown": 11.29 }, "label": "3番の後ろ", "note": "走行位置10番(ユーザー確認 2026-10-08)。ピン最大33番。ピンは柱(x=1795)で3番フロアを受け、1穴=柱で7.4px。棚の後端の高さは、3番前(MID)の高さで変わる(柱の位置の棚の高さ=MID+(F3r−MID)×0.514 がピンの高さになる時に載る)" },
       "F7": { "off": 0, "range": [-120, 0], "travel": 0, "hole": 0, "holeMax": 19, "noTravelPin": true, "label": "宙段", "note": "宙段フロアの支柱(柱の中)。実際の動きu(0〜2)を ×-60 した仮想の上下量。1穴=u0.1=6px(番号札 hole_scale_f7 と同じ)。ピンは宙段の支柱を受ける" }
@@ -74,7 +74,7 @@ window.TRAILER_CONFIG = {
   },
 
   "hangFloor": {
-    "len": 325, "speed": 0.4, "rearPin": { "holes": 6, "pitch": 7, "hole": 1 }, "stopPin": { "hole": 1, "us": [1.86, 1.82, 1.78, 1.75, 1.71, 1.67], "pts": [[1301.4, 427.5], [1306.8, 425.0], [1312.1, 422.5], [1317.4, 419.9], [1322.7, 417.4], [1328, 414.8]], "thick": 16, "note": "フレーム側の固定ピン(赤い板)。pts=ピンの上面の位置[x,y](前→後ろの5段階。斜めの柱に沿って並ぶ)、thick=フロア下面までの厚み。フロア下面がピンに当たる u が loadU になる(0.01刻み)。前から u2.0/1.84/1.76/1.70/1.60。ユーザー指定: 斜めの柱(フロア先端のすぐ後ろ。x1300〜1380)に付ける" }, "tol": 80, "tolLower": 40, "loadU": 1.9, "localX0": 1427, "localY": 510,
+    "len": 325, "speed": 0.4, "rearPin": { "holes": 6, "pitch": 7, "hole": 1 }, "stopPin": { "hole": 1, "us": [1.86, 1.82, 1.78, 1.75, 1.71, 1.67], "pts": [[1301.4, 427.5], [1306.8, 425.0], [1312.1, 422.5], [1317.4, 419.9], [1322.7, 417.4], [1328, 414.8]], "thick": 16, "note": "フレーム側の固定ピン(赤い板)。pts=ピンの上面の位置[x,y](前→後ろの5段階。斜めの柱に沿って並ぶ)、thick=フロア下面までの厚み。フロア下面がピンに当たる u が loadU になる(0.01刻み)。前から u2.0/1.84/1.76/1.70/1.60。ユーザー指定: 斜めの柱(フロア先端のすぐ後ろ。x1300〜1380)に付ける" }, "tol": 60, "tolLower": 30, "loadU": 1.9, "localX0": 1427, "localY": 510,
     "linkage": {
       "frontLen": 140, "pinSpan": 293, "pinOffset": [16, 18], "pinOffsetF": [0, 0], "pinOffsetR": [309, 18], "theta0": 0, "groundY": 528,
       "theta1": 20.48, "theta2": 121, "lockU": 1, "rearMin": 90, "rearMax": 135, "rearGrowTheta": 180, "tableStep": 0.01,
