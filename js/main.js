@@ -130,6 +130,7 @@
   Promise.all(loadList).then(function () {
     try { sessionStorage.removeItem('reloadedOnce'); } catch (e) { }
     statusEl.textContent = '読み込み完了: ' + cfg.name + ' (' + cfg.stage.w + 'x' + cfg.stage.h + 'px, ' + cfg.pxPerMeter + 'px/m)';
+    if (window.TRAILER_ANIM) window.TRAILER_ANIM.enter();   // 左からトレーラーが入ってくる
     requestAnimationFrame(loop);
   }).catch(function (err) {
     statusEl.textContent = '画像読み込みエラー: ' + (err && err.message ? err.message : err);
@@ -359,6 +360,61 @@
     requestAnimationFrame(loop);
   }
 
+  // ---- 出発・入場の演出(2026-10-09 ユーザー指示)----
+  // 入場: 画面を開いた時、トレーラーが左から入ってくる。出発: 終わり方(自分で出発・時間切れ・事故など)に関わらず、トレーラーが走り去る。
+  // 道板を出したまま・道板の上に車がいる時は事故: 道板は地面に引っかかって置き去りになり、車は道板から落ちる。
+  var AN_OUT_X = -(cfg.stage.w + 420);
+  var AN = { off: IS6B ? 0 : AN_OUT_X, kind: null, t0: 0, dur: 0, unsafe: false, cb: null, joltDone: false };
+  function animStep() {
+    if (!AN.kind) return;
+    var t = (performance.now() - AN.t0) / 1000, gs = window.GAME_STATE;
+    if (AN.kind === 'in') {
+      var u = Math.min(1, t / AN.dur);
+      AN.off = AN_OUT_X * Math.pow(1 - u, 3);   // 勢いよく入って、ゆっくり止まる
+      if (u >= 1) { AN.off = 0; AN.kind = null; if (AN.cb) { var f = AN.cb; AN.cb = null; f(); } }
+      return;
+    }
+    // 出発: 少し待って(エンジンが掛かる)から、だんだん加速して左(進行方向)へ走り去る。事故の時は、少し動いて道板が引っかかり、ガクンと止まってから走り出す
+    var LUR = AN.unsafe ? 50 : 0, wait = AN.unsafe ? 0.5 : 0.45, hold = AN.unsafe ? 0.9 : 0, tt, off = 0;
+    if (t < wait) off = 0;
+    else if (AN.unsafe && t < wait + 0.45) { var q = (t - wait) / 0.45; off = -LUR * q * (2 - q); }   // 道板が地面に引っかかるまで進む
+    else if (t < wait + 0.45 + hold) { off = -LUR; if (!AN.joltDone) { AN.joltDone = true; if (gs && gs.fx) gs.fx.shake = { t0: performance.now(), dur: 900, amp: 11 }; } }   // 引っかかってガクンと止まる
+    else { tt = Math.max(0, (t - wait - (AN.unsafe ? 0.45 + hold : 0))) / (AN.dur - wait - (AN.unsafe ? 0.45 + hold : 0)); off = -LUR + (AN_OUT_X + LUR) * tt * tt; }
+    AN.off = Math.max(AN_OUT_X, off);
+    if (t >= AN.dur) { AN.off = AN_OUT_X; AN.kind = null; if (AN.cb) { var f2 = AN.cb; AN.cb = null; f2(); } }
+  }
+  window.TRAILER_ANIM = {
+    get active() { return !!AN.kind; },
+    // 今の状態で発進すると事故になる理由(無ければ null)
+    unsafeDeparture: function () {
+      var fm = window.FLOOR_MECH, gs = window.GAME_STATE, car = gs && gs.car;
+      var onRamp = !!(car && !car.seated && car.progress > 0);
+      var rampOut = !!(fm && (fm.MECH.ramp || fm.rampT() > 0.05));
+      if (onRamp) return '車が道板の上にいるのに発進して、車が落ちました。';
+      if (rampOut) return '道板を出したまま発進して、道板が地面に引っかかりました。';
+      return null;
+    },
+    // トレーラーが走り去る。unsafe=true は事故の演出。終わったら cb
+    depart: function (unsafe, cb) {
+      var fm = window.FLOOR_MECH, gs = window.GAME_STATE;
+      if (IS6B || !gs) { if (cb) cb(); return; }
+      // 発進の前に、扇動板・落し蓋・スライド板をしまう(開けたまま走らない)
+      if (gs.lidOpen) Object.keys(gs.lidOpen).forEach(function (k) { gs.lidOpen[k] = false; });
+      if (fm) { fm.MECH.bridge = false; fm.MECH.f2Flap = false; if (!fm.MECH.slide && fm.toggleSlide) { try { fm.toggleSlide(); } catch (e) { } } }
+      var car = gs.car;
+      if (unsafe && car && !car.seated && car.progress > 0) { car.accident = { t0: performance.now(), landed: false }; car.velocity = 0; }   // 道板の上の車は落ちる
+      VIEW.fitAll();
+      AN.kind = 'out'; AN.t0 = performance.now(); AN.unsafe = !!unsafe; AN.dur = unsafe ? 4.2 : 2.9; AN.cb = cb || null; AN.joltDone = false;
+    },
+    // 入場(左から)。cb は止まった後
+    enter: function (cb) {
+      if (IS6B) { if (cb) cb(); return; }
+      VIEW.fitAll();
+      AN.off = AN_OUT_X; AN.kind = 'in'; AN.t0 = performance.now(); AN.dur = 2.4; AN.unsafe = false; AN.cb = cb || null;
+    },
+    offset: function () { return AN.off; }   // (確認用)
+  };
+
   function draw() {
     if (IS6B) { draw6b(); return; }
     // ジャッキでトレーラーが持ち上がると、キングピンを支点にトレーラー全体(トラクタ以外)が傾く(β版の#rig回転と同じ)
@@ -371,7 +427,9 @@
     curTilt = tilt;
 
     VIEW.begin();   // カメラの位置・拡大(ステージ座標で描けるように変換をかける)
+    animStep();
     var backImg = drawBackdrop();
+    ctx.save(); if (AN.off) ctx.translate(AN.off, 0);   // 出発・入場の演出: 背景以外(トレーラー・トラクタ・車)を横へずらす
 
     // z-order (back -> front) はβ版(old/tsumikomi-simulator-beta.html)のz-indexに合わせる:
     // 背景 -> 道板 -> 車 -> フロア(柱) -> 4番扇動板・1番ワイヤー・ジャッキ -> 前景(手前のフレーム) -> 台車タイヤ -> シリンダー -> トラクタ -> デバッグ表示
@@ -380,7 +438,8 @@
     ctx.drawImage(backImg, 0, 0);
     ctx.restore();
 
-    drawRamp(tilt); // 道板は先端が地面に着くよう、傾きに合わせて角度を計算し直す(画面座標で描く)
+    if (AN.kind === 'out' && AN.unsafe && AN.off) { ctx.save(); ctx.translate(-AN.off, 0); drawRamp(tilt); ctx.restore(); }   // 事故: 道板は地面に引っかかって置き去り
+    else drawRamp(tilt); // 道板は先端が地面に着くよう、傾きに合わせて角度を計算し直す(画面座標で描く)
 
     beginRig(tilt);
     updateLids();
@@ -412,6 +471,7 @@
     ctx.restore();
 
     if (chk.tractor.checked) ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0);
+    ctx.restore();   // 演出のずらしの終わり
   }
 
   // 検証用(2026-10-09 ユーザー指摘「検証が無理やり積んでいる。屋根が貫通・フロアを無視していた」への対策): 積んだ車と、各フロア(1・2・3・5番と宙段)の絵が、実際に重なっている画素数を測る。
@@ -1230,6 +1290,7 @@
       else { var de = (1 - dp) * (1 - dp); drDeg = -17 * de * (0.55 + 0.45 * Math.cos(dp * 11)); drY = 11 * de * (0.6 + 0.4 * Math.cos(dp * 11)); }
     }
     ctx.save();
+    if (acc && AN.off) ctx.translate(-AN.off, 0);   // 落ちた車は地面に残る(トレーラーと一緒に走り去らない)
     ctx.translate(car.x, car.y + bumpY + sink + fallY + drY);
     ctx.rotate((rotDeg + sinkDeg + fallRot + drDeg) * Math.PI / 180);
     // ぶつかった時のグシャッ: 前端を固定して前後に縮み、少し上に膨らんで戻る(減衰する振動)

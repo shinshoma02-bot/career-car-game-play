@@ -23,7 +23,7 @@
   };
   // スコアアタック(旧タイムアタック。2026-10-08 ユーザー提案: 積み終わっても終われない・待つだけになる問題)。
   // 持ち時間は最初 startSec。サイクルを完了するたびに延長ボーナス(base 秒。回を重ねるごとに shrink 秒ずつ減って、min 秒まで)がもらえる。
-  // そのサイクルのミス1回につき missCost 秒引く(下限 floor 秒)。持ち時間が0になるか、「ここで終了」を押すと終わり、スコアで競う
+  // そのサイクルのミス1回につき missCost 秒引く(下限 floor 秒)。持ち時間が0になるか、「荷役を終え出発」を押すと終わり、スコアで競う
   // 難易度ごとに、最初の持ち時間(startSec)と延長の初めの値(base)を変える。2026-10-08 ユーザー指示: 全体に +20秒、イージーはもう少し猶予
   var EXT = { start: { easy: 300, normal: 260, hard: 260 }, base: { easy: 210, normal: 180, hard: 180 }, shrink: 15, min: 90, missCost: 10, floor: 30 };
   var limitSec = EXT.start.normal;
@@ -161,8 +161,12 @@
     state.frozen = true;
     fm.holdStop && fm.holdStop();
     fm.jackHoldStop && fm.jackHoldStop();
+    // 出発の仕方: 道板を出したまま・道板の上に車がいる時は、事故になる(ミス1回。トレーラーが走り去る演出は main.js の TRAILER_ANIM)
+    var unsafe = null;
+    if (!accident && window.TRAILER_ANIM && window.TRAILER_ANIM.unsafeDeparture) unsafe = window.TRAILER_ANIM.unsafeDeparture();
+    if (unsafe) { stats.penalty += Math.round(SCORE.perMajor * mult()); stats.majors++; accident = true; reason = unsafe; }   // 重いミス1回として減点
     refreshBar();
-    var title = accident ? '事故で作業中止' : (cleared ? 'クリア!' : (mode === 'real' ? 'ミスで終了' : '終了'));
+    var title = accident ? '事故で作業中止' : (cleared ? 'クリア!' : (mode === 'real' ? 'ミスで終了' : '荷役を終え出発'));
     $('resultTitle').textContent = MODES[mode].name + (mode === 'sim' ? '' : '(' + DIFFS[diff] + ')') + ':' + title;
     var lines = [];
     if (accident) { lines.push('事故: ' + reason); lines.push('作業を中止します。一からやり直してください。'); }
@@ -175,7 +179,9 @@
     $('resultBody').innerHTML = '';
     lines.forEach(function (l) { var p = document.createElement('p'); p.textContent = l; $('resultBody').appendChild(p); });
     $('resultScore').textContent = 'スコア ' + score();
-    $('resultOverlay').style.display = 'flex';
+    // 結果は、トレーラーが走り去ってから出す(演出が無い環境では、すぐ)
+    if (window.TRAILER_ANIM && window.TRAILER_ANIM.depart) window.TRAILER_ANIM.depart(!!unsafe, function () { $('resultOverlay').style.display = 'flex'; });
+    else $('resultOverlay').style.display = 'flex';
   }
 
   window.GAME_MODE = {
@@ -247,7 +253,7 @@
     limitSec = EXT.start[diff] || EXT.start.normal;
     $('modeOverlay').style.display = 'none';
     $('modeBar').style.display = 'flex';
-    var be = $('btnEnd'); if (be) be.style.display = (m === 'time' && !tut) ? '' : 'none';   // 「ここで終了」はスコアアタックだけ
+    var be = $('btnEnd'); if (be) be.style.display = (m === 'time' && !tut) ? '' : 'none';   // 「荷役を終え出発」はスコアアタックだけ
     refreshBar();
     timerId = setInterval(tick, 250);
   }
@@ -282,15 +288,15 @@
     $('diffOverlay').style.display = 'none';
     $('modeOverlay').style.display = 'flex';
   });
-  // 「ここで終了」: 積み終わって、もう続けない時に、自分で終われる。誤タップ防止に、もう一度押して確定(3秒以内)
+  // 「荷役を終え出発」: 積み終わって、もう続けない時に、自分で終われる。誤タップ防止に、もう一度押して確定(3秒以内)
   (function () {
     var b = $('btnEnd'), armed = 0, t = 0;
     if (!b) return;
     b.addEventListener('click', function () {
       if (!mode || ended || mode !== 'time') return;
-      if (!armed) { armed = 1; b.textContent = '本当に終了?(もう一度)'; clearTimeout(t); t = setTimeout(function () { armed = 0; b.textContent = 'ここで終了'; }, 3000); return; }
-      armed = 0; clearTimeout(t); b.textContent = 'ここで終了';
-      finish(false, '自分で終了しました(残り ' + fmtTime(limitSec - elapsed()) + ')');
+      if (!armed) { armed = 1; b.textContent = '本当に出発?(もう一度)'; clearTimeout(t); t = setTimeout(function () { armed = 0; b.textContent = '荷役を終え出発'; }, 3000); return; }
+      armed = 0; clearTimeout(t); b.textContent = '荷役を終え出発';
+      finish(false, '荷役を終え出発しました(残り ' + fmtTime(limitSec - elapsed()) + ')');
     });
   })();
   $('btnRetry').addEventListener('click', function () { location.reload(); });
