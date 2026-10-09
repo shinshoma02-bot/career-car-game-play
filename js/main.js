@@ -505,7 +505,11 @@
     if (chk.pin.checked) drawPinMarks();
     ctx.restore();
 
-    if (chk.tractor.checked) ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0);
+    if (chk.tractor.checked) {   // キャビンに車がぶつかった時は、トラクタが衝撃で揺れる(後ろのタイヤを支点にガクガクと戻る)
+      var cb = window.GAME_STATE && window.GAME_STATE.fx && window.GAME_STATE.fx.cab, ce = cb ? (performance.now() - cb.t0) / 1000 : 9;
+      if (cb && ce < 1.4) { var cd = Math.exp(-3.2 * ce), kx = 360, ky = 330; ctx.save(); ctx.translate(kx, ky); ctx.rotate(-0.05 * cb.sev * cd * Math.sin(ce * 24) * Math.PI / 6 * 3); ctx.translate(-kx + 8 * cb.sev * cd * Math.sin(ce * 30), -ky); ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0); ctx.restore(); }
+      else ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0);
+    }
     ctx.restore();   // 演出のずらしの終わり
     drawYardLight();   // 昼以外は、全体に色を掛ける
   }
@@ -1287,7 +1291,7 @@
     var ws = [], gs = [], total = 0, i, g, d, xc;
     for (i = 0; i < N; i++) {
       xc = (i + 0.5) * dw0; d = (xc - ux) / R; g = Math.exp(-d * d * 1.5); gs.push(g);
-      var k = c.kind === 'roof' ? 1 + 0.12 * a * g : 1 - 1.6 * a * g;
+      var k = c.kind === 'roof' ? 1 + 0.12 * a * g : Math.max(0.1, 1 - 1.6 * a * g);
       ws.push(dw0 * k); total += dw0 * k;
     }
     var x0 = (c.kind === 'roof' || c.u >= 0.5) ? 0 : w - total, x = x0, pos = [x0];
@@ -1372,6 +1376,17 @@
     }
 
     // 事故(落下): 道板との間の空中から地面へ落ちて、傾きながら地面に叩きつけられる。着地でグシャッと縮む
+    // 輪止め・落し蓋の穴を勢いよく乗り越える(game.js の rideOver): 前が持ち上がって、ガタンと跳ね、ばねのように揺れて収まる。穴は先に前が落ち込む
+    var rideY = 0, rideDeg = 0, rd = car.ride;
+    if (rd) {
+      var rp = (performance.now() - rd.t0) / rd.dur;
+      if (rp >= 1) car.ride = null;
+      else {
+        var env = Math.exp(-3.4 * rp), dir = rd.kind === 'hole' ? 1 : -1, osc = Math.sin(rp * 13);
+        rideDeg = dir * (3 + 11 * rd.sev) * env * osc;
+        rideY = -(2 + 9 * rd.sev) * env * Math.abs(Math.sin(rp * 9)) * (rd.kind === 'hole' ? 0.5 : 1);
+      }
+    }
     var fallY = 0, fallRot = 0, acc = car.accident;
     if (acc) {
       var ft = (performance.now() - acc.t0) / 1000, maxFall = Math.max(0, cfg.ramp.groundY - car.y);
@@ -1393,8 +1408,10 @@
     }
     ctx.save();
     if (acc && AN.off) ctx.translate(-AN.off, 0);   // 落ちた車は地面に残る(トレーラーと一緒に走り去らない)
-    ctx.translate(car.x, car.y + bumpY + sink + fallY + drY);
-    ctx.rotate((rotDeg + sinkDeg + fallRot + drDeg) * Math.PI / 180);
+    var lunge = 0;   // キャビンにぶつかった時: 勢いで前へ食い込む(トラクタの絵が車より手前なので、キャビンの後ろへめり込んで見える)
+    if (car.cabHitT) { var le2 = (performance.now() - car.cabHitT) / 1000; lunge = 110 * (1 - Math.exp(-le2 * 12)) - 10 * Math.min(1, le2 * 1.5); }
+    ctx.translate(car.x - lunge, car.y + bumpY + sink + fallY + drY + rideY);
+    ctx.rotate((rotDeg + sinkDeg + fallRot + drDeg + rideDeg) * Math.PI / 180);
     // ぶつかった時のグシャッ: 前端を固定して前後に縮み、少し上に膨らんで戻る(減衰する振動)
     var sqz = squashOf(car);
     if (!sqz && acc && acc.landed) {   // 落下の着地
@@ -1408,6 +1425,7 @@
 
     var K = 0.72; // タイヤ外周のうち、回転させるホイール部分の比率
     [car.tlRatio, car.trRatio].forEach(function (ratio) {
+      if (cs && cs.amp > 0.45) return;   // 大きく潰れた車は、回すホイールを重ねない(絵の位置がずれて、ホイールだけ浮くため)
       var wheelImgX = ratio * w;
       var wheelImgY = (1 - car.rhRatio) * h;
       var localX = (mapX ? mapX(wheelImgX) : wheelImgX) - leftTireX;

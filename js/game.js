@@ -69,7 +69,7 @@
   var HIT_AT = {
     ramp: { kind: 'front', u: 0, v: 0.32 }, slide: { kind: 'front', u: 0, v: 0.3 }, bridgehit: { kind: 'front', u: 0, v: 0.18 }, bridge: { kind: 'front', u: 0, v: 0.15 },
     f5flat: { kind: 'front', u: 0.06, v: 0.12 }, lowroof: { kind: 'roof', u: 0.38, v: 1 }, hang: { kind: 'roof', u: 0.3, v: 1 }, lowfloor: { kind: 'roof', u: 0.28, v: 0.95 },
-    tirepass: { kind: 'side', u: 0.5, v: 0.28 }, wall: { kind: 'front', u: 0, v: 0.42 }, wallRear: { kind: 'rear', u: 1, v: 0.4 }, flap: { kind: 'roof', u: 0.12, v: 0.8 }, derail: { kind: 'side', u: 0.2, v: 0.1 }, tirestop: { kind: 'side', u: 0.2, v: 0.08 }, generic: { kind: 'front', u: 0, v: 0.4 }
+    tirepass: { kind: 'side', u: 0.5, v: 0.28 }, wall: { kind: 'front', u: 0, v: 0.42 }, wallRear: { kind: 'rear', u: 1, v: 0.4 }, flap: { kind: 'roof', u: 0.12, v: 0.8 }, derail: { kind: 'side', u: 0.2, v: 0.1 }, tirestop: { kind: 'side', u: 0.2, v: 0.08 }, cab: { kind: 'front', u: 0, v: 0.55 }, generic: { kind: 'front', u: 0, v: 0.4 }
   };
   function impact(car, key, speed, opt) {
     if (!car) return;
@@ -78,7 +78,11 @@
     var sev = Math.max(0, Math.min(1, (v - 25) / 170));
     var peak = 0.07 + 0.36 * sev, resid = sev > 0.45 ? peak * 0.4 : 0, dur = 650 + 900 * sev;
     var old = car.crash && car.crash.resid || 0;   // 前の凹みに重ねる(上限あり)
-    car.crash = { t0: performance.now(), dur: dur, kind: at.kind, u: at.u, v: at.v, peak: Math.min(0.5, peak + old * 0.5), resid: Math.min(0.32, Math.max(resid, old) + (resid ? 0.03 : 0)), sev: sev, seed: Math.random() * 1000 };
+    // 損傷の合計(1.0で原型をとどめない=大破): 軽い衝突は小さく、重い衝突は大きく積み上がる。凹みは損傷に比例して深く、残る
+    car.damage = (car.damage || 0) + (opt.dmg !== undefined ? opt.dmg : 0.04 + 0.6 * sev * sev);
+    var dm = Math.min(1.4, car.damage);
+    car.crash = { t0: performance.now(), dur: dur, kind: at.kind, u: at.u, v: at.v, peak: Math.min(0.85, Math.max(peak + old * 0.5, dm * 0.62)), resid: Math.min(0.78, Math.max(resid, old, dm > 0.35 ? dm * 0.55 : 0)), sev: sev, seed: Math.random() * 1000 };
+    if (car.damage >= 1) setTimeout(function () { wreck(car, '車が原型をとどめないほど壊れました。'); }, 700);
     triggerShake(2 + 10 * sev, 450 + 700 * sev);
     // 跳ね返り(走っている車): 軽いほど弾む
     if (car === state.car && !car.seated && opt.recoil !== false && (at.kind === 'front' || at.kind === 'side')) car.velocity = -Math.min(70, v * (0.08 + 0.3 * (1 - sev)));
@@ -95,7 +99,26 @@
     if (sev >= 0.4) { add('debris', 6 + Math.round(10 * sev), 100 + 200 * sev, 900, 4, 80); if (at.kind !== 'side') add('glass', 5 + Math.round(8 * sev), 120 + 160 * sev, 800, 3, 60); }
     if (parts.length > 220) parts.splice(0, parts.length - 220);
   }
-  state.impact = impact;
+  state.impact = impact; state.rideOver = rideOver; state.wreck = wreck;   // (確認用にも公開)
+  // 大破(原型をとどめない)・転落: 作業を止めて、一からやり直し。次のゲームはマイナス点スタート(modes.js)
+  function wreck(car, reason) {
+    if (state.accident) return;
+    state.accident = { reason: reason, wreck: true };
+    if (car) car.velocity = 0;
+    state.frozen = true;
+    triggerShake(14, 1400);
+    setStatus('大破!' + reason);
+    setTimeout(function () { if (window.GAME_MODE && window.GAME_MODE.onAccident) window.GAME_MODE.onAccident(reason); }, 1900);
+  }
+  // 輪止め・タイヤ止め・落し蓋の穴を勢いよく乗り越える: ぶつかるのではなく、乗り上げる衝撃(前が持ち上がり、ガタンと跳ねて、ばねのように揺れが残る)。穴は前が落ち込んでから上がる
+  function rideOver(car, speed, kind) {
+    var v = Math.abs(speed), sev = Math.max(0, Math.min(1, (v - 30) / 150));
+    car.ride = { t0: performance.now(), dur: 900 + 700 * sev, sev: sev, kind: kind === 'hole' ? 'hole' : 'chock' };
+    triggerShake(2 + 5 * sev, 350 + 350 * sev);
+    var parts = state.fx.parts || (state.fx.parts = []), now = performance.now();
+    for (var i = 0; i < 4 + Math.round(8 * sev); i++) parts.push({ k: 'dust', x: car.x + (Math.random() - 0.5) * 24, y: car.y - 3, vx: (Math.random() - 0.3) * 80, vy: -20 - Math.random() * 40, t0: now, life: 500 + Math.random() * 500, size: 5 + 6 * sev, rot: 0, vr: 0 });
+    car.damage = (car.damage || 0) + 0.02 + 0.08 * sev;   // 下回りに少し響く
+  }
   // 2番に積んだ車に2番扇動板がぶつかった(ノーマル・ハード)
   state.flapHit = function () {
     var occ = state.occupied['2'];
@@ -1232,13 +1255,14 @@
     var next;
     if (hit) {
       var nm = hit.slot + '番の' + STOP_NAME[hit.stop.kind];
+      var vHit = Math.abs(car.velocity);
       if (Math.abs(car.velocity) >= CHOCK_OVERRIDE_SPEED_PX_S) {
         // 勢いがあるので乗り越える(衝撃で速度は一部失う)
         next = Math.min(maxProgress, Math.max(0, proposed));
         car.velocity *= OVERRIDE_SPEED_KEEP;
         car.beyond[hit.slot] = true;
         car.contacted = false;
-        impact(car, 'tirestop', Math.abs(car.velocity) * 1.4, { recoil: false });
+        rideOver(car, vHit, hit.stop.kind);
         recordMiss(nm + 'を勢いよく乗り越えた');
         setStatus('ガタン!勢いがついていたので' + nm + 'を乗り越えてしまいました。(ミス: ' + state.misses + ') 反対方向へ動かせば戻れます。');
       } else {
@@ -1262,11 +1286,19 @@
     }
     next = wallClamp(car, before, next);
     car.progress = next;
+    var vEnd = Math.abs(car.velocity);
     if (car.progress <= 0 || car.progress >= maxProgress) car.velocity = 0;
 
     var anyBeyond = Object.keys(car.beyond).some(function (k) { return car.beyond[k]; });
     if (car.progress >= maxProgress - 0.5) {
-      if (anyBeyond) {
+      if (anyBeyond && car.route.id === 'U' && car.beyond['1'] && vEnd >= 60 && !car.cabHit) {
+        // 1番を乗り越えて、まだ勢いがある: 前のトラクタ(キャビン)にぶつかる。最悪、車は大破する(やり直し)
+        car.cabHit = true; car.cabHitT = performance.now();
+        impact(car, 'cab', vEnd, { dmg: 0.5 + 0.7 * Math.min(1, vEnd / 150), recoil: false });
+        state.fx.cab = { t0: performance.now(), sev: Math.min(1, vEnd / 150) };
+        recordMiss('1番を乗り越えて、キャビンにぶつかった');
+        setStatus('ドーン!1番を乗り越えて、キャビンにぶつかりました!');
+      } else if (anyBeyond) {
         // 乗り越えた後、床の端(奥の限界)まで行ってしまったら脱輪
         if (!car.derailed) { car.derailed = true; impact(car, 'derail', Math.abs(car.velocity) + 40, { recoil: false }); recordMiss('脱輪(床の端を越えた)'); setStatus('脱輪!タイヤが床の端を越えました。(ミス: ' + state.misses + ')'); }
       } else if (!car.ranOut) {

@@ -38,7 +38,7 @@
   var diff = 'easy';
   var mode = null, startedAt = 0, timerId = null, ended = false;
   var isTut = false;   // チュートリアル(#mode=tutorial): 中身は sim(難易度なし・時間制限なし)。js/tutorial.js がガイドを重ねる。得点・サイクル完了の表示は出さない
-  var stats = { docks: 0, cycles: 0, heightPenalty: 0, penalty: 0, minors: 0, majors: 0, carPoints: 0, bonus: 0, dispatchFound: 0, dispatchFalse: 0, dispatchMissed: 0 };
+  var stats = { carry: 0, docks: 0, cycles: 0, heightPenalty: 0, penalty: 0, minors: 0, majors: 0, carPoints: 0, bonus: 0, dispatchFound: 0, dispatchFalse: 0, dispatchMissed: 0 };
   var turn = { startedAt: Date.now(), snap: { carPoints: 0, docks: 0 } };   // 今のターン(今の荷物)の開始時刻と、その時の積込み点・台数(連絡・時間切れで巻き戻す)
   // 難易度による加点・減点の倍率(積込み・ミス・高さ超過の全てに掛ける。シミュレーションは1倍)
   var DIFF_MULT = { easy: 1, normal: 1.5, hard: 2 };
@@ -52,7 +52,7 @@
     if (state.deckMinH && isFinite(state.deckMinH)) lim = Math.max(lim, state.deckMinH + SCORE.minHOffsetM);
     return lim;
   }
-  function score() { return Math.round(stats.carPoints + stats.bonus - stats.penalty - stats.heightPenalty); }
+  function score() { return Math.round(stats.carPoints + stats.bonus - stats.penalty - stats.heightPenalty + (stats.carry || 0)); }   // carry: 前のゲームの事故(転落・大破)の損害。マイナス点からスタート
   function turnSec() { return (Date.now() - turn.startedAt) / 1000; }
   // このターンの積込み点(と積込み台数)を、ターン開始時に巻き戻す(荷物を替える時。ミスの減点・ボーナスはそのまま)
   function rollbackTurn() { stats.carPoints = turn.snap.carPoints; stats.docks = turn.snap.docks; }
@@ -153,6 +153,7 @@
     refreshBar();
   }
 
+  var CARRY_KEY = 'carCarryPenalty', CARRY_BASE = 200;   // 事故1回の損害(点)。難易度の倍率を掛ける
   // ---- 終了・結果 ----
   function finish(cleared, reason, accident) {
     if (ended) return;
@@ -169,12 +170,16 @@
     var title = accident ? '事故で作業中止' : (cleared ? 'クリア!' : (mode === 'real' ? 'ミスで終了' : '荷役を終え出発'));
     $('resultTitle').textContent = MODES[mode].name + (mode === 'sim' ? '' : '(' + DIFFS[diff] + ')') + ':' + title;
     var lines = [];
-    if (accident) { lines.push('事故: ' + reason); lines.push('作業を中止します。一からやり直してください。'); }
+    if (accident) {
+      lines.push('事故: ' + reason); lines.push('作業を中止します。一からやり直してください。');
+      if (mode !== 'sim' && !isTut) { var loss = Math.round(CARRY_BASE * mult()); try { localStorage.setItem(CARRY_KEY, String(loss)); } catch (e) { } lines.push('損害 ' + loss + '点: 次のゲームは -' + loss + '点からのスタートになります。'); }
+    }
     else if (mode === 'real' && !cleared) lines.push('何がダメだったか: ' + reason);
     else lines.push(reason);
     lines.push('積み込み ' + stats.docks + '台 / ミス 重' + stats.majors + '・軽' + stats.minors + ' / 完了サイクル ' + stats.cycles);
     if (stats.dispatchFound || stats.dispatchFalse || stats.dispatchMissed) lines.push('配車連絡: 積めない荷物に気づけた ' + stats.dispatchFound + '回(ボーナス +' + stats.bonus + '点) / 積めるのに連絡 ' + stats.dispatchFalse + '回 / 気づけず ' + stats.dispatchMissed + '回');
     if (lastHeightM !== null) lines.push('荷姿の高さ ' + lastHeightM.toFixed(2) + 'm');
+    if (stats.carry) lines.push('前回の事故の損害 ' + stats.carry + '点からのスタート');
     lines.push('所要時間 ' + fmtTime(elapsed()));
     $('resultBody').innerHTML = '';
     lines.forEach(function (l) { var p = document.createElement('p'); p.textContent = l; $('resultBody').appendChild(p); });
@@ -254,6 +259,11 @@
     $('modeOverlay').style.display = 'none';
     $('modeBar').style.display = 'flex';
     var be = $('btnEnd'); if (be) be.style.display = (m === 'time' && !tut) ? '' : 'none';   // 「荷役を終え出発」はスコアアタックだけ
+    // 前のゲームで事故(転落・大破)を起こしていたら、その損害分のマイナス点からスタートする(2026-10-09 ユーザー指示)。1回だけ使う
+    stats.carry = 0;
+    if (m !== 'sim' && !tut) {
+      try { var cr = +localStorage.getItem(CARRY_KEY); if (cr > 0) { stats.carry = -cr; localStorage.removeItem(CARRY_KEY); setTimeout(function () { banner('前回の事故の損害で、-' + cr + '点からのスタートです'); }, 2800); } } catch (e) { }
+    }
     refreshBar();
     timerId = setInterval(tick, 250);
   }
