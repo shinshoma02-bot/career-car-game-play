@@ -399,9 +399,21 @@
   // 道板を出したまま・道板の上に車がいる時は事故: 道板は地面に引っかかって置き去りになり、車は道板から落ちる。
   var AN_OUT_X = -(cfg.stage.w + 420), AN_IN_X = cfg.stage.w + 420;   // 出発は左(進行方向)へ、入場は右から左へ(2026-10-09 ユーザー指示)
   var AN = { off: IS6B ? 0 : AN_IN_X, kind: null, t0: 0, dur: 0, unsafe: false, cb: null, joltDone: false };
+  function startOut() { AN.kind = 'out'; AN.t0 = performance.now(); AN.dur = AN.unsafe ? 4.2 : 2.9; AN.joltDone = false; }
   function animStep() {
     if (!AN.kind) return;
     var t = (performance.now() - AN.t0) / 1000, gs = window.GAME_STATE;
+    if (AN.kind === 'clear') {   // ぶつかって止まった車(キャビンに当たった・途中で止まった)は、トレーラーが走り出す前に、バックして道板から降りて出ていく
+      var car = AN.car, now = performance.now(), dt = Math.min(0.05, (now - (AN.last || now)) / 1000); AN.last = now;
+      AN.cv = Math.min(1200, (AN.cv || 200) + 1600 * dt);
+      if (car && car.pathTool && car.progress > 0) {
+        var before = car.progress; car.progress = Math.max(0, car.progress - AN.cv * dt);
+        var q = car.pathTool.at(car.progress); car.x = q.x; car.y = q.y; car.velocity = -AN.cv;
+        car.spinDeg += ((before - car.progress) / (car.wheelRPx || 30)) * (180 / Math.PI) * 1;
+      }
+      if (!car || !car.pathTool || car.progress <= 0 || car.x > cfg.stage.w + 260 || t > 8) { if (gs && gs.car === car) gs.car = null; AN.car = null; startOut(); }
+      return;
+    }
     if (AN.kind === 'in') {
       var u = Math.min(1, t / AN.dur);
       AN.off = AN_IN_X * Math.pow(1 - u, 3);   // 右から勢いよく入って、ゆっくり止まる
@@ -422,7 +434,7 @@
     // 今の状態で発進すると事故になる理由(無ければ null)
     unsafeDeparture: function () {
       var fm = window.FLOOR_MECH, gs = window.GAME_STATE, car = gs && gs.car;
-      var onRamp = !!(car && !car.seated && car.progress > 0);
+      var onRamp = !!(car && !car.seated && car.progress > 0 && car.progress <= (car.rampArc || 0) + 5);   // まだ道板の上(床に乗っていない)
       var rampOut = !!(fm && (fm.MECH.ramp || fm.rampT() > 0.05));
       if (onRamp) return '車が道板の上にいるのに発進して、車が落ちました。';
       if (rampOut) return '道板を出したまま発進して、道板が地面に引っかかりました。';
@@ -438,7 +450,11 @@
       var car = gs.car;
       if (unsafe && car && !car.seated && car.progress > 0) { car.accident = { t0: performance.now(), landed: false }; car.velocity = 0; }   // 道板の上の車は落ちる
       VIEW.fitAll();
-      AN.kind = 'out'; AN.t0 = performance.now(); AN.unsafe = !!unsafe; AN.dur = unsafe ? 4.2 : 2.9; AN.cb = cb || null; AN.joltDone = false;
+      AN.unsafe = !!unsafe; AN.cb = cb || null;
+      if (!unsafe && car && !car.seated && car.progress > 0 && !car.accident) {   // 床の上で止まった車は、先に降ろす
+        car.cab = null; car.cabHitT = 0; car.ride = null; car.locked = false;
+        AN.kind = 'clear'; AN.t0 = performance.now(); AN.car = car; AN.cv = 200; AN.last = 0;
+      } else startOut();
     },
     // 入場(左から)。cb は止まった後
     enter: function (cb) {

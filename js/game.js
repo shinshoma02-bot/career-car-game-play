@@ -39,7 +39,7 @@
   var ENTRY_STOP = { x: cfg.ramp.bottom[0] + 70, y: cfg.ramp.bottom[1] };
   var OFFSCREEN_X = cfg.stage.w + 220;
   var CREEP_SPEED_PX_S = 0.45 * cfg.pxPerMeter; // 押した瞬間に達する最低速度(クリープ相当)
-  var MAX_SPEED_PX_S = 3.3 * cfg.pxPerMeter;    // 長押しで到達する最高速度
+  var MAX_SPEED_PX_S = 5.2 * cfg.pxPerMeter;    // 長押しで到達する最高速度
   var ACCEL_PX_S2 = 100;  // 押している間、クリープ→最高速度へ滑らかに加速する割合
   var DECEL_PX_S2 = 640;  // 離した時、惰性で滑らかに減速して止まる割合(急停止させない)
   var ENTRY_EXIT_SPEED_PX_S = CREEP_SPEED_PX_S * 2;
@@ -76,17 +76,17 @@
     if (!car) return;
     opt = opt || {};
     var at = HIT_AT[key] || HIT_AT.generic, v = Math.abs(speed === undefined ? 70 : speed);
-    var sev = Math.max(0, Math.min(1, (v - 25) / 170));
-    var peak = 0.07 + 0.36 * sev, resid = sev > 0.45 ? peak * 0.4 : 0, dur = 650 + 900 * sev;
+    var sev = Math.max(0, Math.min(1, (v - 30) / 330));   // 最高速度(約590px/秒)で1。遅い時は大げさにしない
+    var peak = 0.012 + 0.4 * Math.pow(sev, 1.25), resid = sev > 0.45 ? peak * 0.4 : 0, dur = 450 + 1100 * sev;
     var old = car.crash && car.crash.resid || 0;   // 前の凹みに重ねる(上限あり)
     // 損傷の合計(1.0で原型をとどめない=大破): 軽い衝突は小さく、重い衝突は大きく積み上がる。凹みは損傷に比例して深く、残る
-    car.damage = (car.damage || 0) + (opt.dmg !== undefined ? opt.dmg : 0.04 + 0.6 * sev * sev);
+    car.damage = (car.damage || 0) + (opt.dmg !== undefined ? opt.dmg : 0.005 + 0.75 * sev * sev);
     var dm = Math.min(1.4, car.damage);
     car.crash = { t0: performance.now(), dur: dur, kind: at.kind, u: at.u, v: at.v, peak: Math.min(0.85, Math.max(peak + old * 0.5, dm * 0.62)), resid: Math.min(0.78, Math.max(resid, old, dm > 0.35 ? dm * 0.55 : 0)), sev: sev, seed: Math.random() * 1000 };
     if (car.damage >= 1) setTimeout(function () { wreck(car, '車が原型をとどめないほど壊れました。'); }, 700);
-    triggerShake(2 + 10 * sev, 450 + 700 * sev);
+    triggerShake(0.4 + 11 * sev, 250 + 900 * sev);
     // 跳ね返り(走っている車): 軽いほど弾む
-    if (car === state.car && !car.seated && opt.recoil !== false && (at.kind === 'front' || at.kind === 'side')) car.velocity = -Math.min(70, v * (0.08 + 0.3 * (1 - sev)));
+    if (car === state.car && !car.seated && opt.recoil !== false && (at.kind === 'front' || at.kind === 'side')) car.velocity = -Math.min(90, v * (0.05 + 0.25 * (1 - sev)));
     // 粒(火花・破片・ガラス・ほこり): 場所はステージ座標(車の左端から u、地面から v)
     var x = car.x - car.leftTireX + at.u * car.w, y = car.y - at.v * car.h, parts = state.fx.parts || (state.fx.parts = []), now = performance.now();
     function add(kind, n, spd, life, size, up) {
@@ -95,8 +95,8 @@
         parts.push({ k: kind, x: x + (Math.random() - 0.5) * 10, y: y + (Math.random() - 0.5) * 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (up || 0), t0: now, life: life * (0.6 + Math.random() * 0.7), size: size * (0.6 + Math.random() * 0.8), rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14 });
       }
     }
-    add('dust', 4 + Math.round(8 * sev), 60 + 90 * sev, 700 + 500 * sev, 7 + 9 * sev, 10);
-    if (sev >= 0.15) add('spark', 6 + Math.round(18 * sev), 140 + 260 * sev, 380 + 220 * sev, 2, 40);
+    if (sev >= 0.04) add('dust', 3 + Math.round(9 * sev), 50 + 100 * sev, 600 + 600 * sev, 6 + 9 * sev, 10);
+    if (sev >= 0.2) add('spark', 6 + Math.round(18 * sev), 140 + 260 * sev, 380 + 220 * sev, 2, 40);
     if (sev >= 0.4) { add('debris', 6 + Math.round(10 * sev), 100 + 200 * sev, 900, 4, 80); if (at.kind !== 'side') add('glass', 5 + Math.round(8 * sev), 120 + 160 * sev, 800, 3, 60); }
     if (parts.length > 220) parts.splice(0, parts.length - 220);
   }
@@ -113,7 +113,7 @@
   }
   // 輪止め・タイヤ止め・落し蓋の穴を勢いよく乗り越える: ぶつかるのではなく、乗り上げる衝撃(前が持ち上がり、ガタンと跳ねて、ばねのように揺れが残る)。穴は前が落ち込んでから上がる
   function rideOver(car, speed, kind) {
-    var v = Math.abs(speed), sev = Math.max(0, Math.min(1, (v - 30) / 150));
+    var v = Math.abs(speed), sev = Math.max(0, Math.min(1, (v - 300) / 290));   // 乗り越えられる最低の勢い(約350px/秒)から最高速度まで
     car.ride = { t0: performance.now(), dur: 900 + 700 * sev, sev: sev, kind: kind === 'hole' ? 'hole' : 'chock' };
     triggerShake(2 + 5 * sev, 350 + 350 * sev);
     var parts = state.fx.parts || (state.fx.parts = []), now = performance.now();
@@ -378,7 +378,7 @@
   function rampBlockArc(car) {
     var fm = window.FLOOR_MECH;
     if (T6 || !fm || typeof fm.rampReady !== 'function' || fm.rampReady() || !car.pathTool) return undefined;
-    var tail = (cfg.newArt && cfg.newArt.tail && cfg.newArt.tail.x1) || 2070, limX = tail + 3 + car.leftTireX;
+    var tail = (cfg.newArt && cfg.newArt.tail && cfg.newArt.tail.x1) || 2070, limX = tail + 0.5 + car.leftTireX;
     var lo = 0, hi = car.rampArc !== undefined ? car.rampArc : car.pathLen;
     if (car.pathTool.at(lo).x <= limX) return 0;
     if (car.pathTool.at(hi).x > limX) return hi;
@@ -434,13 +434,23 @@
   }
 
   // 駐車している車(OK・固定済み)の周り: 動いている車がこの範囲(タイヤ基準点の進行距離)に入ると車同士がぶつかる
+  // 車の「実体のある」範囲(前タイヤから前端までa・後端までb)。輪郭(prof)の高さが低い所(バンパーの先の空白・タイヤだけの端)は含めない。
+  // 以前は絵の四角(w)全体で当たりを見ていたので、すき間があっても当たっていた(2026-10-09 ユーザー指示)
+  function solidExt(c) {
+    var n = c.prof && c.prof.length, a = c.leftTireX, b = c.w - c.leftTireX;
+    if (!n) return { a: a, b: b };
+    var i0 = 0, i1 = n - 1;
+    while (i0 < n - 1 && c.prof[i0] < 0.2) i0++;
+    while (i1 > 0 && c.prof[i1] < 0.2) i1--;
+    return { a: Math.max(0, c.leftTireX - i0 / n * c.w), b: Math.max(0, (i1 + 1) / n * c.w - c.leftTireX) };
+  }
   function zonesOf(car) {
-    var zs = [];
+    var zs = [], ec = solidExt(car);
     car.route.slots.forEach(function (k) {
       var occ = state.occupied[k];
       if (!occ || occ.live === car || car.arc[k] === undefined) return;
-      var sp = car.arc[k] - (occ.dx || 0);
-      zs.push({ slot: k, lo: sp - (occ.w - occ.leftTireX) - car.leftTireX, hi: sp + occ.leftTireX + (car.w - car.leftTireX) });
+      var sp = car.arc[k] - (occ.dx || 0), eo = solidExt(occ);
+      zs.push({ slot: k, lo: sp - eo.b - ec.a, hi: sp + eo.a + ec.b });
     });
     return zs;
   }
@@ -1135,17 +1145,20 @@
   }
 
   // 目標速度へ滑らかに近づける(押している間は加速、離している間は惰性で減速)
+  // 押し続けるほど、スピードが乗る(2026-10-09 ユーザー指示): 押した時間 hold(秒)から目標速度を決める。 v = クリープ + 60·hold + 27.5·hold² (3秒で約480、約4秒で最高速度の5.2m/s)。
+  // ちょん押しは低速で位置合わせができ、長押しでは勢いがつく(ぶつかった・乗り越えた・脱輪した時の反応が、その速さで変わる)。離すと押した時間は6倍の速さで減る(ちょん押しを繰り返しても速くならない)
+  var HOLD_A = 60, HOLD_B = 27.5;
   function updateVelocity(car, pressedDir, dt) {
     if (pressedDir !== 0) {
       if (car.velocity === 0 || (car.velocity > 0) !== (pressedDir > 0)) {
         car.velocity = pressedDir * CREEP_SPEED_PX_S; // 発進/逆転時はすぐクリープ速度に乗る
+        car.hold = 0;
       }
-      var targetV = pressedDir * MAX_SPEED_PX_S;
-      var maxDelta = ACCEL_PX_S2 * dt;
-      car.velocity = (car.velocity < targetV)
-        ? Math.min(targetV, car.velocity + maxDelta)
-        : Math.max(targetV, car.velocity - maxDelta);
+      car.hold = (car.hold || 0) + dt;
+      var targetV = pressedDir * Math.min(MAX_SPEED_PX_S, CREEP_SPEED_PX_S + HOLD_A * car.hold + HOLD_B * car.hold * car.hold);
+      car.velocity = (Math.abs(car.velocity) < Math.abs(targetV)) ? targetV : car.velocity;   // 押している間は、押した時間に応じた速さに乗る(惰性より遅くはならない)
     } else {
+      car.hold = Math.max(0, (car.hold || 0) - 6 * dt);
       var decelStep = DECEL_PX_S2 * dt;
       car.velocity = (car.velocity > 0)
         ? Math.max(0, car.velocity - decelStep)
@@ -1157,7 +1170,7 @@
   // 輪止め・タイヤ止め・落としは「道の上の障害物」。ぶつかった瞬間の速度が閾値未満なら、その位置でぴたっと止まって
   // 即OK。閾値以上なら勢いを一部失いながら乗り越える(ミス)。止まったスロットがその車の積み込み先になる。
   // イージー: 通れない状態(道板・棚・駐車中の車など)では前へ進めない / ノーマル・ハード: 進めるが、ぶつかる・仕様上できない動きはミス。
-  var CONTACT_MARGIN_PX = 8;   // 輪止めの少し手前(約4px)から当たりとみなす(当たってから前に出ないとOKにならない、を防ぐ)
+  var CONTACT_MARGIN_PX = 2;   // 輪止めの少し手前(約4px)から当たりとみなす(当たってから前に出ないとOKにならない、を防ぐ)
 
   // 道の上の障害物(いま有効なもの)を手前から順に
   function barriersOf(car) {
@@ -1301,17 +1314,17 @@
         car.cab.tImp = tI; car.cab.vImp = vI;
         setTimeout(function () {
           car.cab.done = true;
-          var sv = Math.min(1.2, vI / 200);
+          var sv = Math.min(1.2, vI / 380);
           impact(car, 'cab', vI, { dmg: 0.08 + 0.9 * sv * sv + 0.15 * sv, recoil: false });
           state.fx.cab = { t0: performance.now(), sev: Math.max(0.15, Math.min(1, sv)) };
           recordMiss('1番を乗り越えて、キャビンにぶつかった');
-          setStatus((vI < 90 ? 'コツン…' : vI < 190 ? 'ドン!' : 'ドーン!') + '1番を乗り越えて、キャビンにぶつかりました!');
+          setStatus((vI < 100 ? 'コツン…' : vI < 260 ? 'ドン!' : 'ドーン!') + '1番を乗り越えて、キャビンにぶつかりました!');
         }, tI * 1000);
       } else {
         car.cab.tStop = vEnd / A;
         setTimeout(function () {
           car.cab.done = true;
-          if (!car.derailed) { car.derailed = true; impact(car, 'derail', 60, { recoil: false }); recordMiss('脱輪(床の端を越えた)'); setStatus('脱輪!1番の床の端から前のタイヤが落ちました。勢いが足りず、キャビンにはぶつかりませんでした。'); }
+          if (!car.derailed) { car.derailed = true; impact(car, 'derail', Math.max(40, vEnd * 0.5), { recoil: false }); recordMiss('脱輪(床の端を越えた)'); setStatus('脱輪!1番の床の端から前のタイヤが落ちました。勢いが足りず、キャビンにはぶつかりませんでした。'); }
         }, car.cab.tStop * 1000);
       }
     }
@@ -1319,7 +1332,7 @@
     if (car.progress >= maxProgress - 0.5) {
       if (anyBeyond) {
         // 乗り越えた後、床の端(奥の限界)まで行ってしまったら脱輪
-        if (!car.derailed) { car.derailed = true; impact(car, 'derail', Math.abs(car.velocity) + 40, { recoil: false }); recordMiss('脱輪(床の端を越えた)'); setStatus('脱輪!タイヤが床の端を越えました。(ミス: ' + state.misses + ')'); }
+        if (!car.derailed) { car.derailed = true; impact(car, 'derail', vEnd, { recoil: false }); recordMiss('脱輪(床の端を越えた)'); setStatus('脱輪!タイヤが床の端を越えました。(ミス: ' + state.misses + ')'); }
       } else if (!car.ranOut) {
         // 止める物が何も無いまま奥の限界まで行ってしまった
         car.ranOut = true;
