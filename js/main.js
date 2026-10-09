@@ -414,6 +414,43 @@
     if (chk.tractor.checked) ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0);
   }
 
+  // 検証用(2026-10-09 ユーザー指摘「検証が無理やり積んでいる。屋根が貫通・フロアを無視していた」への対策): 積んだ車と、各フロア(1・2・3・5番と宙段)の絵が、実際に重なっている画素数を測る。
+  // 車は自分が載っているフロア(carrier)とは重なって当然なので、それ以外のフロアとの重なりだけを返す。{slot, floor, px} の一覧(px>0 のもの)。
+  window.OVERLAP_CHECK = function () {
+    var gs = window.GAME_STATE, fm = window.FLOOR_MECH;
+    if (!gs || !fm || !images) return null;
+    var W = cfg.stage.w, H = cfg.stage.h, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var dc = cv.getContext('2d', { willReadFrequently: true }), keep = ctx, masks = {}, out = [];
+    function alpha() { return dc.getImageData(0, 0, W, H).data; }
+    ctx = dc;
+    try {
+      ['F1', 'F2', 'F3', 'F5'].forEach(function (id) { dc.clearRect(0, 0, W, H); if (images[id]) drawTransformedFloor(id, images[id]); masks[id] = alpha(); });
+      var C = chuudanArt();
+      if (C) {
+        dc.clearRect(0, 0, W, H);
+        var hp = fm.hangPose(), ha = hp.ang * Math.PI / 180;
+        dc.save(); dc.translate(hp.F[0], hp.F[1]); dc.rotate(ha); dc.drawImage(images.floor_chuudan, -C.floorPivot[0], -C.floorPivot[1]); dc.restore();
+        masks.F7 = alpha();
+      }
+      Object.keys(gs.occupied).forEach(function (num) {
+        var c = gs.occupied[num], pos, rotDeg = c.rotDeg || 0;
+        if (c.floor) { pos = fm.onFloor(c.floor, c.localX, c.localY); rotDeg += fm.poseOf(c.floor).ang; } else pos = [c.localX, c.localY];
+        dc.clearRect(0, 0, W, H); drawCarBody(c.img, pos[0], pos[1], c.w, c.h, c.leftTireX, rotDeg, null);
+        var cm = alpha(), own = cfg.slots[num].floor || cfg.slots[num].carrier || null;
+        Object.keys(masks).forEach(function (id) {
+          if (id === own) return;
+          var m = masks[id], n = 0, col = {}, depth = 0;
+          for (var yy = 0; yy < H; yy++) for (var xx = 0; xx < W; xx++) {
+            var i = (yy * W + xx) * 4 + 3;
+            if (cm[i] > 160 && m[i] > 160) { n++; var d = (col[xx] = (col[xx] || 0) + 1); if (d > depth) depth = d; }
+          }
+          if (n > 0) out.push({ slot: num, floor: id, px: n, cols: Object.keys(col).length, depth: depth });
+        });
+      });
+    } finally { ctx = keep; }
+    return out;
+  };
+
   // ぶつかった衝撃でトレーラーが揺れる(減衰する振動)
   function updateShake() {
     var gs = window.GAME_STATE, sk = gs && gs.fx && gs.fx.shake;

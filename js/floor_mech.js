@@ -63,7 +63,7 @@
   // ---- セットピン ----
   var PIN_PITCH = floorsCfg.pinPitch;
   // 下段の車とフロアの当たり判定は、フロアの枠(横に見えるフレーム)の内側5cm程度は隙間があって当たらない(5cm=5.7px)
-  var FRAME_GAP_PX = 0.05 * cfg.pxPerMeter;
+  var FRAME_GAP_PX = (cfg.hangFloor && cfg.hangFloor.frameGapPx !== undefined) ? cfg.hangFloor.frameGapPx : 0.05 * cfg.pxPerMeter;   // 設定 hangFloor.frameGapPx(px)で変えられる(検証で、すき間を変えて、積める組み合わせの割合を比べた)
   var PINS = {}; Object.keys(floorsCfg.ends).forEach(function (k) { PINS[k] = null; });
   var PIN_TARGET = {};
   // ---- 3番後ろ(F3r)のピンは、柱(x=post.x)で3番フロアを受ける(2026-10-08 ユーザー指摘「棚とピンの動きが連動していない」)----

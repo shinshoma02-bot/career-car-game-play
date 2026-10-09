@@ -249,7 +249,8 @@
     });
     // top が小さいほど高い。荷姿の高さ = 地面から屋根まで
     var H = bestAssign ? (cfg.ramp.groundY - best) / PX : Infinity;
-    return H <= limit ? { ok: true, H: H, assign: bestAssign, F1need: f1Need(fw[bestAssign[3]]) } : { ok: false, H: H, why: '荷姿の高さが制限を超える(最も低く積んでも ' + H.toFixed(2) + 'm)' };
+    // 2026-10-09 ユーザー指示: 「高くなっても、フロアと接触せず積めたらそれでいい」。荷姿の高さの制限では弾かない(高さはスコアの減点だけ)。積めない(並べ方が無い・高さが有限でない)時だけ不合格
+    return bestAssign && isFinite(H) ? { ok: true, H: H, assign: bestAssign, F1need: f1Need(fw[bestAssign[3]]) } : { ok: false, H: H, why: '積める並べ方が無い(フロアや車に当たる)' };
   }
   window.LOADABLE = { check: check, SLACK_M: SLACK_M, setTilt: function (deg) { TILT_MAX_DEG = deg; cache = {}; staticCache = {}; }, tilt: function () { return TILT_MAX_DEG; } };   // setTilt: 検証用(傾きの上限を変えて比べる)
 })();
