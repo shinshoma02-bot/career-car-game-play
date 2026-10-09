@@ -44,7 +44,6 @@
     var key = carKey({ entry: d.e }, d.flip);
     if (f1Cache[key] !== undefined) return f1Cache[key];
     var E = fm.ENDS, L = lowerEnv(d, '4', 0);
-    for (var sh = 15; sh <= 60; sh += 15) { var L2 = lowerEnv(d, '4', -sh); for (var q = 0; q < L.length; q++) if (L2[q] < L[q]) L[q] = L2[q]; }   // 4番に着く前の60px手前(ゲームの屋根の判定の範囲)から、そこまでの各位置で当たらない高さ
     function ok(s) { return fm.envFits([L], ['F1'], f1Offs(s)); }
     var lo = -F1_DOWN, hi = Math.max(BASE.F1f - fm.offOfHole('F1f', E.F1f.holeMax), BASE.F1r - fm.offOfHole('F1r', E.F1r.holeMax)), r;
     if (ok(lo)) r = lo;
@@ -62,7 +61,6 @@
     COVER[slotNum].forEach(function (id) { need[id] = n; });
     // 2・3番フロアの上げる量は、車の絵の輪郭と棚の実際の形で求め直す(高さだけの近似だと、屋根がフロアに入り込んだ。2026-10-09)。着く前の60pxからの各位置で当たらないこと
     var Lenv = lowerEnv(d, slotNum, 0);
-    for (var sh = 15; sh <= 60; sh += 15) { var L2 = lowerEnv(d, slotNum, -sh); for (var q = 0; q < Lenv.length; q++) if (L2[q] < Lenv[q]) Lenv[q] = L2[q]; }
     function envNeed(id, mk, rmax) {
       function ok(r) { return fm.envFits([Lenv], [id], mk(r)); }
       if (ok(0)) return 0;
@@ -110,7 +108,7 @@
   // 実際は、宙段(と7番の車)の真上に来る3番前(MID)だけが高く、両端の2番前・3番後ろは、宙段の上を外れるので低くできる(棚は傾けられる)。
   //  ・MID(3番前)の穴ごとに、2番前(F2f)・3番後ろ(F3r)を「宙段・7番の車・下段(4・5・6番)の車・棚の傾き・フレーム」に当たらない最も低い穴まで下げる
   //  ・その中で、上段(1〜3番)の車の屋根が最も低くなる MID を選ぶ。2番前は、5番が平らな時に上がる freeTop まで(以前の -60 は、5番がスロープの時だけ届く高さだった)
-  var TILT_MAX_DEG = 5;   // 仮: 2・3番の棚の傾きの上限(度)。実車は写真で5〜15度傾いて積まれているが、傾いた車の高さは計算に入れていないので控えめにする
+  var TILT_MAX_DEG = 10;   // 2・3番の棚の傾きの上限(度)。実車の写真(7台積み)では2番が約13度傾いて積まれている。傾いた車の屋根の高さは roofY で計算に入れた(2026-10-09)ので、5→10に広げた(ランダム60デッキで、7台の積める割合 55%→67%、平均の高さ 4.29→4.21m)
   var D = { M: [], F2: [], F3: [] };   // 穴の高さの一覧(低い順。off が大きい=低い)
   (function () {
     var E = fm.ENDS, h;
@@ -136,13 +134,19 @@
   }
   function baseOffs() { return Object.assign(fm.curOffs(), { F2f: BASE.F2f, MID: BASE.MID, F3r: BASE.F3r }); }
   // 下段の車(slot=4/5/6)の屋根が作る「上のフロアの下面は、これより下に来てはいけない」高さの表(枠の内側 GAP は車が入り込める)
-  function lowerEnv(d, slotNum, shiftPx) {
+  function lowerEnv1(d, slotNum, shiftPx) {
     var S = cfg.slots[slotNum], occ = { img: d.img, prof: d.prof, w: d.w, h: d.h, leftTireX: d.leftTireX };
     var pos = [S.tireX + 8 - (shiftPx || 0), S.deckY], top = fm.carTopY(occ, pos, 0), x0 = pos[0] - d.leftTireX, L = new Float32Array(fm.ENV.n);
     for (var i = 0; i < L.length; i++) {
       var x = fm.ENV.x0 + i * fm.ENV.dx;
       L[i] = x >= x0 && x <= x0 + d.w ? top(x) + GAP : 1e9;
     }
+    return L;
+  }
+  // 下段の車の屋根の包絡線。着く位置だけでなく、着く前の60px(ゲームの屋根の判定の範囲)の各位置でも当たらないこと(後ろから走ってくるので、手前ほど後ろのフロアの下を通る)
+  function lowerEnv(d, slotNum, shiftPx) {
+    var L = lowerEnv1(d, slotNum, shiftPx);
+    for (var sh = 15; sh <= 60; sh += 15) { var L2 = lowerEnv1(d, slotNum, (shiftPx || 0) - sh); for (var q = 0; q < L.length; q++) if (L2[q] < L[q]) L[q] = L2[q]; }
     return L;
   }
   // 1つの制約(包絡線 L)について、MID の穴ごとに、その棚(end='F2f' か 'F3r')を下げられる最も低い高さを求める(表。入れられない MID は null)

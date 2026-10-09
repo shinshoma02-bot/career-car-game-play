@@ -307,7 +307,9 @@
     if (!fm || !fm.envFits || !fm.ENV || !car.img) return null;
     var occ = { img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, top = fm.carTopY(occ, [car.x, car.y], 0), x0 = car.x - car.leftTireX, L = new Float32Array(fm.ENV.n);
     for (var i = 0; i < L.length; i++) { var x = fm.ENV.x0 + i * fm.ENV.dx; L[i] = x >= x0 && x <= x0 + car.w ? top(x) + fm.FRAME_GAP_PX : 1e9; }
-    return fm.envFits([L], ['F1', 'F2', 'F3'], fm.curOffs()) ? null : true;
+    var bad = ['F1', 'F2', 'F3'].filter(function (id) { return !fm.envFits([L], [id], fm.curOffs()); });
+    state.lowroofFloors = bad;   // (確認用)当たっているフロア
+    return bad.length ? true : null;
   }
   // 宙段が上がっている(格納でない)間に、下段の車が宙段の下を通ろうとしていないか
   function hangBlocksCar(car) {
