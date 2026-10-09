@@ -447,6 +447,7 @@
     drawHolesUnder();
     drawSlidePlate();   // スライド板は内側の機構: 車とフロア・フレームの奥に描いて、外側からは見えないようにする
     drawCars();
+    drawParts();
     if (images.tailOcc) ctx.drawImage(images.tailOcc, TAIL.x0, TAIL.y0);   // 後端の部材は車より手前
     drawChocks('holes');
     if (chk.floors.checked) {
@@ -1232,13 +1233,79 @@
     return [1 - sq.a * sd * so, 1 + sq.a * 0.5 * sd * so];
   }
   // 左タイヤ接地点(x,y)を軸に、rotDeg度回転させて車体画像を描く
+  // ---- ぶつかった時のグシャッ(車の凹み)と、火花・破片・ほこり・ガラスの粒(2026-10-09)----
+  // car.crash = { t0, dur, kind(front/roof/side/rear), u(車の左端=前から0〜1), v(地面から0〜1), peak, resid(残る凹み), sev(重さ 0〜1) }(game.js の impact)
+  // 車の絵を細い縦の短冊に切って、ぶつかった場所の近くだけ、前後に縮める(前・横・後ろ)/上から潰す(屋根)。縮み方はガウス分布。凹みは素早く入って、ばねのように戻り、重い時は一部が残る
+  var CRASH_N = 56;
+  function crashState(car) {
+    var c = car && car.crash; if (!c) return null;
+    var p = (performance.now() - c.t0) / c.dur, amp;
+    if (p < 0) return null;
+    if (p < 0.12) { var r = p / 0.12; amp = c.peak * r * (2 - r); }
+    else if (p >= 1) amp = c.resid;
+    else { var q = p - 0.12; amp = c.resid + (c.peak - c.resid) * Math.exp(-q * 5) * (0.75 + 0.25 * Math.cos(q * 16)); }
+    return amp < 0.004 ? null : { c: c, amp: amp };
+  }
+  // 戻り値: 絵の左端(x=0)からの位置(0〜w)を、凹んだ後の位置に直す関数(ホイールの位置合わせ用)。ctx は車の座標系(左タイヤ基準)で呼ぶ
+  function drawCrashBody(img, w, h, leftTireX, cs) {
+    var c = cs.c, a = cs.amp, N = CRASH_N, iw = img.width, ih = img.height, sw = iw / N, dw0 = w / N, ux = c.u * w, R = 0.3 * w;
+    var ws = [], gs = [], total = 0, i, g, d, xc;
+    for (i = 0; i < N; i++) {
+      xc = (i + 0.5) * dw0; d = (xc - ux) / R; g = Math.exp(-d * d * 1.5); gs.push(g);
+      var k = c.kind === 'roof' ? 1 + 0.12 * a * g : 1 - 1.6 * a * g;
+      ws.push(dw0 * k); total += dw0 * k;
+    }
+    var x0 = (c.kind === 'roof' || c.u >= 0.5) ? 0 : w - total, x = x0, pos = [x0];
+    ctx.save();   // 衝撃で車体が前のめりに沈む(前から当たった時は、後ろのタイヤを支点に鼻が下がる。屋根を潰された時は全体が沈む)
+    if (c.kind === 'roof') ctx.translate(0, a * h * 0.12);
+    else { var px = -leftTireX + (c.u < 0.5 ? w * 0.8 : w * 0.2); ctx.translate(px, 0); ctx.rotate((c.u < 0.5 ? -1 : 1) * a * 0.12); ctx.translate(-px, 0); }
+    for (i = 0; i < N; i++) {
+      g = gs[i];
+      var yk = 1, jag = 0;
+      if (c.kind === 'roof') yk = 1 - a * 1.0 * g * (0.5 + 0.5 * c.v);   // 屋根が沈む(下の端は固定)
+      else { yk = 1 + 0.45 * a * g; jag = Math.sin(i * 1.9 + c.seed) * a * g * h * 0.07; }   // 前がつぶれて、ボンネットが盛り上がってギザギザになる
+      var dh = h * yk + jag;
+      ctx.drawImage(img, i * sw, 0, sw + 0.6, ih, -leftTireX + x, -dh, ws[i] + 0.6, dh);
+      x += ws[i]; pos.push(x);
+    }
+    ctx.restore();
+    return function (xl) { var f = Math.max(0, Math.min(N, xl / dw0)), j = Math.min(N - 1, Math.floor(f)); return pos[j] + (pos[j + 1] - pos[j]) * (f - j); };
+  }
+  function updateParts(dt) {
+    var gs = window.GAME_STATE, ps = gs && gs.fx && gs.fx.parts; if (!ps || !ps.length) return;
+    var now = performance.now();
+    for (var i = ps.length - 1; i >= 0; i--) {
+      var q = ps[i], age = now - q.t0;
+      if (age > q.life) { ps.splice(i, 1); continue; }
+      var grav = q.k === 'dust' ? -20 : 900;   // ほこりは上へふわっと
+      q.vy += grav * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
+      if (q.k === 'dust') { q.vx *= 0.96; }
+      else if (q.y > cfg.ramp.groundY) { q.y = cfg.ramp.groundY; q.vy *= -0.35; q.vx *= 0.6; if (q.k === 'spark') q.life = Math.min(q.life, age + 60); }
+    }
+  }
+  var partsLast = 0;
+  function drawParts() {
+    var gs = window.GAME_STATE, ps = gs && gs.fx && gs.fx.parts; if (!ps || !ps.length) return;
+    var now = performance.now(), dt = Math.min(0.05, Math.max(0, (now - partsLast) / 1000)); partsLast = now; updateParts(dt);
+    ps.forEach(function (q) {
+      var u = (now - q.t0) / q.life, al = 1 - u;
+      ctx.save(); ctx.translate(q.x, q.y);
+      if (q.k === 'dust') { ctx.globalAlpha = 0.45 * al; ctx.fillStyle = '#c9c4b8'; ctx.beginPath(); ctx.arc(0, 0, q.size * (1 + 1.6 * u), 0, 6.3); ctx.fill(); }
+      else if (q.k === 'spark') { ctx.globalAlpha = Math.min(1, al * 1.5); ctx.strokeStyle = u < 0.4 ? '#fff2b0' : '#ff9a2e'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-q.vx * 0.03, -q.vy * 0.03); ctx.stroke(); }
+      else if (q.k === 'glass') { ctx.rotate(q.rot); ctx.globalAlpha = al; ctx.fillStyle = 'rgba(200,230,240,.8)'; ctx.beginPath(); ctx.moveTo(0, -q.size); ctx.lineTo(q.size * 0.6, q.size * 0.7); ctx.lineTo(-q.size * 0.7, q.size * 0.4); ctx.closePath(); ctx.fill(); }
+      else { ctx.rotate(q.rot); ctx.globalAlpha = al; ctx.fillStyle = '#3b3f45'; ctx.fillRect(-q.size, -q.size * 0.6, q.size * 2, q.size * 1.2); }   // 破片
+      ctx.restore();
+    });
+  }
+
   function drawCarBody(img, x, y, w, h, leftTireX, rotDeg, car) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rotDeg * Math.PI / 180);
     var sqz = squashOf(car);
     if (sqz) { ctx.translate(-leftTireX, 0); ctx.scale(sqz[0], sqz[1]); ctx.translate(leftTireX, 0); }
-    ctx.drawImage(img, -leftTireX, -h, w, h);
+    var cs = crashState(car);
+    if (cs) drawCrashBody(img, w, h, leftTireX, cs); else ctx.drawImage(img, -leftTireX, -h, w, h);
     ctx.restore();
   }
 
@@ -1301,13 +1368,14 @@
       else sqz = [0.78, 1.1];   // 潰れたまま
     }
     if (sqz) { ctx.translate(-leftTireX, 0); ctx.scale(sqz[0], sqz[1]); ctx.translate(leftTireX, 0); }
-    ctx.drawImage(car.img, -leftTireX, -h, w, h);
+    var cs = crashState(car), mapX = null;
+    if (cs) mapX = drawCrashBody(car.img, w, h, leftTireX, cs); else ctx.drawImage(car.img, -leftTireX, -h, w, h);
 
     var K = 0.72; // タイヤ外周のうち、回転させるホイール部分の比率
     [car.tlRatio, car.trRatio].forEach(function (ratio) {
       var wheelImgX = ratio * w;
       var wheelImgY = (1 - car.rhRatio) * h;
-      var localX = wheelImgX - leftTireX;
+      var localX = (mapX ? mapX(wheelImgX) : wheelImgX) - leftTireX;
       var localY = wheelImgY - h;
       var rx = car.rwRatio * w * K, ry = car.rhRatio * h * K;
 

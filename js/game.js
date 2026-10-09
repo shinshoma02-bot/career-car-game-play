@@ -62,11 +62,44 @@
   state.fx = { shake: null };
   function triggerShake(amp, dur) { state.fx.shake = { t0: performance.now(), dur: dur || 500, amp: amp }; }
   function triggerSquash(car, a, dur) { car.squash = { t0: performance.now(), dur: dur || 480, a: a }; }
+  // ---- ぶつかった時の反応(2026-10-09 ユーザー指示「ぶつかった場所と速度でリアクションを変える。グシャッとリアルに」)----
+  // 場所: kind=front(前から)/roof(屋根)/side(横)/rear(後ろ)、u=車の左端(前)から0〜1、v=地面から屋根まで0〜1。速度 speed(px/秒)で重さ(sev 0〜1)が決まる。
+  //  軽い(sev<0.15): ポコッと小さく凹んで戻る・ほこり。 中(〜0.45): 凹みが大きく、火花・ほこり、少し跳ね返る。 重い: 大きく潰れて凹みが残る・火花・破片・ガラス、大きく揺れる。
+  // 描画は main.js(car.crash の凹み、state.fx.parts の粒)。凹みが残る車は、そのまま走り続ける(直さない)
+  var HIT_AT = {
+    ramp: { kind: 'front', u: 0, v: 0.32 }, slide: { kind: 'front', u: 0, v: 0.3 }, bridgehit: { kind: 'front', u: 0, v: 0.18 }, bridge: { kind: 'front', u: 0, v: 0.15 },
+    f5flat: { kind: 'front', u: 0.06, v: 0.12 }, lowroof: { kind: 'roof', u: 0.38, v: 1 }, hang: { kind: 'roof', u: 0.3, v: 1 }, lowfloor: { kind: 'roof', u: 0.28, v: 0.95 },
+    tirepass: { kind: 'side', u: 0.5, v: 0.28 }, wall: { kind: 'front', u: 0, v: 0.42 }, wallRear: { kind: 'rear', u: 1, v: 0.4 }, flap: { kind: 'roof', u: 0.12, v: 0.8 }, derail: { kind: 'side', u: 0.2, v: 0.1 }, tirestop: { kind: 'side', u: 0.2, v: 0.08 }, generic: { kind: 'front', u: 0, v: 0.4 }
+  };
+  function impact(car, key, speed, opt) {
+    if (!car) return;
+    opt = opt || {};
+    var at = HIT_AT[key] || HIT_AT.generic, v = Math.abs(speed === undefined ? 70 : speed);
+    var sev = Math.max(0, Math.min(1, (v - 25) / 170));
+    var peak = 0.07 + 0.36 * sev, resid = sev > 0.45 ? peak * 0.4 : 0, dur = 650 + 900 * sev;
+    var old = car.crash && car.crash.resid || 0;   // 前の凹みに重ねる(上限あり)
+    car.crash = { t0: performance.now(), dur: dur, kind: at.kind, u: at.u, v: at.v, peak: Math.min(0.5, peak + old * 0.5), resid: Math.min(0.32, Math.max(resid, old) + (resid ? 0.03 : 0)), sev: sev, seed: Math.random() * 1000 };
+    triggerShake(2 + 10 * sev, 450 + 700 * sev);
+    // 跳ね返り(走っている車): 軽いほど弾む
+    if (car === state.car && !car.seated && opt.recoil !== false && (at.kind === 'front' || at.kind === 'side')) car.velocity = -Math.min(70, v * (0.08 + 0.3 * (1 - sev)));
+    // 粒(火花・破片・ガラス・ほこり): 場所はステージ座標(車の左端から u、地面から v)
+    var x = car.x - car.leftTireX + at.u * car.w, y = car.y - at.v * car.h, parts = state.fx.parts || (state.fx.parts = []), now = performance.now();
+    function add(kind, n, spd, life, size, up) {
+      for (var i = 0; i < n; i++) {
+        var a = (at.kind === 'roof' ? -Math.PI / 2 : (at.u < 0.5 ? Math.PI : 0)) + (Math.random() - 0.5) * (kind === 'dust' ? 2.6 : 2.2), sp = spd * (0.35 + Math.random() * 0.8);
+        parts.push({ k: kind, x: x + (Math.random() - 0.5) * 10, y: y + (Math.random() - 0.5) * 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (up || 0), t0: now, life: life * (0.6 + Math.random() * 0.7), size: size * (0.6 + Math.random() * 0.8), rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14 });
+      }
+    }
+    add('dust', 4 + Math.round(8 * sev), 60 + 90 * sev, 700 + 500 * sev, 7 + 9 * sev, 10);
+    if (sev >= 0.15) add('spark', 6 + Math.round(18 * sev), 140 + 260 * sev, 380 + 220 * sev, 2, 40);
+    if (sev >= 0.4) { add('debris', 6 + Math.round(10 * sev), 100 + 200 * sev, 900, 4, 80); if (at.kind !== 'side') add('glass', 5 + Math.round(8 * sev), 120 + 160 * sev, 800, 3, 60); }
+    if (parts.length > 220) parts.splice(0, parts.length - 220);
+  }
+  state.impact = impact;
   // 2番に積んだ車に2番扇動板がぶつかった(ノーマル・ハード)
   state.flapHit = function () {
     var occ = state.occupied['2'];
-    triggerShake(7, 600);
-    if (occ && occ.live) triggerSquash(occ.live, 0.14, 520);
+    if (occ && occ.live) impact(occ.live, 'flap', 100, { recoil: false }); else triggerShake(7, 600);
     recordMiss('2番の車に2番扇動板がぶつかった', 'major');
   };
   // 事故(車の落下など): 衝撃の演出のあと作業を止めて、一からやり直し(modes.jsが結果画面を出す)
@@ -1119,8 +1152,9 @@
       if (!willIn) { delete car.collided[z.slot]; return; }
       if (wasIn) return;
       var vImp = Math.abs(car.velocity);
-      triggerShake(Math.min(10, 3 + vImp / 45), 650);
-      triggerSquash(car, Math.min(0.22, 0.07 + vImp / 1200), 560);
+      impact(car, 'wall', vImp);
+      var parked = state.occupied[z.slot];
+      if (parked && parked.live) impact(parked.live, 'wallRear', vImp * 0.6, { recoil: false });   // ぶつけられた駐車中の車も、後ろが凹む
       if (state.hints) {
         next = before <= z.lo ? z.lo : z.hi;
         car.velocity = 0;
@@ -1151,7 +1185,7 @@
         // 実物(フロア・4番扇動板・宙段・タイヤ)に当たる理由(phys)は、その位置で止まる(通り抜けない)
         if (pressedDir > 0 && !car.missedKeys[p.key]) {
           car.missedKeys[p.key] = true;
-          triggerShake(9, 700); triggerSquash(car, 0.16, 600);
+          impact(car, p.key, Math.abs(car.velocity));
           setStatus('ぶつかった!' + p.msg.split('。')[0] + '。');
         }
         if (p.phys && !blocked) blocked = p;
@@ -1160,7 +1194,7 @@
       else if (pressedDir > 0 && !car.missedKeys[p.key]) {
         car.missedKeys[p.key] = true;
         recordMiss(p.msg.split('。')[0], (p.key === 'ramp' || p.key === 'jack') ? 'minor' : 'major');
-        if (p.phys) { triggerShake(9, 700); triggerSquash(car, 0.16, 600); }
+        if (p.phys) impact(car, p.key, Math.abs(car.velocity));
       }
       // ノーマル・ハードも、実物に当たる理由(phys)では、その位置で止まる(ミスは上で1回記録)
       if (!state.hints && !state.freeMode && p.phys && !blocked) blocked = p;
@@ -1204,8 +1238,7 @@
         car.velocity *= OVERRIDE_SPEED_KEEP;
         car.beyond[hit.slot] = true;
         car.contacted = false;
-        triggerShake(Math.min(9, 3 + Math.abs(car.velocity) / 70), 600);
-        triggerSquash(car, 0.07, 450);
+        impact(car, 'tirestop', Math.abs(car.velocity) * 1.4, { recoil: false });
         recordMiss(nm + 'を勢いよく乗り越えた');
         setStatus('ガタン!勢いがついていたので' + nm + 'を乗り越えてしまいました。(ミス: ' + state.misses + ') 反対方向へ動かせば戻れます。');
       } else {
@@ -1235,7 +1268,7 @@
     if (car.progress >= maxProgress - 0.5) {
       if (anyBeyond) {
         // 乗り越えた後、床の端(奥の限界)まで行ってしまったら脱輪
-        if (!car.derailed) { car.derailed = true; triggerShake(8, 700); triggerSquash(car, 0.16, 600); recordMiss('脱輪(床の端を越えた)'); setStatus('脱輪!タイヤが床の端を越えました。(ミス: ' + state.misses + ')'); }
+        if (!car.derailed) { car.derailed = true; impact(car, 'derail', Math.abs(car.velocity) + 40, { recoil: false }); recordMiss('脱輪(床の端を越えた)'); setStatus('脱輪!タイヤが床の端を越えました。(ミス: ' + state.misses + ')'); }
       } else if (!car.ranOut) {
         // 止める物が何も無いまま奥の限界まで行ってしまった
         car.ranOut = true;
@@ -1355,10 +1388,10 @@
   // 宙段が車にぶつかった(floor_mech.jsから)。イージーは手前で止まって注意だけ。ノーマル・ハードは減点+揺れ+グシャッ
   window.FLOOR_MECH_HIT = function (c) {
     var occ = state.occupied[c.slot], car = (occ && occ.live) || state.car;
-    if (state.hints) { if (car) triggerSquash(car, 0.06, 300); return; }
+    var hk = /^hang/.test(c.key || '') ? 'hang' : 'generic';
+    if (state.hints) { if (car) impact(car, hk, 40, { recoil: false }); return; }
     recordMiss(c.msg, 'major');
-    triggerShake(9, 700);
-    if (car) triggerSquash(car, 0.18, 650);
+    if (car) impact(car, hk, 110, { recoil: false });
     setStatus(c.msg + '!(ミス: ' + state.misses + ')');
   };
   // 経路の折れ線pts上で、始点からの距離sがどの区間(i番目の点とi+1番目の点の間)の、区間始点から何pxか(割合fracも)
@@ -1385,7 +1418,7 @@
       if (lastHang !== null && Math.abs(hg - lastHang) > 0.0005 && (!state.hints || state.freeMode) && !car.hangDerailed) {
         car.hangDerailed = true;
         car.derail = { t0: performance.now(), dur: 1100 };
-        triggerShake(9, 800); triggerSquash(car, 0.14, 600);
+        impact(car, 'derail', 90, { recoil: false });
         if (state.freeMode) setStatus('脱輪!車が乗りかけの時に宙段を動かしました。');
         else {
           recordMiss('車が乗りかけの時に宙段を動かして脱輪した', 'major');
