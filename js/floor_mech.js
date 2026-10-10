@@ -187,7 +187,7 @@
   var RP_CFG = HANG.rearPin || { holes: 1, pitch: 0, hole: 1 };
   var RP = { hole: RP_CFG.hole || 1, len: LK.rearMin + ((RP_CFG.hole || 1) - 1) * (RP_CFG.pitch || 0), theta1: LK.theta1 };
   var REAR_LEN_MAX = LK.rearMax || (LK.rearMin + (RP_CFG.holes || 1) * (RP_CFG.pitch || 0));   // 後ろの柱を伸ばせる上限(2026-10-08 ユーザー指示: 柱はシリンダーのように連続で伸び縮みさせる)
-  function hangSolve(u) {
+  function hangSolve(u, prevAR) {
     u = Math.max(0, Math.min(2, u));
     // theta0=格納時(u=0)の前の柱の角度(水平=0。前の取付点が付け根より低い時は負。無ければ0)
     var th0 = LK.theta0 || 0, th1 = RP.theta1;   // th1=後ろの柱がセットピンの長さまで縮んで止まる角度(ピン穴で変わる)
@@ -204,7 +204,9 @@
       var Lr = RP.len;   // 後ろの柱の可動部はセットピンで固定された長さのまま
       var vx = pR[0] - aF[0], vy = pR[1] - aF[1], d = Math.hypot(vx, vy), a = (S * S - Lr * Lr + d * d) / (2 * d), h = Math.sqrt(Math.max(0, S * S - a * a));
       var ex = vx / d, ey = vy / d, mx = aF[0] + ex * a, my = aF[1] + ey * a, p1 = [mx - ey * h, my + ex * h], p2 = [mx + ey * h, my - ex * h];
-      aR = p1[0] >= p2[0] ? p1 : p2;
+      // 2つの交点のどちらを取るか。前の u の位置に近い方を取る(以前は x の大きい方に固定していたため、取付点を動かすと途中で入れ替わって、フロアが瞬間移動した)
+      if (prevAR) aR = Math.hypot(p1[0] - prevAR[0], p1[1] - prevAR[1]) <= Math.hypot(p2[0] - prevAR[0], p2[1] - prevAR[1]) ? p1 : p2;
+      else aR = p1[0] >= p2[0] ? p1 : p2;
     }
     var ang = Math.atan2(aR[1] - aF[1], aR[0] - aF[0]) - dlt, c = Math.cos(ang), s = Math.sin(ang);   // フロアの傾き = 取付点を結ぶ線の傾き − dlt
     var F = [aF[0] - (oF[0] * c - oF[1] * s), aF[1] - (oF[0] * s + oF[1] * c)];
@@ -222,7 +224,7 @@
     for (i = 0; i < 50; i++) { var m = (lo + hi) / 2; if (len(m) > RP.len) lo = m; else hi = m; }
     RP.theta1 = hi;
   }
-  function hangRebuild() { rearPinSolve(); HANG_TAB.length = 0; for (var hi = 0; hi <= HANG_N; hi++) HANG_TAB.push(hangSolve(hi * 2 / HANG_N)); stopPinSolve(); }   // 設定値を実行中に変えて比べる時(検証用)にも使う
+  function hangRebuild() { rearPinSolve(); HANG_TAB.length = 0; var prevAR = null; for (var hi = 0; hi <= HANG_N; hi++) { var hs = hangSolve(hi * 2 / HANG_N, prevAR); HANG_TAB.push(hs); prevAR = hs.aR; } stopPinSolve(); }   // 設定値を実行中に変えて比べる時(検証用)にも使う
   // ピンの位置(穴 n)から、宙段を上から下げた時にフロア下面がピンに当たる u を求める(0.01 刻み)。HANG.loadU に入れる
   function stopPinSolve() {
     if (!SP_CFG) return;
