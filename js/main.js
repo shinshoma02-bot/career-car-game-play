@@ -672,6 +672,9 @@
     ctx.save();
     ctx.translate(p.F[0], p.F[1]);
     ctx.rotate(a);
+    // 宙段フロアの絵は、長さ 325px(設定 hangFloor.len の基準)で描いてある。設定の長さ(len)に合わせて、前端を支点に横へ伸ばす(2026-10-10 ユーザー指示「フロアの長さが変わってない」)
+    var FLEN = (cfg.hangFloor && cfg.hangFloor.len) || 325, FBASE = 325;
+    ctx.scale(FLEN / FBASE, 1);
     ctx.drawImage(images.floor_chuudan, -C.floorPivot[0], -C.floorPivot[1]);
     ctx.restore();
     if (C.floorEar && !C.floorEar.off && images[C.floorEar.img]) {   // off:true で描かない(D19: 柱の上端がフロア先端の上面の角に付くので、今の耳は合わない。R12 で作り直し)
