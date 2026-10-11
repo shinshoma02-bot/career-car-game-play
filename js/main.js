@@ -87,7 +87,37 @@
     var g = cv.getContext('2d');
     g.drawImage(img, 0, 0);
     g.clearRect(TAIL_FAR.x0, TAIL_FAR.y0, TAIL_FAR.x1 - TAIL_FAR.x0, TAIL_FAR.y1 - TAIL_FAR.y0);
+    movePinPlate(g);
     return cv;
+  }
+  // フレームの絵に焼き込まれた固定ピンの赤い板(穴6つ)を、設定 hangFloor.stopPin.plate の shift だけ動かす。
+  // 宙段の止まる高さ(stopPin.us)に合わせてピンの位置を決めたので、板の穴もそこへ合わせる(素材は書き換えず、読み込み時に絵の中の赤い板だけ切り出して置き直す)
+  function movePinPlate(g) {
+    var P = cfg.hangFloor && cfg.hangFloor.stopPin && cfg.hangFloor.stopPin.plate;
+    if (!P || !P.shift || (!P.shift[0] && !P.shift[1])) return;
+    var rx = P.rect[0], ry = P.rect[1], rw = P.rect[2], rh = P.rect[3], id;
+    try { id = g.getImageData(rx, ry, rw, rh); } catch (e) { return; }
+    var d = id.data, n = rw * rh, m = new Uint8Array(n), i, x, y;
+    for (i = 0; i < n; i++) { var r = d[i * 4], gg = d[i * 4 + 1], b = d[i * 4 + 2], a = d[i * 4 + 3]; if (a > 0 && r > gg + 25 && r > b + 25) m[i] = 1; }   // 赤い画素
+    function grow(src) {   // 周りの8近傍へ1画素ふくらませる(赤い縁・穴の暗い点まで板に含める)
+      var o = new Uint8Array(src);
+      for (y = 0; y < rh; y++) for (x = 0; x < rw; x++) if (src[y * rw + x]) {
+        for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) { var yy = y + dy, xx = x + dx; if (yy >= 0 && yy < rh && xx >= 0 && xx < rw) o[yy * rw + xx] = 1; }
+      }
+      return o;
+    }
+    m = grow(grow(grow(m)));
+    var plate = g.createImageData(rw, rh);
+    for (i = 0; i < n; i++) {
+      var rr = d[i * 4], g2 = d[i * 4 + 1], a2 = d[i * 4 + 3];
+      if (!m[i] || a2 === 0 || g2 > rr + 25) continue;   // ティール(柱)の画素は動かさない
+      plate.data[i * 4] = rr; plate.data[i * 4 + 1] = g2; plate.data[i * 4 + 2] = d[i * 4 + 2]; plate.data[i * 4 + 3] = a2;
+      d[i * 4 + 3] = 0;
+    }
+    g.putImageData(id, rx, ry);
+    var tmp = document.createElement('canvas'); tmp.width = rw; tmp.height = rh;
+    tmp.getContext('2d').putImageData(plate, 0, 0);
+    g.drawImage(tmp, rx + P.shift[0], ry + P.shift[1]);
   }
 
   // semi-6b: 奥の枠・手前の枠と、設定の parts を全部読む(b64の旧画像・semi-6 のフロア画像は使わない)
@@ -525,6 +555,7 @@
       var cb = window.GAME_STATE && window.GAME_STATE.fx && window.GAME_STATE.fx.cab, ce = cb ? (performance.now() - cb.t0) / 1000 : 9;
       if (cb && ce < 1.4) { var cd = Math.exp(-3.2 * ce), kx = 360, ky = 330; ctx.save(); ctx.translate(kx, ky); ctx.rotate(-0.05 * cb.sev * cd * Math.sin(ce * 24) * Math.PI / 6 * 3); ctx.translate(-kx + 8 * cb.sev * cd * Math.sin(ce * 30), -ky); ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0); ctx.restore(); }
       else ctx.drawImage(yardImgs.tractor || images.tractor, AN.off || 0, 0);   // トラクタも入場・出発の演出でずらす(以前は動かず残っていた)
+      if (AN.off) drawTractorWheelsRoll();
     }
     ctx.restore();   // 演出のずらしの終わり
     drawYardLight();   // 昼以外は、全体に色を掛ける
@@ -611,6 +642,24 @@
     return Math.asin(Math.min(1, airSusCur / (w.cx - k[0]))) * 180 / Math.PI;
   }
 
+  // 入場・出発で動いている間、トラクタのタイヤも転がす(トラクタ画像に焼き込まれたタイヤの上に、同じ絵を回して重ねる。止まっている時は重ねない)
+  var tractorWheelImgs = null;
+  function drawTractorWheelsRoll() {
+    if (IS6B) return;
+    if (!tractorWheelImgs) {
+      tractorWheelImgs = [];
+      [['assets/semi-6/wheel_front.png', 256.5, 528.5], ['assets/semi-6/wheel_drive.png', 735.5, 528.5]].forEach(function (d) {
+        var im = new Image(); im.src = d[0] + '?v=1'; tractorWheelImgs.push({ im: im, x: d[1], y: d[2] });
+      });
+    }
+    tractorWheelImgs.forEach(function (w) {
+      if (!w.im.complete || !w.im.naturalWidth) return;
+      ctx.save(); ctx.translate(w.x + AN.off, w.y); ctx.rotate(AN.off / 59);
+      ctx.drawImage(w.im, -w.im.width / 2, -w.im.height / 2);
+      ctx.restore();
+    });
+  }
+
   // トレーラー座標の点を画面座標へ
   function rigToWorld(p, tilt) {
     if (!tilt) return [p[0], p[1]];
@@ -672,6 +721,7 @@
     // 宙段フロアは、下段(6番)の床の窪みに収まる時、床の上面より下は見えない(2026-10-10 ユーザー指摘「宙段の後方が6番フロアを貫通」)。
     // 物理(付け根・長さ)は変えず、描画だけ 6番の床の上面(deckY)で切る。
     var DECK_Y = (cfg.slots && cfg.slots['6'] && cfg.slots['6'].deckY) || 510;
+    ctx.save();   // 切り抜き用(下の最後の restore と対)
     ctx.save();
     ctx.beginPath(); ctx.rect(-6000, -6000, 12000, 6000 + DECK_Y + 2); ctx.clip();
     ctx.translate(p.F[0], p.F[1]);
@@ -1199,11 +1249,14 @@
   function drawTire(cx, cy, r) {
     if (NA && images.wheel_alu) {   // 新素材(122×122、半径59で作成): 突出時の拡大は画像の拡大で表す
       var ws = r / 59;
-      ctx.drawImage(images.wheel_alu, cx - 61 * ws, cy - 61 * ws, 122 * ws, 122 * ws);
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(AN.off ? AN.off / 59 : 0);   // 入場・出発で動いている間は、タイヤも転がる(2026-10-11 ユーザー指示)
+      ctx.drawImage(images.wheel_alu, -61 * ws, -61 * ws, 122 * ws, 122 * ws);
+      ctx.restore();
       return;
     }
     ctx.save();
     ctx.translate(cx, cy);
+    if (AN.off) ctx.rotate(AN.off / r);
     // タイヤ(側面は外側ほど少し明るいゴム)
     var tg = ctx.createRadialGradient(0, 0, r * 0.55, 0, 0, r);
     tg.addColorStop(0, '#0f1011'); tg.addColorStop(0.8, '#1d1e20'); tg.addColorStop(1, '#2a2b2d');
