@@ -554,7 +554,7 @@
     if (chk.tractor.checked) {   // キャビンに車がぶつかった時は、トラクタが衝撃で揺れる(後ろのタイヤを支点にガクガクと戻る)
       var cb = window.GAME_STATE && window.GAME_STATE.fx && window.GAME_STATE.fx.cab, ce = cb ? (performance.now() - cb.t0) / 1000 : 9;
       if (cb && ce < 1.4) { var cd = Math.exp(-3.2 * ce), kx = 360, ky = 330; ctx.save(); ctx.translate(kx, ky); ctx.rotate(-0.05 * cb.sev * cd * Math.sin(ce * 24) * Math.PI / 6 * 3); ctx.translate(-kx + 8 * cb.sev * cd * Math.sin(ce * 30), -ky); ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0); ctx.restore(); }
-      else ctx.drawImage(yardImgs.tractor || images.tractor, AN.off || 0, 0);   // トラクタも入場・出発の演出でずらす(以前は動かず残っていた)
+      else ctx.drawImage(yardImgs.tractor || images.tractor, 0, 0);   // 入場・出発のずらしは外側の translate が掛かっている(ここで足すと二重にずれて、台車とヘッドが別々になる)
       if (AN.off) drawTractorWheelsRoll();
     }
     ctx.restore();   // 演出のずらしの終わり
@@ -654,7 +654,7 @@
     }
     tractorWheelImgs.forEach(function (w) {
       if (!w.im.complete || !w.im.naturalWidth) return;
-      ctx.save(); ctx.translate(w.x + AN.off, w.y); ctx.rotate(AN.off / 59);
+      ctx.save(); ctx.translate(w.x, w.y); ctx.rotate(AN.off / 59);
       ctx.drawImage(w.im, -w.im.width / 2, -w.im.height / 2);
       ctx.restore();
     });
