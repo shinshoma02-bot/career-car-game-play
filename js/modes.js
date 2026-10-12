@@ -78,10 +78,10 @@
   // 積んだ車のうち一番高い所の地上高(m)。フロア上の車はフロアの現在位置で計算する
   function loadHeightM() {
     var top = Infinity;
-    Object.keys(state.occupied).forEach(function (n) {
-      var c = state.occupied[n], y = c.localY;
-      if (c.floor) y = fm.onFloor(c.floor, c.localX, c.localY)[1];
-      top = Math.min(top, y - c.h);
+    Object.keys(state.occupied).forEach(function (n) {   // 描画と同じ位置・同じ傾き(床の傾き+車の回転)で、車の一番高い所を測る(2026-10-11。傾いた宙段の7台目で低く出ていた)
+      var c = state.occupied[n], pos = [c.localX, c.localY], rot = c.rotDeg || 0;
+      if (c.floor) { pos = fm.onFloor(c.floor, c.localX, c.localY); rot += fm.poseOf(c.floor).ang; }
+      top = Math.min(top, fm.carRoofY(c, pos, rot));
     });
     return top === Infinity ? 0 : (cfg.ramp.groundY - top) / cfg.pxPerMeter;
   }

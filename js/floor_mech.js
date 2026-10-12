@@ -279,6 +279,17 @@
     if (profCache && prof) profCache.set(img, prof);
     return prof;
   }
+  // 積んだ車の一番高い所(y。小さいほど高い)。描画と同じく、車の絵をposを支点に rotDeg 回して、輪郭(profile)の全部の列で測る(2026-10-11)。
+  // 絵が読めない時は、回した4隅の一番高い所。傾いた宙段の上の車は、回した分だけ屋根が上がるので、傾きを入れないと高さが低く出る
+  function carRoofY(occ, pos, rotDeg) {
+    var a = (rotDeg || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), L = occ.leftTireX, w = occ.w, h = occ.h, best = Infinity;
+    var prof = occ.prof || (occ.img ? carProfile(occ.img) : null);
+    function at(lx, ly) { var y = pos[1] + lx * sa + ly * ca; if (y < best) best = y; }
+    if (prof && prof.length) {
+      for (var c = 0; c < prof.length; c++) at((c + 0.5) / prof.length * w - L, -h * prof[c]);
+    } else { at(-L, -h); at(w - L, -h); at(w - L, 0); at(-L, 0); }
+    return best;
+  }
   // 積んだ車occ(床の位置pos)の、画面x での屋根の高さ(y)。絵が読めない時は全体を屋根の高さとする
   // 宙段まわりは実車でもすき間がほぼ無い(車の屋根・ボンネットと棚が触れる寸前で積んでいる)ので、車を HANG.tol px 低く見て判定する(実車の許容)
   function carTopY(occ, pos, tolOverride) {
@@ -1000,7 +1011,7 @@
     holdStart: holdStart, holdStop: holdStop,
     atTravel: atTravel, upperConnected: upperConnected, f1Connected: f1Connected,
     cylPin: cylPin, cylLen: cylLen,
-    outrigger: OUT, jackLift: jackLift, tireOffGround: tireOffGround, jackTiltDeg: jackTiltDeg,
+    carRoofY: carRoofY, outrigger: OUT, jackLift: jackLift, tireOffGround: tireOffGround, jackTiltDeg: jackTiltDeg,
     jackHoldStart: jackHoldStart, jackHoldStop: jackHoldStop, toggleTireOut: toggleTireOut, moveTire: moveTire, setLock: setLock, workReady: workReady, pressInfo: pressInfo
   };
 })();
