@@ -127,15 +127,27 @@
     recordMiss('2番の車に2番扇動板がぶつかった', 'major');
   };
   // 事故(車の落下など): 衝撃の演出のあと作業を止めて、一からやり直し(modes.jsが結果画面を出す)
-  function accident(car, reason) {
+  function accident(car, reason, hangX) {
     if (state.accident) return;
     state.accident = { reason: reason };
     car.accident = { t0: performance.now(), landed: false };
+    if (hangX !== undefined) car.accident.hang = hangX;   // ひっかかって傾いて止まる(落ちない)。hangX=端の x(ここを支点に傾く)
     car.velocity = 0;
     state.frozen = true;
     triggerShake(12, 1400);
     setStatus('事故!' + reason);
     setTimeout(function () { if (window.GAME_MODE && window.GAME_MODE.onAccident) window.GAME_MODE.onAccident(reason); }, 1900);
+  }
+
+  // 道が途切れた所(トレーラーの後端・上げた3番フロアの後端)を、後ろのタイヤが越えた時の反応(メモ5・6・7。2026-10-13)。
+  //  ゆっくり: 後ろのタイヤが端から外れ、車の後ろ側が端の部材にひっかかって、傾いて止まる(戻れない)。
+  //  勢いがある: そのまま端から落ちる(落下→大破。やり直し)。どちらも、地面へ瞬間移動したり、前進で元に戻ったりしない
+  var EDGE_FALL_V = 170;   // これ以上の速さ(px/秒)で端を越えたら落ちる
+  function edgeBreak(car, edgeX, what) {
+    var v = Math.abs(car.velocity);
+    if (v >= EDGE_FALL_V) { accident(car, what + 'の端から、勢いよく落ちてしまいました。'); return; }
+    car.velocity = 0;
+    accident(car, what + 'の端に、車の後ろがひっかかって傾いてしまいました(ゆっくり出すと、後ろのタイヤが外れます)。', edgeX);
   }
 
   // ---- 輪止め・タイヤ止め・タイヤ落とし(第5章)----
@@ -273,6 +285,7 @@
       pts.push(slotPt('4'));
       tg['6'] = slotPt('6'); tg['5'] = slotPt('5', 'F5'); tg['4'] = slotPt('4');
     } else {
+      pts.push(slotPt('6'));   // 6番の接地点を通る(道板の上端から5番へ一直線だと、6番の位置で線が約4px上になり、車が浮いて止まる)
       pts.push(slotPt('5'));
       extra.f5Edge = { x: 1560, y: S['5'].deckY };   // 5番フロアの後端(ここから先は5番フロアの上)。5番フロアが平らでない間は、ここから先へ進めない
       tg['6'] = slotPt('6'); tg['5'] = slotPt('5');
@@ -382,25 +395,32 @@
     return fm.hangHits(x0, x0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), fm.MECH.hang);
   }
   // 道板が出ていない時: 車は地面を走って、トレーラーの後端(newArt.tail.x1)に車の先端が当たって止まる。その進行距離(無ければ undefined)
+  // 経路上で x が xLim になる位置(経路の長さ)。経路は x が小さくなる向き(道板→トレーラーの前)へ伸びる。範囲は 0〜道板の上端
+  function arcAtX(car, xLim) {
+    var lo = 0, hi = car.rampArc !== undefined ? car.rampArc : car.pathLen;
+    if (car.pathTool.at(lo).x <= xLim) return 0;
+    if (car.pathTool.at(hi).x > xLim) return hi;
+    for (var i = 0; i < 22; i++) { var m = (lo + hi) / 2; if (car.pathTool.at(m).x > xLim) lo = m; else hi = m; }
+    return lo;
+  }
+  function tailX1() { return (cfg.newArt && cfg.newArt.tail && cfg.newArt.tail.x1) || 2070; }
+  // 道板が出ていない時: 車の先端がトレーラーの後端に当たって止まる位置(無ければ undefined)
   function rampBlockArc(car) {
     var fm = window.FLOOR_MECH;
     if (T6 || !fm || typeof fm.rampReady !== 'function' || fm.rampReady() || !car.pathTool) return undefined;
-    var tail = (cfg.newArt && cfg.newArt.tail && cfg.newArt.tail.x1) || 2070, limX = tail + 0.5 + car.leftTireX;
-    var lo = 0, hi = car.rampArc !== undefined ? car.rampArc : car.pathLen;
-    if (car.pathTool.at(lo).x <= limX) return 0;
-    if (car.pathTool.at(hi).x > limX) return hi;
-    for (var i = 0; i < 22; i++) { var m = (lo + hi) / 2; if (car.pathTool.at(m).x > limX) lo = m; else hi = m; }
-    return lo;
+    return arcAtX(car, tailX1() + 0.5 + car.leftTireX);
   }
+  // 後ろのタイヤが、トレーラーの後端(道板との境)の位置に来る経路の長さ。後ろのタイヤは、先頭(progress)より wbPx 後ろ
+  function tailRearTireArc(car) { return arcAtX(car, tailX1()) + (car.wbPx || 0); }
   var TIRE_PASS_MARGIN_PX = 30;   // 6番のタイヤ基準点からこれ以上通り過ぎたら「通過」とみなす(6番に止まる車は輪止めの手前で止まる)
   function routeProblems(car) {
     if (T6) return window.FLOOR_MECH.routeProblems6b(car);
     var fm = window.FLOOR_MECH, out = [], id = car.route.id;
     if (!fm.rampReady()) {
       // 道板が出ていない: 地面を走って、トレーラーの後端にぶつかって止まる(宙に浮いて進まない)
-      var rba = rampBlockArc(car);
+      var rba = car.onDeck ? undefined : rampBlockArc(car);   // トレーラーの床の上にいる車は、道板が無くても止めない(後ろへ出る時は後端で落ちる=edgeBreak)
       if (rba !== undefined && car.progress >= rba - 1) out.push({ key: 'ramp', phys: true, stopAt: rba, msg: '道板が出ていないので、トレーラーの後ろにぶつかります。フロア昇降パネルの「道板を出す」で出してから進めてください。' });
-      else if (rba === undefined) out.push({ key: 'ramp', msg: '道板が出ていません。フロア昇降パネルの「道板を出す」で出してから進めてください。' });
+      else if (rba === undefined && !car.onDeck) out.push({ key: 'ramp', msg: '道板が出ていません。フロア昇降パネルの「道板を出す」で出してから進めてください。' });
     }
     if (fm.tireOffGround()) out.push({ key: 'jack', msg: 'ジャッキで台車が浮いている間は車を動かせません。ジャッキを縮めて接地させてください。' });
     if (id === 'U') {
@@ -947,7 +967,7 @@
   }
   // タップした位置にある機構(いちばん近いもの)。{ run: 実行する関数 }。無ければ null
   function mechanismAt(x, y, tol) {
-    var fm = window.FLOOR_MECH; if (!fm) return null;
+    var fm = window.FLOOR_MECH; if (!fm || !fm.bridgeSeg || !fm.slideGeom) return null;   // semi-6b の機構には、4番扇動板・スライド板が無い(タップのたびに例外になっていた。2026-10-13 検証で発見)
     var best = null;
     function cand(d, run) { if (!best || d < best.d) best = { d: Math.max(0, d), run: run }; }
     // 4番扇動板: 根元から先端までの線(出ている時は5番側へ、格納中は下に垂れている)
@@ -1351,14 +1371,20 @@
     var p = car.pathTool.at(car.progress);
     car.x = p.x; car.y = p.y;
     rideBridge(car);
-    car.groundRun = rampBlockArc(car) !== undefined;   // 道板が出ていない間は、地面を水平に走る(道板の斜面を宙で上らない)
+    // 後ろのタイヤが床の上に載ったら「床の上の車」。道板が出ていなくても、地面を走る扱いにしない(床の高さのまま。後端を越えた時は edgeBreak)
+    if (!T6 && car.progress - (car.wbPx || 0) > tailRearTireArc(car) - (car.wbPx || 0) + 4) car.onDeck = true;
+    car.groundRun = !car.onDeck && rampBlockArc(car) !== undefined;   // 道板が出ていない間は、地面を水平に走る(道板の斜面を宙で上らない)
     if (car.groundRun) car.y = cfg.ramp.groundY;
+    if (!T6 && car.onDeck && !window.FLOOR_MECH.rampReady() && car.progress < tailRearTireArc(car) - 2) {
+      edgeBreak(car, tailX1(), 'トレーラー');
+      return false;
+    }
     car.spinDeg += (applied / car.wheelRPx) * (180 / Math.PI) * SPIN_SIGN;
     if (applied !== 0) car.phase = 'moving';
     if (car.seated && applied < -0.2) car.contacted = false;   // 輪止めから離れる向きに動かしたら、OK(固定でない限り)を外す
     // 3番フロアが道板から離れている(上げている)のに、車が3番の後端より後ろ(道板との間の空中)へ出たら、車が落ちる事故
-    if (car.route.id === 'U' && car.f3RearArc !== undefined && !window.FLOOR_MECH.upperConnected() && car.progress < car.f3RearArc - 6 && car.progress > 1) {
-      accident(car, '3番フロアを上げた状態で、車が後ろへ出て落ちてしまいました。');
+    if (car.route.id === 'U' && car.f3RearArc !== undefined && !window.FLOOR_MECH.upperConnected() && car.progress - (car.wbPx || 0) < car.f3RearArc - 2 && car.progress > 1) {
+      edgeBreak(car, car.pts[3].x, '3番フロア');   // 後ろのタイヤが後端を越えたら(先頭が越えるのを待たない)
       return false;
     }
     checkUnderFloors(car);

@@ -81,7 +81,7 @@
     Object.keys(state.occupied).forEach(function (n) {   // 描画と同じ位置・同じ傾き(床の傾き+車の回転)で、車の一番高い所を測る(2026-10-11。傾いた宙段の7台目で低く出ていた)
       var c = state.occupied[n], pos = [c.localX, c.localY], rot = c.rotDeg || 0;
       if (c.floor) { pos = fm.onFloor(c.floor, c.localX, c.localY); rot += fm.poseOf(c.floor).ang; }
-      top = Math.min(top, fm.carRoofY(c, pos, rot));
+      top = Math.min(top, fm.carRoofY ? fm.carRoofY(c, pos, rot) : pos[1] - c.h);   // carRoofY の無いトレーラー(semi-6b)は、従来どおり車の枠の上端(2026-10-13 検証で発見)
     });
     return top === Infinity ? 0 : (cfg.ramp.groundY - top) / cfg.pxPerMeter;
   }

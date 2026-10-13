@@ -722,7 +722,7 @@
     // 宙段フロア → 前端の受け耳(D18。フロア上面の上に出る柱の受け)→ 前の柱(柱の上端が耳の穴に重なる)の順に描く。後ろの柱はフロアの下(上で先に描いた)
     // 宙段フロアは、下段(6番)の床の窪みに収まる時、床の上面より下は見えない(2026-10-10 ユーザー指摘「宙段の後方が6番フロアを貫通」)。
     // 物理(付け根・長さ)は変えず、描画だけ 6番の床の上面(deckY)で切る。
-    var DECK_Y = (cfg.slots && cfg.slots['6'] && cfg.slots['6'].deckY) || 510;
+    var DECK_Y = (cfg.hangFloor && cfg.hangFloor.clipDeckY) || 510;   // 床の絵の上面の高さ(車の接地 deckY は 525 に下げたので、deckY は使わない。2026-10-13 検証で発見)
     ctx.save();   // 切り抜き用(下の最後の restore と対)
     ctx.save();
     ctx.beginPath(); ctx.rect(-6000, -6000, 12000, 6000 + DECK_Y + 2); ctx.clip();
@@ -1498,8 +1498,9 @@
         rideY = -(2 + 9 * rd.sev) * env * Math.abs(Math.sin(rp * 9)) * (rd.kind === 'hole' ? 0.5 : 1);
       }
     }
-    var fallY = 0, fallRot = 0, acc = car.accident;
-    if (acc) {
+    var fallY = 0, fallRot = 0, acc = car.accident, hangDeg = 0;
+    if (acc && acc.hang !== undefined) hangDeg = 16 * (1 - Math.exp(-3.2 * (performance.now() - acc.t0) / 1000));   // 端にひっかかって、後ろ側が下がって傾く(落ちない)
+    if (acc && acc.hang === undefined) {
       var ft = (performance.now() - acc.t0) / 1000, maxFall = Math.max(0, cfg.ramp.groundY - car.y);
       fallY = Math.min(maxFall, 700 * ft * ft);
       fallRot = -Math.min(38, 55 * ft);
@@ -1532,6 +1533,7 @@
     }
     ctx.translate(car.x - lunge, car.y + bumpY + sink + fallY + drY + rideY + cabDrop);
     ctx.rotate((rotDeg + sinkDeg + fallRot + drDeg + rideDeg + cabPitch) * Math.PI / 180);
+    if (hangDeg) { var hx = acc.hang - car.x; ctx.translate(hx, 0); ctx.rotate(hangDeg * Math.PI / 180); ctx.translate(-hx, 0); }   // 端(hx)を支点に傾く
     // ぶつかった時のグシャッ: 前端を固定して前後に縮み、少し上に膨らんで戻る(減衰する振動)
     var sqz = squashOf(car);
     if (!sqz && acc && acc.landed) {   // 落下の着地
