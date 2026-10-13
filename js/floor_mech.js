@@ -437,10 +437,35 @@
     if (i < 0 || i >= ENV_N - 1) return 1e9;
     return Math.min(L[i], L[i + 1]);
   }
+  // 上のフロアの下面を、描かれた絵(素材)の形から読む(2026-10-13 ユーザー指示「絵の形に合わせて当たりを作る」)。
+  // 絵は絵の座標のまま描かれる(main.js drawTransformedFloor)ので、列ごとに一番下の不透明な画素の位置を取る。
+  // 読めた列だけ使う(読めない時は、従来の直線の近似 bottom(x) のまま)
+  function setFloorArt(id, img) {
+    var f = FLOORS[id];
+    if (!f || !img || !img.width) return;
+    try {
+      var cv = document.createElement('canvas'), g;
+      cv.width = img.width; cv.height = img.height;
+      g = cv.getContext('2d', { willReadFrequently: true });
+      g.drawImage(img, 0, 0);
+      var d = g.getImageData(0, 0, cv.width, cv.height).data, samples = [];
+      for (var x = Math.max(0, Math.floor(f.x0)); x <= Math.min(cv.width - 1, Math.ceil(f.x1)); x += 2) {
+        for (var y = cv.height - 1; y >= 0; y--) { if (d[(y * cv.width + x) * 4 + 3] > 40) { samples.push([x, y]); break; } }
+      }
+      if (samples.length) f.art = samples;
+    } catch (e) { f.art = null; }   // 読めない(画像が外部から来るなど)時は近似のまま
+  }
   // 包絡線 L(と、下段の車などの追加の上限)に対して、上のフロア ids の下面が収まるか(offs で)。ids の下面の各点 y ≤ L(x)
   function envFits(Ls, ids, offs) {
     for (var q = 0; q < ids.length; q++) {
       var f = FLOORS[ids[q]];
+      if (f.art) {   // 絵の下のふち(列ごと)
+        for (var a = 0; a < f.art.length; a++) {
+          var pa = onFloor(ids[q], f.art[a][0], f.art[a][1], offs);
+          for (var ja = 0; ja < Ls.length; ja++) if (pa[1] > envAt(Ls[ja], pa[0])) return false;
+        }
+        continue;
+      }
       for (var x = f.x0; x <= f.x1; x += 15) {
         var p = onFloor(ids[q], x, f.bottom(x), offs);
         for (var j = 0; j < Ls.length; j++) if (p[1] > envAt(Ls[j], p[0])) return false;
@@ -1011,7 +1036,7 @@
     holdStart: holdStart, holdStop: holdStop,
     atTravel: atTravel, upperConnected: upperConnected, f1Connected: f1Connected,
     cylPin: cylPin, cylLen: cylLen,
-    carRoofY: carRoofY, outrigger: OUT, jackLift: jackLift, tireOffGround: tireOffGround, jackTiltDeg: jackTiltDeg,
+    carRoofY: carRoofY, setFloorArt: setFloorArt, outrigger: OUT, jackLift: jackLift, tireOffGround: tireOffGround, jackTiltDeg: jackTiltDeg,
     jackHoldStart: jackHoldStart, jackHoldStop: jackHoldStop, toggleTireOut: toggleTireOut, moveTire: moveTire, setLock: setLock, workReady: workReady, pressInfo: pressInfo
   };
 })();
