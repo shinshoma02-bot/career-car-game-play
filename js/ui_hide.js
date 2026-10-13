@@ -40,5 +40,16 @@
     showBtn.classList.add('show');
   }, true);
 
+  // 画面が低い横長(約520px以下)の時は、ページ全体は動かず、右の操作盤(#opsPanel)だけが動く。
+  // そのままだと、ステージの上でホイールを回しても何も動かないので、どこでホイールを回しても操作盤へ回す(2026-10-13 ユーザー指示)
+  var lowLandscape = window.matchMedia ? window.matchMedia('(orientation: landscape) and (max-height: 520px)') : null;
+  document.addEventListener('wheel', function (e) {
+    if (!lowLandscape || !lowLandscape.matches || e.ctrlKey || e.metaKey) return;   // Ctrl+ホイールは拡大縮小(main.js)
+    var ops = document.getElementById('opsPanel');
+    if (!ops || ops.contains(e.target)) return;   // 操作盤の上は、ふつうにスクロールする
+    ops.scrollTop += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+
   window.UI_HIDDEN = false;
 })();
