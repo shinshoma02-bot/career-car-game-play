@@ -1835,6 +1835,7 @@
   //  - 選択中のスロット: 輪止めを置ける位置の目盛り+今止まる位置(大きな矢印とラベル)
   //  - それ以外: セット中の輪止め/開いている落し蓋だけ小さな矢印
   function drawChockMarkers() {
+    if (window.UI_HIDDEN) return;   // UI非表示の時は、輪止め・固定などの文字を描かない
     var st = window.GAME_STATE;
     if (!st || !st.activeStop) return;
     function arrow(label, color, big) {
@@ -1882,6 +1883,7 @@
 
   // 輪止め(タイヤ止め・落とし)に当たって止まっている車に「OK」を出す。以前の選択中スロットの四角い囲いは廃止
   function drawSlotMarks() {
+    if (window.UI_HIDDEN) return;   // UI非表示の時は、輪止め・固定などの文字を描かない
     var st = window.GAME_STATE;
     if (!st) return;
     // 操作中でOKの車に緑の「OK」、固定した車には小さな「固定」を出す
@@ -1926,6 +1928,7 @@
   }
 
   function drawPinMarks() {
+    if (window.UI_HIDDEN) return;   // UI非表示の時は、輪止め・固定などの文字を描かない
     ctx.save();
     ctx.fillStyle = '#50c8ff';
     ctx.font = '14px sans-serif';
