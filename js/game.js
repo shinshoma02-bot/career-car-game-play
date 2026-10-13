@@ -280,8 +280,9 @@
       // 5番フロアのスロープ(後端→持ち上がった前端)を上り、4番扇動板を渡って4番へ(β版のrouteToと同じ経路)
       var f5 = fm.FLOORS.F5;
       pts.push({ floor: 'F5', x: f5.rear.pt[0], y: f5.rear.pt[1] });
-      pts.push({ floor: 'F5', x: 962, y: f5.front.pt[1] });
-      extra.bridgeWall = { floor: 'F5', x: 962, y: f5.front.pt[1] };   // 5番フロアの前端(スロープの上端)。4番扇動板が出ていない間は、ここから先(4番との隙間)へ進めない(格納した4番扇動板が垂れ下がっている)
+      // 5番スロープの上を、4番扇動板の先端(板が斜面に載る点)まで上り、そこから板の上面(根元へ下る)を通って4番へ。以前は斜面の前端(962)まで進んでから板の根元へ落ちていて、板の上で車が約6px浮いた(2026-10-13)
+      pts.push({ floor: 'F5', x: cfg.bridgePlate.tipX, y: f5.front.pt[1] });
+      extra.bridgeWall = { floor: 'F5', x: cfg.bridgePlate.tipX, y: f5.front.pt[1] };   // 5番フロアの前端(スロープの上端)。4番扇動板が出ていない間は、ここから先(4番との隙間)へ進めない(格納した4番扇動板が垂れ下がっている)
       pts.push({ x: fm.BR_ANCHOR[0], y: fm.BR_ANCHOR[1] });
       pts.push(slotPt('4'));
       tg['6'] = slotPt('6'); tg['5'] = slotPt('5', 'F5'); tg['4'] = slotPt('4');
