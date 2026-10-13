@@ -84,8 +84,8 @@ window.TRAILER_CONFIG = {
   },
 
   "cylinders": [
-    { "id": "f2mid", "floor": "F2", "pin": [1416.4, 322], "anchor": [1491.9, 428], "barrel": 70, "tele": true, "thick": 12, "note": "中央の上下を可能にする補助シリンダー(取付点は実車合わせの新素材値)" },
-    { "id": "f3rear", "floor": "F3", "pin": [1750, 334], "anchor": [1590, 525], "barrel": 150, "tele": true, "thick": 12, "note": "3番後ろの昇降" },
+    { "id": "f2mid", "floor": "F2", "pin": [1416.4, 322], "anchor": [1491.9, 428], "barrel": 70, "hidden": true, "thick": 12, "note": "中央の上下を可能にする補助シリンダー(取付点は実車合わせの新素材値)" },
+    { "id": "f3rear", "floor": "F3", "pin": [1750, 334], "anchor": [1590, 525], "barrel": 150, "drawBarrel": 175, "thick": 12, "note": "3番後ろの昇降" },
     { "id": "midvert", "floor": null, "pin": [1499.9, 326], "anchor": [1499.9, 498], "barrel": 60, "stage1": 60, "two": true, "thick": 12, "note": "中央の継ぎ目(2番後・3番前)の昇降。二段式" }
   ],
 

@@ -709,7 +709,7 @@
 
   // ---- シリンダー(見た目の伸縮)----
   var CYLS = cfg.cylinders.map(function (c) {
-    return { id: c.id, floor: c.floor, pin: c.pin, anchor: c.anchor, barrel: c.barrel, tele: !!c.tele, thick: c.thick };
+    return { id: c.id, floor: c.floor, pin: c.pin, anchor: c.anchor, barrel: c.barrel, drawBarrel: c.drawBarrel, hidden: !!c.hidden, tele: !!c.tele, thick: c.thick };
   });
   function cylPin(c, offs) {
     if (c.floor) return onFloor(c.floor, c.pin[0], c.pin[1], offs);

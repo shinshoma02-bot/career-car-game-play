@@ -925,8 +925,9 @@
       drawStrip('cyl2_stage1', st, at, deg, bt + e1 - st);
       drawStrip('cyl2_barrel', bt, at, deg, 0);
     } else if (!c.two) {
+      var bl = Math.min(c.drawBarrel || c.barrel, L - 6);   // 外筒の見た目の長さ(ロッドが出る長さは外筒以内。判定用の barrel とは別)
       drawStrip(c.rodName || 'cyl_rod', L - 6, at, deg, 6);
-      drawStrip(c.barrelName || 'cyl_barrel', c.barrel, at, deg, 0);
+      drawStrip(c.barrelName || 'cyl_barrel', bl, at, deg, 0);
     } else {
       var b = c.barrel, s1 = c.stage1;
       drawStrip('cyl2_rod', Math.max(10, L - b - s1 * 0.8), at, deg, b + s1 * 0.8 - 4);
@@ -1037,6 +1038,7 @@
     var mlArt = midLinkArt();
     if (mlArt) drawMidLink(mlArt, fm);
     fm.CYLS.forEach(function (c) {
+      if (c.hidden) return;   // 3番の左の斜めシリンダー(f2mid)は描かない(2026-10-13 ユーザー指示。棚の動きの判定には使う)
       if (mlArt && c.id === 'midvert') return;   // 新しい機構(金具+リンク+専用の二段シリンダー)で描く
       var r = fm.cylLen(c);
       if (NA && images.cyl_barrel) drawCylinderArt(c, r.L, r.deg);
