@@ -387,7 +387,8 @@
       }
     }
     canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
-    canvas.addEventListener('wheel', function (e) {   // PC: ホイールで拡大縮小
+    canvas.addEventListener('wheel', function (e) {   // PC: Ctrl(⌘)+ホイールで拡大縮小(トラックパッドのピンチも同じ)。ふだんのホイールはページのスクロールに使う(2026-10-13 ユーザー指示)
+      if (!e.ctrlKey && !e.metaKey) return;   // 何もしない → ブラウザが普通にページをスクロールする
       e.preventDefault(); manual = true;
       var st = clientToStage(e.clientX, e.clientY), f = Math.exp(-e.deltaY * 0.0015), oz = tgt.zoom;
       tgt.zoom = oz * f; clampTarget(tgt);
