@@ -343,6 +343,13 @@
   }
   // 走っている車が通れない理由の一覧(β版のcheckPlacementと同じ条件を、道の上の位置に合わせて判定)。
   // イージー: 理由が出ている間は前へ進めない / ノーマル・ハード: 進めるがミス(同じ理由は車1台につき続く間1回)
+  // 出している4番扇動板の上を通る車は、タイヤを板の上面に乗せる(板は橋なので、車の下が板の上にある)。床の高さ(経路)より高ければ、板に合わせる
+  function rideBridge(car) {
+    var fm = window.FLOOR_MECH;
+    if (!fm || !fm.bridgeSurfaceY) return;
+    var ys = [car.x, car.x + (car.wbPx || 0)].map(function (x) { return fm.bridgeSurfaceY(x); }).filter(function (v) { return v !== null; });
+    if (ys.length) car.y = Math.min(car.y, Math.min.apply(null, ys));
+  }
   function lowFloorBlocked(car) {
     // 下段(4〜6番)へ向かう通り道の上で、上段フロアが棚の絵の高さ(=下段の車が入れる高さ)より下がっていたら通れない。
     // 走行位置(初期状態)は絵より下がっているので、下段を積む前に上段の棚を上げる必要がある
@@ -407,10 +414,7 @@
       }
     } else {
       // 出している4番扇動板が、下段を走る車の前に当たる(実物の板)
-      var bx0 = car.x - car.leftTireX;
-      if (fm.bridgeHitsBody && fm.bridgeHitsBody(bx0, bx0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), car.y)) {
-        out.push({ key: 'bridgehit', phys: true, msg: '4番扇動板が出ているので、車の前が当たります。4番扇動板を格納してください。' });
-      }
+      // 出している4番扇動板は、5番と4番の間の橋(車は板の上に乗って通る。当たりで止めない・2026-10-13)。板の上の車の高さは rideBridge で合わせる
       // 積む場所(スロット)にほぼ着いた所だけ調べる(スロープを上る途中の通過は、従来どおり lowFloorBlocked で見る)
       if (car.arc && state.targetSlot && car.arc[state.targetSlot] !== undefined && car.progress >= car.arc[state.targetSlot] - 60 && car.progress <= car.arc[state.targetSlot] + 6 && lowRoofBlocked(car)) out.push({ key: 'lowroof', phys: true, msg: 'この車は背が高くて、上のフロアの下に入れません(当たります)。上のフロアを上げるか、車の向きを変えてください。' });
       var hb = (id === 'L' || id === '4') && hangBlocksCar(car);
@@ -1346,6 +1350,7 @@
     var applied = car.progress - before;
     var p = car.pathTool.at(car.progress);
     car.x = p.x; car.y = p.y;
+    rideBridge(car);
     car.groundRun = rampBlockArc(car) !== undefined;   // 道板が出ていない間は、地面を水平に走る(道板の斜面を宙で上らない)
     if (car.groundRun) car.y = cfg.ramp.groundY;
     car.spinDeg += (applied / car.wheelRPx) * (180 / Math.PI) * SPIN_SIGN;
@@ -1525,6 +1530,7 @@
       }
       var p = car.pathTool.at(car.progress);
       car.x = p.x; car.y = p.y;
+      rideBridge(car);
     }
     // 輪止めに当たったまま止まっている車は、状態が変わった時(タイヤを張り出して6番に積めるようになった等)にもOKを判定し直す
     if (car && car.route && car.arc && car.contacted && !car.seated && !car.locked && (car.phase === 'ready' || car.phase === 'moving')) updateSeated(car, barriersOf(car));
