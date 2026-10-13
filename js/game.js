@@ -76,6 +76,7 @@
     if (!car) return;
     opt = opt || {};
     var at = HIT_AT[key] || HIT_AT.generic, v = Math.abs(speed === undefined ? 70 : speed);
+    if (opt.at) at = { kind: opt.at.kind || at.kind, u: opt.at.u !== undefined ? opt.at.u : at.u, v: opt.at.v !== undefined ? opt.at.v : at.v };   // 実際に当たった場所(floorContactAt など)
     var sev = Math.max(0, Math.min(1, (v - 30) / 330));   // 最高速度(約590px/秒)で1。遅い時は大げさにしない
     var peak = 0.012 + 0.4 * Math.pow(sev, 1.25), resid = sev > 0.45 ? peak * 0.4 : 0, dur = 450 + 1100 * sev;
     var old = car.crash && car.crash.resid || 0;   // 前の凹みに重ねる(上限あり)
@@ -362,6 +363,41 @@
     if (!fm || !fm.bridgeSurfaceY) return;
     var ys = [car.x, car.x + (car.wbPx || 0)].map(function (x) { return fm.bridgeSurfaceY(x); }).filter(function (v) { return v !== null; });
     if (ys.length) car.y = Math.min(car.y, Math.min.apply(null, ys));
+  }
+  // 上段フロア(1〜3番)の下面に、車の屋根の輪郭が最初に当たる場所(2026-10-13 メモ4)。車は左(前)へ進むので、重なっている点のうち一番前(x が小さい)を取る。
+  // 戻り値: { kind:'roof', u:車の前端から0〜1, v:地面から0〜1 }。当たっていなければ null(従来の固定の場所を使う)
+  function floorContactAt(car) {
+    var fm = window.FLOOR_MECH;
+    if (T6 || !fm || !fm.onFloor || !car.img) return null;
+    var offs = fm.curOffs(), x0 = car.x - car.leftTireX, roof = fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y], 0), best = null;
+    ['F1', 'F2', 'F3'].forEach(function (id) {
+      var f = fm.FLOORS[id], samples = f.art;
+      if (!samples) { samples = []; for (var x = f.x0; x <= f.x1; x += 6) samples.push([x, f.bottom(x)]); }
+      for (var i = 0; i < samples.length; i++) {
+        var q = fm.onFloor(id, samples[i][0], samples[i][1], offs);
+        if (q[0] < x0 || q[0] > x0 + car.w) continue;
+        var r = roof(q[0]);
+        if (q[1] > r && (!best || q[0] < best.x)) best = { x: q[0], roofY: r };
+      }
+    });
+    if (!best) {   // まだ重なっていない(フロアの前の端が、車の鼻のすぐ前)→ 下がったフロアの縁が、車の鼻(前)に当たる
+      var lip = null, noseR = roof(x0 + 1);
+      ['F1', 'F2', 'F3'].forEach(function (id) {
+        var f = fm.FLOORS[id], samples = f.art;
+        if (!samples) { samples = []; for (var x = f.x0; x <= f.x1; x += 6) samples.push([x, f.bottom(x)]); }
+        for (var i = 0; i < samples.length; i++) {
+          var q = fm.onFloor(id, samples[i][0], samples[i][1], offs);
+          if (q[0] >= x0 - 40 && q[0] < x0 && (!lip || q[1] > lip)) lip = q[1];
+        }
+      });
+      if (lip === null || lip <= noseR) return null;
+      return { kind: 'front', u: 0, v: Math.max(0.18, Math.min((car.y - noseR) / car.h, (car.y - lip) / car.h + 0.1)) };
+    }
+    return { kind: 'roof', u: Math.max(0.02, Math.min(0.98, (best.x - x0) / car.w)), v: Math.max(0.3, Math.min(1, (car.y - best.roofY) / car.h)) };
+  }
+  function contactOpt(car, key) {
+    if (key === 'lowroof' || key === 'lowfloor') { var at = floorContactAt(car); if (at) return { at: at }; }
+    return undefined;
   }
   function lowFloorBlocked(car) {
     // 下段(4〜6番)へ向かう通り道の上で、上段フロアが棚の絵の高さ(=下段の車が入れる高さ)より下がっていたら通れない。
@@ -1247,7 +1283,7 @@
         // 実物(フロア・4番扇動板・宙段・タイヤ)に当たる理由(phys)は、その位置で止まる(通り抜けない)
         if (pressedDir > 0 && !car.missedKeys[p.key]) {
           car.missedKeys[p.key] = true;
-          impact(car, p.key, Math.abs(car.velocity));
+          impact(car, p.key, Math.abs(car.velocity), contactOpt(car, p.key));
           setStatus('ぶつかった!' + p.msg.split('。')[0] + '。');
         }
         if (p.phys && !blocked) blocked = p;
@@ -1256,7 +1292,7 @@
       else if (pressedDir > 0 && !car.missedKeys[p.key]) {
         car.missedKeys[p.key] = true;
         recordMiss(p.msg.split('。')[0], (p.key === 'ramp' || p.key === 'jack') ? 'minor' : 'major');
-        if (p.phys) impact(car, p.key, Math.abs(car.velocity));
+        if (p.phys) impact(car, p.key, Math.abs(car.velocity), contactOpt(car, p.key));
       }
       // ノーマル・ハードも、実物に当たる理由(phys)では、その位置で止まる(ミスは上で1回記録)
       if (!state.hints && !state.freeMode && p.phys && !blocked) blocked = p;
@@ -1339,7 +1375,7 @@
         setTimeout(function () {
           car.cab.done = true;
           var sv = Math.min(1.2, vI / 380);
-          impact(car, 'cab', vI, { dmg: 0.08 + 0.9 * sv * sv + 0.15 * sv, recoil: false });
+          impact(car, 'cab', vI, { dmg: 0.03 + 0.9 * sv * sv + 0.1 * sv, recoil: false });   // 遅い時は軽い凹み(以前は 0.08+…+0.15sv で、遅くても損傷が大きかった)
           state.fx.cab = { t0: performance.now(), sev: Math.max(0.15, Math.min(1, sv)) };
           recordMiss('1番を乗り越えて、キャビンにぶつかった');
           setStatus((vI < 100 ? 'コツン…' : vI < 260 ? 'ドン!' : 'ドーン!') + '1番を乗り越えて、キャビンにぶつかりました!');
@@ -1572,6 +1608,38 @@
     requestAnimationFrame(syncDynamicPath);
   }
   requestAnimationFrame(syncDynamicPath);
+
+  // 道板が、道板の手前で待っている(入場中の)車に当たったら、事故(2026-10-13 メモ1)。
+  // 道板は、床下から真横に出る(rampT 0〜0.55)→先端が地面へ傾く(0.55〜1)。描画(main.js drawRamp)と同じ形で、板の線(厚み10px)が車の輪郭に入ったら当たり
+  function rampPlatePoints() {
+    var fm = window.FLOOR_MECH, rt = fm.rampT(), top = cfg.ramp.top, bot = cfg.ramp.bottom;
+    if (rt <= 0) return [];
+    var len = Math.hypot(bot[0] - top[0], bot[1] - top[1]), slide = Math.min(1, rt / 0.55), u = Math.max(0, (rt - 0.55) / 0.45);
+    u = u * u * (3 - 2 * u);
+    var vy = cfg.ramp.groundY - top[1], vx = Math.sqrt(Math.max(0, len * len - vy * vy)), ang = Math.atan2(vy, vx) * u;
+    var ox = top[0] - len * (1 - slide), oy = top[1], pts = [];
+    for (var t = 0; t <= 1.0001; t += 0.04) pts.push([ox + t * len * Math.cos(ang), oy + t * len * Math.sin(ang)]);
+    return pts;
+  }
+  function checkRampHit() {
+    var car = state.car, fm = window.FLOOR_MECH;
+    if (T6 || !car || !fm || !fm.rampT || state.accident || state.frozen || car.seated || car.accident) return;
+    if ((car.phase !== 'ready' && car.phase !== 'entering') || car.progress > 1) return;   // 待機中・入場中の車だけ(道板の上に乗った車は対象外)
+    var rt = fm.rampT(); if (rt <= 0 || rt >= 0.999) return;   // 出し入れの動きの途中だけ(出きって地面に着いた板に、待っている車が当たることは無い)
+    var pts = rampPlatePoints(); if (!pts.length) return;
+    var roof = fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y], 0), x0 = car.x - car.leftTireX;
+    for (var i = 0; i < pts.length; i++) {
+      var px = pts[i][0], py = pts[i][1];
+      if (px < x0 || px > x0 + car.w) continue;
+      if (py + 10 > roof(px) && py < car.y - 14) {   // 板が、車の屋根の輪郭〜車の下(地上高 約14px)の間に入ったら当たり
+        impact(car, 'ramp', 220);
+        recordMiss('道板が、待機中の車に当たった', 'major');
+        wreck(car, '道板を出す動きが、道板の手前にいる車に当たりました。車がいない時に出してください。');
+        return;
+      }
+    }
+  }
+  setInterval(checkRampHit, 40);
 
   // --- 入力配線 ---
   // 離した後も惰性で滑らかに減速するため、ボタンを離しても速度が残っている間はループを続ける

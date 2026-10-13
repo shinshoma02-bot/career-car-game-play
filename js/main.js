@@ -431,7 +431,7 @@
   // 道板を出したまま・道板の上に車がいる時は事故: 道板は地面に引っかかって置き去りになり、車は道板から落ちる。
   var AN_OUT_X = -(cfg.stage.w + 420), AN_IN_X = cfg.stage.w + 420;   // 出発は左(進行方向)へ、入場は右から左へ(2026-10-09 ユーザー指示)
   var AN = { off: IS6B ? 0 : AN_IN_X, kind: null, t0: 0, dur: 0, unsafe: false, cb: null, joltDone: false };
-  function startOut() { AN.kind = 'out'; AN.t0 = performance.now(); AN.dur = AN.unsafe ? 4.2 : 2.9; AN.joltDone = false; }
+  function startOut() { AN.kind = 'out'; AN.t0 = performance.now(); AN.dur = AN.unsafe ? 4.2 : 2.9; AN.joltDone = false; AN.rampFall = null; }
   function animStep() {
     if (!AN.kind) return;
     var t = (performance.now() - AN.t0) / 1000, gs = window.GAME_STATE;
@@ -455,9 +455,9 @@
     // 出発: 少し待って(エンジンが掛かる)から、だんだん加速して左(進行方向)へ走り去る。事故の時は、少し動いて道板が引っかかり、ガクンと止まってから走り出す
     var LUR = AN.unsafe ? 50 : 0, wait = AN.unsafe ? 0.5 : 0.45, hold = AN.unsafe ? 0.9 : 0, tt, off = 0;
     if (t < wait) off = 0;
-    else if (AN.unsafe && t < wait + 0.45) { var q = (t - wait) / 0.45; off = -LUR * q * (2 - q); }   // 道板が地面に引っかかるまで進む
+    else if (AN.unsafe && t < wait + 0.45) { var q = (t - wait) / 0.45; off = -LUR * q * (2 - q); if (gs && gs.fx && Math.random() < 0.6) (gs.fx.parts || (gs.fx.parts = [])).push({ k: 'spark', x: cfg.ramp.bottom[0] + Math.random() * 14, y: cfg.ramp.groundY - 2, vx: 60 + Math.random() * 140, vy: -(40 + Math.random() * 120), t0: performance.now(), life: 380, size: 2.4, rot: 0, vr: 0 }); }   // 道板が地面に引っかかるまで進む(先端が地面をこする火花)
     else if (t < wait + 0.45 + hold) { off = -LUR; if (!AN.joltDone) { AN.joltDone = true; if (gs && gs.fx) gs.fx.shake = { t0: performance.now(), dur: 900, amp: 11 }; } }   // 引っかかってガクンと止まる
-    else { tt = Math.max(0, (t - wait - (AN.unsafe ? 0.45 + hold : 0))) / (AN.dur - wait - (AN.unsafe ? 0.45 + hold : 0)); off = -LUR + (AN_OUT_X + LUR) * tt * tt; }
+    else { if (AN.unsafe && !AN.rampFall) AN.rampFall = { t0: performance.now(), hit: 0 }; tt = Math.max(0, (t - wait - (AN.unsafe ? 0.45 + hold : 0))) / (AN.dur - wait - (AN.unsafe ? 0.45 + hold : 0)); off = -LUR + (AN_OUT_X + LUR) * tt * tt; }
     AN.off = Math.max(AN_OUT_X, off);
     if (t >= AN.dur) { AN.off = AN_OUT_X; AN.kind = null; if (AN.cb) { var f2 = AN.cb; AN.cb = null; f2(); } }
   }
@@ -520,7 +520,7 @@
     ctx.drawImage(backImg, 0, 0);
     ctx.restore();
 
-    if (AN.kind === 'out' && AN.unsafe && AN.off) { ctx.save(); ctx.translate(-AN.off, 0); drawRamp(tilt); ctx.restore(); }   // 事故: 道板は地面に引っかかって置き去り
+    if (AN.kind === 'out' && AN.unsafe && AN.off) { ctx.save(); ctx.translate(-AN.off, 0); if (AN.rampFall) drawRampFall(); else drawRamp(tilt); ctx.restore(); }   // 事故: 道板は地面に引っかかって置き去り
     else drawRamp(tilt); // 道板は先端が地面に着くよう、傾きに合わせて角度を計算し直す(画面座標で描く)
 
     beginRig(tilt);
@@ -638,10 +638,17 @@
     var grounded = fm && fm.MECH.tireOut && fm.MECH.jack <= o.jackContact - o.airSusDrop;
     var target = grounded ? o.airSusDrop : 0, step = o.airSusDrop * dt / 1.0;
     airSusCur = airSusCur < target ? Math.min(target, airSusCur + step) : Math.max(target, airSusCur - step);
+    // 台車のタイヤが重みで少し沈み込む(2026-10-13 ユーザー指示)。タイヤを出して接地し、ジャッキの足が地面を押していない(jack ≤ jackContact)間は、荷重がタイヤにかかって潰れる。
+    // ジャッキが伸びて荷重が足に移ると(jack > jackContact)、タイヤは戻る(少し行き過ぎて揺れ戻る=ばね)。車体は、潰れた分だけ下がる
+    var lift = fm ? fm.MECH.jack - o.jackContact : 0, load = fm && fm.MECH.tireOut ? Math.max(0, Math.min(1, 1 - lift / 4)) : 0;
+    var sagTarget = TIRE_SAG_PX * load, h = Math.min(0.05, dt);
+    tireSagV += ((sagTarget - tireSag) * 140 - tireSagV * 13) * h;
+    tireSag += tireSagV * h;
   }
+  var TIRE_SAG_PX = 3.5, tireSag = 0, tireSagV = 0;
   function airSusTiltDeg() {
     var k = cfg.outrigger.kingpin, w = cfg.outrigger.wheel;
-    return Math.asin(Math.min(1, airSusCur / (w.cx - k[0]))) * 180 / Math.PI;
+    return Math.asin(Math.min(1, (airSusCur + tireSag) / (w.cx - k[0]))) * 180 / Math.PI;   // 車体が下がる量 = エアサスの沈み + タイヤの潰れ
   }
 
   // 入場・出発で動いている間、トラクタのタイヤも転がす(トラクタ画像に焼き込まれたタイヤの上に、同じ絵を回して重ねる。止まっている時は重ねない)
@@ -1227,8 +1234,14 @@
     sg.addColorStop(0, 'rgba(5,7,8,0.97)'); sg.addColorStop(0.6, 'rgba(8,10,11,0.93)'); sg.addColorStop(1, 'rgba(10,13,14,0.6)');
     ctx.fillStyle = sg;
     ctx.beginPath(); ctx.arc(cx, fcy, 64 * sc, Math.PI, Math.PI * 2); ctx.closePath(); ctx.fill();
-    if (e < 0.5) { drawTire(cx, cy, r); drawFender(w, cx, fcy, sc); }
-    else { drawFender(w, cx, fcy, sc); drawTire(cx, cy, r); }
+    function tireSquashed() {   // 重みで潰れたタイヤ: 接地点(下端)を支点に、縦に縮めて少し横に広げる
+      var q = Math.max(-0.05, Math.min(0.12, tireSag / r)), sy = 1 - q, sx = 1 + 0.5 * q;
+      ctx.save(); ctx.translate(cx, cy + r); ctx.scale(sx, sy); ctx.translate(-cx, -(cy + r));
+      drawTire(cx, cy, r);
+      ctx.restore();
+    }
+    if (e < 0.5) { tireSquashed(); drawFender(w, cx, fcy, sc); }
+    else { drawFender(w, cx, fcy, sc); tireSquashed(); }
     ctx.restore();
   }
   function drawFender(w, cx, cy, sc) {
@@ -1304,22 +1317,8 @@
     ctx.restore();
   }
   // 道板: 上面(車のタイヤが通る面)の先端が地面に着く。厚みは付け根側だけで、先端は斜めに削れている
-  function drawRamp(tilt) {
-    // 出し入れ: 0〜0.55は床下から真横にスライド(後端から出てくるように後端より後ろだけ見せる)、0.55〜1は地面へ傾ける
-    var fm = window.FLOOR_MECH, rt = fm ? fm.rampT() : 1;
-    if (rt <= 0) return;
-    var slide = Math.min(1, rt / 0.55), u = Math.max(0, (rt - 0.55) / 0.45);
-    u = u * u * (3 - 2 * u);
-    var top = rigToWorld(cfg.ramp.top, tilt), bot = cfg.ramp.bottom;
-    var len = Math.hypot(bot[0] - cfg.ramp.top[0], bot[1] - cfg.ramp.top[1]);
-    var vy = cfg.ramp.groundY - top[1], vx = Math.sqrt(Math.max(0, len * len - vy * vy));
-    var angle = Math.atan2(vy, vx) * u;
-    var thick = 10, bevel = 60;
-
-    ctx.save();
-    if (slide < 1) { ctx.beginPath(); ctx.rect(top[0] - 4, top[1] - 80, len + 120, 200); ctx.clip(); }
-    ctx.translate(top[0] - len * (1 - slide), top[1]);
-    ctx.rotate(angle);
+  // 道板の板の描画(原点=根元。右へ len、下へ厚み thick。先端 bevel の長さは薄く削がれる)
+  function drawRampPlate(len, thick, bevel) {
     ctx.beginPath();
     ctx.moveTo(0, 0); ctx.lineTo(len, 0); ctx.lineTo(len - bevel, thick); ctx.lineTo(0, thick);
     ctx.closePath();
@@ -1339,6 +1338,44 @@
     ctx.strokeStyle = '#2c3135';
     ctx.lineWidth = 1.2;
     ctx.stroke();
+  }
+  // 事故の出発で置き去りになった道板: 根元が外れて、先端を支点に倒れ、「カランコロン」と跳ねて地面に落ち着く(2026-10-13 メモ2)
+  function drawRampFall() {
+    var rf = AN.rampFall, now = performance.now(), ft = (now - rf.t0) / 1000, top = cfg.ramp.top, bot = cfg.ramp.bottom, G = cfg.ramp.groundY;
+    var len = Math.hypot(bot[0] - top[0], bot[1] - top[1]), ang0 = Math.atan2(G - top[1], Math.sqrt(Math.max(1, len * len - (G - top[1]) * (G - top[1]))));
+    var ang = ft > 2 ? 0 : ang0 * Math.exp(-4.2 * ft) * Math.abs(Math.cos(9 * ft));   // 倒れて(0)、跳ね返り、だんだん小さくなる
+    var tipX = bot[0] + 30 * (1 - Math.exp(-3 * ft)), tipY = G - 4;
+    var rx = tipX - len * Math.cos(ang), ry = tipY - len * Math.sin(ang);
+    var gst = window.GAME_STATE, parts = gst && gst.fx ? (gst.fx.parts || (gst.fx.parts = [])) : null;
+    var BOUNCE = [0.1745, 0.5236, 0.8727];   // 板が地面に着く時刻(秒)
+    while (rf.hit < BOUNCE.length && ft >= BOUNCE[rf.hit]) {
+      if (parts) { var strong = 1 - rf.hit * 0.3; for (var q = 0; q < 6 + Math.round(8 * strong); q++) { var dust = q % 2 === 0; parts.push({ k: dust ? 'dust' : 'spark', x: rx + (Math.random() - 0.3) * 30, y: G - 3, vx: (Math.random() - 0.4) * (dust ? 110 : 260) * strong, vy: -(dust ? 30 : 120 + Math.random() * 160) * strong, t0: now, life: dust ? 600 : 420, size: dust ? 6 + 4 * strong : 2.6, rot: 0, vr: 0 }); } }
+      if (gst && gst.fx && rf.hit === 0) gst.fx.shake = { t0: now, dur: 600, amp: 6 };
+      rf.hit++;
+    }
+    ctx.save();
+    ctx.translate(rx, ry);
+    ctx.rotate(ang);
+    drawRampPlate(len, 10, 60);
+    ctx.restore();
+  }
+  function drawRamp(tilt) {
+    // 出し入れ: 0〜0.55は床下から真横にスライド(後端から出てくるように後端より後ろだけ見せる)、0.55〜1は地面へ傾ける
+    var fm = window.FLOOR_MECH, rt = fm ? fm.rampT() : 1;
+    if (rt <= 0) return;
+    var slide = Math.min(1, rt / 0.55), u = Math.max(0, (rt - 0.55) / 0.45);
+    u = u * u * (3 - 2 * u);
+    var top = rigToWorld(cfg.ramp.top, tilt), bot = cfg.ramp.bottom;
+    var len = Math.hypot(bot[0] - cfg.ramp.top[0], bot[1] - cfg.ramp.top[1]);
+    var vy = cfg.ramp.groundY - top[1], vx = Math.sqrt(Math.max(0, len * len - vy * vy));
+    var angle = Math.atan2(vy, vx) * u;
+    var thick = 10, bevel = 60;
+
+    ctx.save();
+    if (slide < 1) { ctx.beginPath(); ctx.rect(top[0] - 4, top[1] - 80, len + 120, 200); ctx.clip(); }
+    ctx.translate(top[0] - len * (1 - slide), top[1]);
+    ctx.rotate(angle);
+    drawRampPlate(len, thick, bevel);
     ctx.restore();
   }
   // ぶつかった車のグシャッ(前端を固定して前後に縮み、少し膨らんで戻る)の拡大率
@@ -1525,7 +1562,8 @@
     if (cb0) {
       var ct = (performance.now() - cb0.t0) / 1000, slideT = cb0.hit ? Math.min(ct, cb0.tImp) : Math.min(ct, cb0.tStop);
       lunge = cb0.v0 * slideT - 0.5 * cb0.a * slideT * slideT;
-      if (cb0.hit && ct > cb0.tImp) { var ce2 = ct - cb0.tImp, pen = Math.min(150, 0.42 * cb0.vImp); lunge = cb0.G + pen * (1 - Math.exp(-ce2 * 13)) - 0.07 * cb0.vImp * Math.min(1, ce2 * 1.6) * (1 - Math.exp(-ce2 * 2)); cabPitch = -Math.min(5, cb0.vImp / 50) * (1 - Math.exp(-ce2 * 9)) * Math.exp(-ce2 * 0.8); }
+      // 食い込み pen: 遅い(vImp 100で約16px)はコツン、速い(300以上)でめり込む(2026-10-13 メモ3。以前は 0.42×vImp で、遅くても大きくめり込んだ)
+      if (cb0.hit && ct > cb0.tImp) { var ce2 = ct - cb0.tImp, pen = Math.min(150, 0.0016 * cb0.vImp * cb0.vImp); lunge = cb0.G + pen * (1 - Math.exp(-ce2 * 13)) - 0.07 * cb0.vImp * Math.min(1, ce2 * 1.6) * (1 - Math.exp(-ce2 * 2)); cabPitch = -Math.min(5, cb0.vImp / 50) * (1 - Math.exp(-ce2 * 9)) * Math.exp(-ce2 * 0.8); }
       var deckX = cfg.floors.defs.F1.x0, over = deckX - (car.x - lunge) + 8;   // 前のタイヤが床の先端を越えた距離
       if (over > 0) cabDrop = Math.min(48, over * 0.55);
       if (!cb0.hit) cabDrop = Math.max(cabDrop, 34 * Math.min(1, ct / (cb0.tStop + 0.25)));   // 届かずに止まる: 前のタイヤが床の端から落ちて、鼻が下がる(脱輪)
