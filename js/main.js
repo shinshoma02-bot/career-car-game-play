@@ -1792,7 +1792,7 @@
   }
   function drawSwitchGroupFrame() {
     var ui = window.SWITCH_UI, groups = NA && NA.switchGroups, gs = window.GAME_STATE;
-    if (!groups) return;
+    if (!groups || window.UI_HIDDEN) return;   // UI非表示の時は、スイッチの黄色い枠(光る枠)を描かない
     var cur = ui && ui.current, glow = images.hint_glow, idleHint = !cur && gs && gs.hints;
     if (!cur && !idleHint) return;
     var pulse = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(performance.now() / 420));
