@@ -1069,7 +1069,7 @@
   function drawBridgePlate(anchor, len, deg) {
     var rail = 7, top = 6;
     ctx.save();
-    ctx.translate(anchor[0], anchor[1]);
+    ctx.translate(anchor[0], anchor[1] + top);   // 板の上面(網の上の縁)を、根元の線(車が乗る面・4番の床の高さ)に合わせる(2026-10-13 段差の修正)
     ctx.rotate(deg * Math.PI / 180);
     // 網の上面
     ctx.save();
