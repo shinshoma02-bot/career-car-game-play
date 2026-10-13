@@ -163,8 +163,9 @@
     fm.holdStop && fm.holdStop();
     fm.jackHoldStop && fm.jackHoldStop();
     // 出発の仕方: 道板を出したまま・道板の上に車がいる時は、事故になる(ミス1回。トレーラーが走り去る演出は main.js の TRAILER_ANIM)
-    var unsafe = null;
-    if (!accident && window.TRAILER_ANIM && window.TRAILER_ANIM.unsafeDeparture) unsafe = window.TRAILER_ANIM.unsafeDeparture();
+    var unsafe = null, unsafeAnim = null;
+    if (window.TRAILER_ANIM && window.TRAILER_ANIM.unsafeDeparture) unsafeAnim = unsafe = window.TRAILER_ANIM.unsafeDeparture();   // 事故で中止した時も、道板を出したままなら、置き去り・落下の演出にする(減点は二重にしない)
+    if (accident) unsafe = null;
     if (unsafe) { stats.penalty += Math.round(SCORE.perMajor * mult()); stats.majors++; accident = true; reason = unsafe; }   // 重いミス1回として減点
     refreshBar();
     var title = accident ? '事故で作業中止' : (cleared ? 'クリア!' : (mode === 'real' ? 'ミスで終了' : '荷役を終え出発'));
@@ -185,7 +186,7 @@
     lines.forEach(function (l) { var p = document.createElement('p'); p.textContent = l; $('resultBody').appendChild(p); });
     $('resultScore').textContent = 'スコア ' + score();
     // 結果は、トレーラーが走り去ってから出す(演出が無い環境では、すぐ)
-    if (window.TRAILER_ANIM && window.TRAILER_ANIM.depart) window.TRAILER_ANIM.depart(!!unsafe, function () { $('resultOverlay').style.display = 'flex'; });
+    if (window.TRAILER_ANIM && window.TRAILER_ANIM.depart) window.TRAILER_ANIM.depart(!!unsafeAnim, function () { $('resultOverlay').style.display = 'flex'; });
     else $('resultOverlay').style.display = 'flex';
   }
 

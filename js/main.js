@@ -918,7 +918,13 @@
   // c=シリンダーの定義(anchor=車体側の根元)、L=今の取付点間の長さ、deg=根元から棚側へ向かう角度
   function drawCylinderArt(c, L, deg) {
     var at = c.anchor;
-    if (!c.two) {
+    if (c.tele && NA.cylInfo.cyl2_rod && !c.two) {
+      // 入れ子式: 外筒 → 1段目 → ロッドの順に伸びる。1か所が出る長さは、外筒の長さ以内(取付点の間隔=棚の高さは変えない。2026-10-13 ユーザー指示)
+      var bt = Math.min(c.barrel, L - 6), st = Math.max(20, bt * 0.95), e1 = Math.min(Math.max(0, L - bt), st);
+      drawStrip('cyl2_rod', st, at, deg, L - st);
+      drawStrip('cyl2_stage1', st, at, deg, bt + e1 - st);
+      drawStrip('cyl2_barrel', bt, at, deg, 0);
+    } else if (!c.two) {
       drawStrip(c.rodName || 'cyl_rod', L - 6, at, deg, 6);
       drawStrip(c.barrelName || 'cyl_barrel', c.barrel, at, deg, 0);
     } else {
@@ -1642,7 +1648,11 @@
         car = Object.create(car); car.x = rp[0]; car.y = rp[1];
         rotDeg += curTilt * (1 - onRig);
       }
+      // 道板の手前(地面)で待っている車は、トレーラーが走り出しても引っ張られず、地面に残る(2026-10-13 ユーザー指示)
+      var stay = AN.kind === 'out' && AN.off && st.car.x >= cfg.ramp.bottom[0] - 2 && !st.car.accident;
+      if (stay) { ctx.save(); ctx.translate(-AN.off, 0); }
       drawDrivingCar(car, rotDeg);
+      if (stay) ctx.restore();
     }
   }
 

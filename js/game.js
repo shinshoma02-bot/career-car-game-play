@@ -1624,7 +1624,7 @@
   }
   function checkRampHit() {
     var car = state.car, fm = window.FLOOR_MECH;
-    if (T6 || !car || !fm || !fm.rampT || state.accident || state.frozen || car.seated || car.accident) return;
+    if (T6 || !car || !fm || !fm.rampT || state.accident || state.frozen || car.seated || car.accident || car.rampHit) return;   // 1台につき1回(当たったあと、同じ車で繰り返し数えない)
     if ((car.phase !== 'ready' && car.phase !== 'entering') || car.progress > 1) return;   // 待機中・入場中の車だけ(道板の上に乗った車は対象外)
     var rt = fm.rampT(); if (rt <= 0 || rt >= 0.999) return;   // 出し入れの動きの途中だけ(出きって地面に着いた板に、待っている車が当たることは無い)
     var pts = rampPlatePoints(); if (!pts.length) return;
@@ -1633,9 +1633,11 @@
       var px = pts[i][0], py = pts[i][1];
       if (px < x0 || px > x0 + car.w) continue;
       if (py + 10 > roof(px) && py < car.y - 14) {   // 板が、車の屋根の輪郭〜車の下(地上高 約14px)の間に入ったら当たり
+        // 即中止にはしない(2026-10-13 ユーザー指示): ぶつかった衝撃とミス1回。作業は続けられる(ぶつかったまま車が積めるかは、道板を動かしてから判定)
+        car.rampHit = true;
         impact(car, 'ramp', 220);
         recordMiss('道板が、待機中の車に当たった', 'major');
-        wreck(car, '道板を出す動きが、道板の手前にいる車に当たりました。車がいない時に出してください。');
+        setStatus('道板が車に当たりました!車がいない時に出してください。(ミス: ' + state.misses + ')');
         return;
       }
     }
