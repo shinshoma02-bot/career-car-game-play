@@ -43,7 +43,7 @@ window.TRAILER_CONFIG = {
     "1": { "tireX": 515.2, "deckY": 294.2, "rot": -1.8, "floor": "F1", "hit": [485, 87, 454.5, 203], "stopKind": "none", "chockRequired": true, "defaultChock": true, "chockRange": { "front": 0, "rear": 180, "divisions": 30, "step": 6 }, "note": "基準の輪止め(tireX)は1番フロアの先端(floors.defs.F1.x0=456。タイヤの中心はそこから24px(約0.2m)後ろ)に置く。前(キャビン側)へは動かせない。後ろ(手前)へ120cm(2026-10-06 ユーザー指示)" },
     "2": { "tireX": 1061, "deckY": 316, "rot": 0,    "floor": "F2", "hit": [957.2, 87, 522.2, 225], "stopKind": "hole", "chockRange": { "rear": 120, "divisions": 20, "step": 6 } },
     "3": { "tireX": 1650, "deckY": 312, "rot": 0,    "floor": "F3", "hit": [1560, 72, 591, 239], "stopKind": "hole", "chockRange": { "rear": 102, "divisions": 17, "step": 6 } },
-    "4": { "tireX": 509,  "deckY": 472, "rot": 0,    "floor": null, "hit": [469, 304, 528.9, 138], "stopKind": "stopper", "chockRange": { "rear": 120, "divisions": 20, "step": 6 } },
+    "4": { "tireX": 509,  "deckY": 457, "rot": 0,    "floor": null, "hit": [469, 304, 528.9, 138], "stopKind": "stopper", "chockRange": { "rear": 120, "divisions": 20, "step": 6 } },
     "5": { "tireX": 1083.2, "deckY": 525, "rot": 0,    "floor": null, "carrier": "F5", "hit": [1017.5, 326, 546.5, 181], "stopKind": "none", "chockRequired": true, "chockStart": "front", "chockRange": { "front": 44, "rear": 88, "divisions": 33, "step": 4 } },
     "7": { "tireX": 1458.1, "deckY": 510, "rot": 0,    "floor": null, "carrier": "F7", "hit": [1332, 300, 318, 150], "stopKind": "hole", "noChock": true, "instantLid": true, "note": "宙段フロア(7台目)。タイヤ位置は宙段フロアのローカル座標(格納時の平らな姿勢=下段の床の高さy510、前端x1427)。輪止めは無く、タイヤ落としの穴だけ。格納中は下段の窪みにはまっていて穴は関係なく、上げた時には最初から穴が空いている(落し蓋の操作は無い)" },
     "6": { "tireX": 1626, "deckY": 525, "rot": 0,    "floor": null, "hit": [1564, 326, 486, 181], "maxWidthM": 1.755, "maxWidthNoTireM": 1.48, "restrictedNote": "6番は車幅1.75m以下(軽自動車・5ナンバー・ステップワゴンクラスまで)の車のみ。幅の広い車は6番に載せられません", "stopKind": "none", "chockRequired": true, "chockRange": { "front": 72, "rear": 104, "divisions": 22, "step": 8 } }
@@ -100,7 +100,7 @@ window.TRAILER_CONFIG = {
 
   "slidePlate": { "len": 50, "thick": 7, "note": "スライド板: 1番フロア後端(x1=850)から2番側へ出る板(len px≒0.44m=1番と2番の隙間ぶん。2026-10-07 ユーザー指示で半分に)。しまうと1番フロアの下に入る。出ている間は1番へ渡れる(1番↔2番がつながる条件)が、1番を上げた時に2番の長い車に当たる。実車写真(2026-10-07)準拠、数値は仮"},
   "f2Flap": { "len": 70, "note": "2番扇動板: 2番フロア前端(x0から後方へlen px≒0.6m、実車は1m未満)のメッシュ床。ヒンジで外側に開くと、その範囲で4番の車の屋根と干渉しなくなる。開いている間は1番↔2番の道が切れる" },
-  "bridgePlate": { "anchor": [936.5, 472], "stowedX": 936.5, "tipX": 1005, "note": "4番フロア後端が支点(ヒンジ)。格納時は下向きに垂れる。搬出時は5番フロアの位置に関わらず、5番をスロープにセットした時の前端の高さ(tipXの位置)まで固定で倒れる" },
+  "bridgePlate": { "anchor": [936.5, 457], "stowedX": 936.5, "tipX": 1005, "note": "4番フロア後端が支点(ヒンジ)。格納時は下向きに垂れる。搬出時は5番フロアの位置に関わらず、5番をスロープにセットした時の前端の高さ(tipXの位置)まで固定で倒れる" },
 
   "ramp": { "top": [2053, 518], "bottom": [2366, 577], "groundY": 577, "startX": 2605 },
 
