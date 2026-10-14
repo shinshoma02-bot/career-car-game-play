@@ -702,5 +702,120 @@
       9,
       9
     ]
+  },
+  "sw_engine_remote": {
+    "size": [
+      46,
+      92
+    ],
+    "slots": [
+      [
+        23,
+        26
+      ],
+      [
+        23,
+        42
+      ]
+    ],
+    "slotNames": [
+      "始動",
+      "停止"
+    ],
+    "cap": "btn_sq*",
+    "lamp": [
+      23,
+      67
+    ],
+    "lampArt": "lamp_amber*",
+    "note": "エンジンリモートスイッチ(マニュアル p15 の 29・32)。上=始動・下=停止。lamp=エンジン確認ランプ(エンジンが回っている間 点灯)"
+  },
+  "sw_toggle_main_on": {
+    "size": [
+      40,
+      60
+    ],
+    "pivot": [
+      19,
+      24
+    ]
+  },
+  "sw_toggle_main_off": {
+    "size": [
+      40,
+      60
+    ],
+    "pivot": [
+      19,
+      24
+    ]
+  },
+  "sw_toggle_pto_on": {
+    "size": [
+      40,
+      60
+    ],
+    "pivot": [
+      19,
+      24
+    ]
+  },
+  "sw_toggle_pto_off": {
+    "size": [
+      40,
+      60
+    ],
+    "pivot": [
+      19,
+      24
+    ]
+  },
+  "limit_switch": {
+    "size": [
+      34,
+      30
+    ],
+    "pivot": [
+      13,
+      16
+    ],
+    "rollerAt": [
+      21.4,
+      6.0
+    ]
+  },
+  "limit_switch_on": {
+    "size": [
+      34,
+      30
+    ],
+    "pivot": [
+      13,
+      16
+    ],
+    "rollerAt": [
+      25.9,
+      14.2
+    ]
+  },
+  "lamp_amber": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
+  },
+  "lamp_amber_off": {
+    "size": [
+      18,
+      18
+    ],
+    "pivot": [
+      9,
+      9
+    ]
   }
 }

@@ -130,7 +130,23 @@
   // ヤード(積み下ろしの場所)の背景・地面。グラフィック部門の納品(R21)があれば、設定 cfg.yard のパスの画像を読んで、ベタ塗りの代わりに描く。無ければ従来のまま。
   // cfg.yard = { bg: 背景(空・ヤードの景色。ステージ全面 2520×724)、ground: 地面(同サイズの透明PNG。地面 y=577 より下)、frameBack: 背景色を含まない透明な奥の枠(今の frame_back は背景色 #5a616c 込みの不透明なので、
   //   ヤードを見せる時は、これに差し替えて描く)、v: ?v= の番号 }。frameBack が無いまま bg・ground だけ指定しても、不透明な奥の枠がヤードを隠すだけ(エラーにはならない)。
-  var yardImgs = { bg: null, ground: null, back: null, tractor: null }, YARD = cfg.yard || null;
+  // ---- 積み込む場所(D39・R25): 今のヤードのほか、港の岸壁・中古車オークション会場・自動車工場の構内。画面を開くたびにランダム(#...&place=port で指定)。昼・夕方・曇り・夜の色の重ねと組み合わせる ----
+  var PLACE_LIST = [
+    { id: 'yard', name: 'ヤード', w: 4 },
+    { id: 'port', name: '港の岸壁', w: 2, lamps: [[380, 184], [1140, 184], [1880, 184]], lampR: 160 },
+    { id: 'auction', name: '中古車オークション会場', w: 2, lamps: [[443, 367], [1183, 367], [1923, 367], [2443, 367]] },
+    { id: 'factory', name: '自動車工場の構内', w: 2, lamps: [[443, 367], [1183, 367], [1923, 367], [2443, 367]] }
+  ];
+  var PLACE_PICK = (function () {
+    var m = /[?&#]place=(\w+)/.exec(location.hash + location.search), want = m && m[1], i, tot = 0, r;
+    for (i = 0; i < PLACE_LIST.length; i++) if (PLACE_LIST[i].id === want) return PLACE_LIST[i];
+    PLACE_LIST.forEach(function (y) { tot += y.w; }); r = Math.random() * tot;
+    for (i = 0; i < PLACE_LIST.length; i++) { r -= PLACE_LIST[i].w; if (r < 0) return PLACE_LIST[i]; }
+    return PLACE_LIST[0];
+  })();
+  window.YARD_PLACE = PLACE_PICK;
+  var yardImgs = { bg: null, ground: null, back: null, tractor: null }, YARD = cfg.yard ? Object.assign({}, cfg.yard) : null;
+  if (YARD && PLACE_PICK.id !== 'yard') { YARD.bg = 'assets/common/yard/yard_bg_' + PLACE_PICK.id + '.png'; YARD.ground = 'assets/common/yard/yard_ground_' + PLACE_PICK.id + '.png'; }
   if (YARD) {
     ['bg', 'ground', 'frameBack', 'tractor'].forEach(function (k) {
       if (!YARD[k]) return;
@@ -155,7 +171,7 @@
     return YARD_LIST[0];
   })();
   window.YARD_VARIANT = YARD_PICK;
-  var LAMPS = [[430, 352], [1157, 352], [1900, 352], [2430, 352]];   // 背景の街灯(夜の明かり)
+  var LAMPS = PLACE_PICK.lamps || [[430, 352], [1157, 352], [1900, 352], [2430, 352]], LAMP_R = PLACE_PICK.lampR || 105;   // 背景の街灯(夜の明かり。場所ごと)
   function rgb(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + (a === undefined ? 1 : a) + ')'; }
   function drawYardBack() {   // 背景(+地面)を、場所の色で描く。夕方は空の地平線を赤く、曇りは色をくすませる
     var Y = YARD_PICK;
@@ -170,7 +186,7 @@
     ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = rgb(Y.mul2 || Y.mul); ctx.fillRect(0, 0, cfg.stage.w, cfg.stage.h);
     if (Y.lamps) {
       ctx.globalCompositeOperation = 'lighter';
-      LAMPS.forEach(function (L) { var g = ctx.createRadialGradient(L[0], L[1], 3, L[0], L[1], 105); g.addColorStop(0, 'rgba(255,225,150,.4)'); g.addColorStop(1, 'rgba(255,225,150,0)'); ctx.fillStyle = g; ctx.fillRect(L[0] - 105, L[1] - 105, 210, 210); });
+      LAMPS.forEach(function (L) { var g = ctx.createRadialGradient(L[0], L[1], 3, L[0], L[1], LAMP_R); g.addColorStop(0, 'rgba(255,225,150,.4)'); g.addColorStop(1, 'rgba(255,225,150,0)'); ctx.fillStyle = g; ctx.fillRect(L[0] - LAMP_R, L[1] - LAMP_R, LAMP_R * 2, LAMP_R * 2); });
     }
     ctx.restore();
   }
@@ -189,7 +205,9 @@
     loadImage(floorSrc('F2')).then(function (img) { images.F2 = NA ? img : cleanF2(img); }),
     loadImage(floorSrc('F3')).then(function (img) { images.F3 = img; }),
     loadImage(floorSrc('F5')).then(function (img) { images.F5 = img; })
-  ].concat(NA && NA.parts ? Object.keys(NA.parts).map(function (k) { return loadImage(newSrc(NA.parts[k])).then(function (img) { images[k] = img; }); }) : [],
+  ].concat(IS6B ? [] : ['limit_switch', 'limit_switch_on'].map(function (k) { return loadImage('assets/common/switches/' + k + '.png?v=1').then(function (img) { images['sw_' + k] = img; }, function () { }); }),
+    IS6B ? [] : ['hook', 'winch_body', 'winch_handle'].map(function (k) { return loadImage('assets/common/tiedown/' + k + '.png?v=1').then(function (img) { images['td_' + k] = img; }, function () { }); }),
+    NA && NA.parts ? Object.keys(NA.parts).map(function (k) { return loadImage(newSrc(NA.parts[k])).then(function (img) { images[k] = img; }); }) : [],
     NA && NA.switchParts ? NA.switchParts.map(function (k) { return loadImage(newSrc(NA.switchDir + k + '.png')).then(function (img) { images[k] = img; }); }) : []);
   Promise.all(loadList).then(function () {
     try { sessionStorage.removeItem('reloadedOnce'); } catch (e) { }
@@ -541,6 +559,8 @@
     drawBogiePanel();   // 台車のタイヤの上: 反対側のフレームも重なって見えるので、くり抜かず緑で塗りつぶす
     if (chk.fg.checked) ctx.drawImage(images.fg, 0, 0);
     drawPillarScale();
+    drawLimitSwitch();
+    lashQueue.forEach(function (q) { drawLashing(q[0], q[1], q[2], q[3]); });
     if (chk.floors.checked) drawJack('leg');
     if (chk.wheel.checked) drawTrailerWheel();
     drawChocks('blocks'); // 輪止め本体は小さく、下段では前景フレームの梁に隠れるので手前に描く
@@ -987,6 +1007,38 @@
     ctx.restore();
   }
 
+  // 中央柱(3番前の継ぎ目)の上限のリミットスイッチ(D43。マニュアルの「上限でリミットスイッチが働いて止まる」)。上限に着くと、ローラーのレバーが倒れる
+  var LIMIT_SW = [1492, 230];   // 原点=レバーの軸(pivot)。ローラーが、上限の位置の金具の上の面に当たる所
+  function drawLimitSwitch() {
+    var fm = window.FLOOR_MECH, on = !!(fm && fm.midAtLimit && fm.midAtLimit()), im = images[on ? 'sw_limit_switch_on' : 'sw_limit_switch'];
+    if (!im || IS6B) return;
+    ctx.drawImage(im, LIMIT_SW[0] - 13, LIMIT_SW[1] - 16);
+  }
+  // 固縛(D43): 車のタイヤの前後にフックを掛け、床の荷締機のハンドルを回してワイヤを張る。回数(car.lashTurns)が増えるほど張る。車の座標(前タイヤの接地点が原点・後ろが+x・床の傾きで回す)で描く
+  var LASH_TURNS_DRAW = 6;
+  function drawLashing(num, c, pos, rotDeg) {
+    var car = c.live; if (!car || IS6B || !images.td_hook || !images.td_winch_body || !images.td_winch_handle) return;
+    var gs = window.GAME_STATE, turns = car.lashTurns || 0;
+    if (!turns && !(gs && gs.targetSlot === num)) return;
+    var r = car.wheelRPx || 28, wb = car.wbPx || c.w * 0.6, tight = Math.min(1, turns / LASH_TURNS_DRAW);
+    var target = turns * 120, now = performance.now(), dt = Math.min(0.1, (now - (car.lashT || now)) / 1000);
+    car.lashT = now; car.lashAng = (car.lashAng || 0) + (target - (car.lashAng || 0)) * Math.min(1, dt * 7);
+    ctx.save(); ctx.translate(pos[0], pos[1]); ctx.rotate(rotDeg * Math.PI / 180);
+    [-1, 1].forEach(function (side) {   // -1=前のタイヤ・+1=後ろのタイヤ
+      var tx = side < 0 ? -r * 0.8 : wb + r * 0.8, ty = -r * 0.62, wx = side < 0 ? -r - 42 : wb + r + 42, wy = -13;
+      var hpx = tx + side * 7.6, hpy = ty + 16.5, wox = wx, woy = wy + 5.6;
+      if (turns) {
+        ctx.save(); ctx.strokeStyle = '#25282b'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(hpx, hpy); ctx.quadraticCurveTo((hpx + wox) / 2, (hpy + woy) / 2 + (1 - tight) * 16, wox, woy); ctx.stroke();
+        ctx.strokeStyle = 'rgba(190,195,200,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.restore();
+        ctx.save(); ctx.translate(tx, ty); if (side > 0) ctx.scale(-1, 1); ctx.drawImage(images.td_hook, -2.6, -9); ctx.restore();
+      }
+      ctx.drawImage(images.td_winch_body, wx - 15, wy - 10);
+      ctx.save(); ctx.translate(wx, wy); ctx.rotate(((side < 0 ? 1 : -1) * car.lashAng) * Math.PI / 180); ctx.drawImage(images.td_winch_handle, -4, -4.5); ctx.restore();
+    });
+    ctx.restore();
+  }
   // 中央柱の側面の番号札(0〜30番、5ごと)と赤いテープ(継ぎ目の上限)。手前のフレームの後に重ねる
   function drawPillarScale() {
     var M = NA && NA.midLink, im = images.mid_pillar_scale;
@@ -1648,8 +1700,10 @@
     ctx.restore();
   }
 
+  var lashQueue = [];
   function drawCars() {
     var st = window.GAME_STATE;
+    lashQueue.length = 0;
     if (!st) return;
 
     var fm = window.FLOOR_MECH;
@@ -1663,6 +1717,7 @@
         pos = [c.localX, c.localY];
       }
       drawCarBody(c.img, pos[0], pos[1], c.w, c.h, c.leftTireX, rotDeg, c.live);
+      lashQueue.push([num, c, pos, rotDeg]);   // 固縛の部品は、手前のフレームより前に描く(フレームの梁に隠れないように)
     });
 
     if (st.car && !st.car.seated) {

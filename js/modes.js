@@ -102,6 +102,7 @@
       if (!Object.keys(state.occupied).every(function (n) { var c = state.occupied[n].live; return c && c.locked; })) return false;
       return fm.cycleReady();
     }
+    if (state.lashRequired && state.lashRequired() && state.unlashed && state.unlashed().length) return false;   // ノーマル・ハード: 全ての車を固縛してから完了(D43)
     // 1〜6番がそろっている(宙段の7台目は任意。数だけで判定すると、宙段があるのに5番が空でも完了してしまう)
     if (['1', '2', '3', '4', '5', '6'].some(function (n) { return !state.occupied[n]; })) return false;
     if (state.deckSize >= 7 && !state.occupied['7']) return false;   // 7台のサイクルは、宙段の7台目も積む

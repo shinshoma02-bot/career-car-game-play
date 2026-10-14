@@ -482,6 +482,7 @@
   }
   var hangHold = null, hangRaf = null, hangHitKeys = {};   // hangHitKeys: ぶつかり中のもの(離れるまで減点は1回)
   function hangStart(dir) {
+    var pb = powerBlock(); if (pb) { onWarn(pb); return; }
     hangHold = { dir: dir, last: null, warned: false };
     if (hangRaf === null) hangRaf = requestAnimationFrame(hangStep);
   }
@@ -493,8 +494,9 @@
     if (h.last === null) h.last = ts;
     var dt = Math.min(0.05, (ts - h.last) / 1000); h.last = ts;
     if (dt <= 0) { hangRaf = requestAnimationFrame(hangStep); return; }   // 最初のフレームは時間が進んでいない
+    if (powerBlock()) { hangHold = null; return; }
     var stuck = hangStuck();
-    var nu = Math.max(hangLow(), Math.min(2, MECH.hang + h.dir * HANG.speed * dt));
+    var nu = Math.max(hangLow(), Math.min(2, MECH.hang + h.dir * HANG.speed * (h.dir < 0 ? DOWN_MULT : 1) * dt));
     var onPin = SP_CFG && SP.inserted && h.dir > 0 && MECH.hang <= HANG.loadU + 1e-6;   // 固定ピンが刺さっていて、フロアがピンの高さより下にある → 上げるとピンに当たって、それより奥(上)へは動かない(下げる=来た道を戻る方向は止めない)
     if (onPin) nu = Math.min(nu, HANG.loadU);
     var gs = window.GAME_STATE;
@@ -820,7 +822,33 @@
   var LIFT_DELAY_SEC = 0.8;   // 下ボタン長押しで、シリンダーが5番を押し上げ始めるまでの待ち(秒)
   var holding = null;
   var jackHoldUnused = null;
+  // ---- 動力(D43。浜名ワークスのマニュアル p4): エンジン → PTO(油圧ポンプ)→ 昇降メインスイッチ の順に入れないと、フロアの昇降スイッチは効かない ----
+  // ノーマル・ハードだけ(イージー・シミュレーション・チュートリアルは、最初から全部 ON として扱い、ここでは止めない)。エンジンは最初から掛かっている
+  var POWER = { engine: true, pto: false, main: false };
+  function powerRequired() { var gs = window.GAME_STATE; return !!gs && !gs.freeMode && !gs.hints && !/mode=tutorial/.test(location.hash); }
+  function powerBlock() {
+    if (!powerRequired()) return null;
+    if (!POWER.engine) return 'エンジンが止まっています(エンジンリモートスイッチで始動)';
+    if (!POWER.pto) return 'PTOがOFFです(油圧ポンプが回っていません)。PTOを入れてください';
+    if (!POWER.main) return '昇降メインスイッチがOFFです。ONにしてからフロアを動かしてください';
+    return null;
+  }
+  function powerState() { var req = powerRequired(); return { required: req, engine: !req || POWER.engine, pto: !req || POWER.pto, main: !req || POWER.main }; }
+  function setPower(k, v) {
+    if (k !== 'engine' && k !== 'pto' && k !== 'main') return false;
+    v = !!v;
+    if (v && k === 'pto' && powerRequired() && !POWER.engine) { onWarn('エンジンが止まっているので、PTOは入りません'); return false; }
+    if (v && k === 'main' && powerRequired() && !POWER.pto) { onWarn('PTOを入れてから、昇降メインスイッチを入れてください'); return false; }
+    POWER[k] = v;
+    if (k === 'engine' && !v) { POWER.pto = false; POWER.main = false; }   // エンジンが止まると PTO も切れ、昇降メインも落ちる
+    if (k === 'pto' && !v) POWER.main = false;                              // PTO を切ると、昇降メインも OFF に戻す
+    if (!v) { try { holdStop(); } catch (e) { } try { if (typeof jackHoldStop === 'function') jackHoldStop(); } catch (e) { } }
+    onInfo({ engine: v ? 'エンジン始動' : 'エンジン停止', pto: v ? 'PTO ON' : 'PTO OFF', main: v ? '昇降メイン ON' : '昇降メイン OFF' }[k]);
+    return true;
+  }
+  var DOWN_MULT = 1.3;   // 下げる速さは、上げるより少し速い(上げは油圧、下げは自重。D43)
   function holdStart(endKey, dir) {
+    var pb = powerBlock(); if (pb) { onWarn(pb); return; }
     if (endKey === 'F7') { hangStart(-dir); return; }   // ▲(-1)=上げる
     var ids = floorsOfEnd(endKey), un = unlockedOn(ids);
     if (un.length) { onWarn(un.join('・') + '番を緊締してからフロアを動かしてください'); return; }
@@ -858,6 +886,7 @@
     var h = holding;
     if (h.last === null) h.last = ts;
     var dt = Math.min(0.05, (ts - h.last) / 1000); h.last = ts;
+    if (powerBlock()) { holdStop(); return; }
 
     // ピンに載った判定(rested)と同じ1.5pxの余裕を見る。下の車の屋根すれすれでピンの数値までわずかに届かない時も、5番を持ち上げられるように
     // 5番フロアを下げ切ったら、同じ押し続けでは2番前を上げない(離して押し直すまで止まる)。押し続けの勢いで2番前がピンから浮いて、
@@ -869,7 +898,7 @@
       // 押し直す必要はなく、長押しのまま待てば動き出す
       if (h.dir > 0) { h.liftWait = (h.liftWait || 0) + dt; if (h.liftWait < LIFT_DELAY_SEC) { holdRafId = requestAnimationFrame(holdStep); return; } }
       // 2番前シリンダーの余力で5番フロアを昇降
-      var nl = Math.min(LIFT_MAX, Math.round((MECH.lift + h.dir * RATE * dt) * 10) / 10);
+      var nl = Math.min(LIFT_MAX, Math.round((MECH.lift + h.dir * RATE * (h.dir > 0 ? DOWN_MULT : 1) * dt) * 10) / 10);
       var p5 = nl === MECH.lift ? '可動範囲いっぱい' : liftProblem(nl);
       if (p5) { if (h.warned !== p5) { onWarn(p5); h.warned = p5; } }
       else { MECH.lift = Math.max(0, nl); applyF5(); h.warned = false; }
@@ -891,7 +920,7 @@
     // ピンを抜いた時にすでに freeTop より上なら、そこより上へは上げられないだけで、下げるまでは位置はそのまま(押した瞬間に飛ばない)
     var topOff = er[0];
     if (ENDS[h.end].freeTop !== undefined && !(PINS[h.end] !== null && PINS[h.end] <= pinLimitOff(h.end) + 0.5 && (h.end !== 'F2f' || f5Slope()))) topOff = Math.max(er[0], Math.min(ENDS[h.end].freeTop, ENDS[h.end].off));
-    cand[h.end] = Math.min(lo, Math.max(topOff, Math.round((cand[h.end] + h.dir * RATE * dt) * 10) / 10));
+    cand[h.end] = Math.min(lo, Math.max(topOff, Math.round((cand[h.end] + h.dir * RATE * (h.dir > 0 ? DOWN_MULT : 1) * dt) * 10) / 10));
     if (h.end === 'MID') {
       // 中央継ぎ目を動かすと、3番後ろの斜めシリンダーはシーソーのように連動する
       var d = cand.MID - midPrev;
@@ -900,7 +929,7 @@
     }
     var prob = cand[h.end] === ENDS[h.end].off
       ? (PINS[h.end] !== null && h.dir > 0 && ENDS[h.end].off <= PINS[h.end] + 0.5 ? 'セットピンでこれ以上下がらない'
-        : '可動範囲いっぱい')
+        : (h.dir < 0 && ENDS[h.end].off <= er[0] + 0.6 ? 'リミットスイッチが働いて、これ以上上がりません' : '可動範囲いっぱい'))
       : poseProblem(h.ids, cand);
     if (prob) { if (h.warned !== prob) { onWarn(prob); h.warned = prob; } }
     else { ENDS[h.end].off = cand[h.end]; if (h.end === 'MID') ENDS.F3r.off = cand.F3r; h.warned = false; autoPinTarget(h.end); if (h.end === 'MID') autoPinTarget('F3r'); }
@@ -1023,6 +1052,7 @@
     MECH.bridge = false; MECH.f2Flap = false; MECH.slide = true; slideT.reset(1);
     MECH.lift = 0; MECH.hook = false; MECH.stopper = true;
     MECH.jack = 0; MECH.tireOut = false; MECH.lockR = MECH.lockL = true;
+    POWER.engine = true; POWER.pto = false; POWER.main = false;
     applyF5();
     initPins();   // 棚を走行位置・ピンを初期状態へ。宙段も格納(hang=0)に戻る
     syncHangEnd();
@@ -1043,7 +1073,7 @@
     holdStart: holdStart, holdStop: holdStop,
     atTravel: atTravel, upperConnected: upperConnected, f1Connected: f1Connected,
     cylPin: cylPin, cylLen: cylLen,
-    carRoofY: carRoofY, setFloorArt: setFloorArt, outrigger: OUT, jackLift: jackLift, tireOffGround: tireOffGround, jackTiltDeg: jackTiltDeg,
+    carRoofY: carRoofY, setFloorArt: setFloorArt, powerState: powerState, setPower: setPower, powerBlock: powerBlock, midAtLimit: function () { return ENDS.MID.off <= ENDS.MID.r[0] + 0.6; }, outrigger: OUT, jackLift: jackLift, tireOffGround: tireOffGround, jackTiltDeg: jackTiltDeg,
     jackHoldStart: jackHoldStart, jackHoldStop: jackHoldStop, toggleTireOut: toggleTireOut, moveTire: moveTire, setLock: setLock, workReady: workReady, pressInfo: pressInfo
   };
 })();

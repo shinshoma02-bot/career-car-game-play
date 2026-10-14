@@ -64,3 +64,15 @@
   ベージュの2ボタン押ボタン(`sw_pendant2` + `btn_cap_ue` / `btn_cap_shita` の想定)。宙段を実装するまでは描画のみ。
   宙段の素材と動きは `GRAPHICS_SPEC.md` §4-1c、`assets/semi-6/parts/floor_mid.png`。
 - 追加の押ボタンが要る場合は、グラフィック制作チャットへ依頼する(キャップの文字を増やすだけなら `make_switches.py` の `KANJI` に1行足せば出せる)。
+
+## 6. マニュアルから足したスイッチ(2026-10-14、`make_switches_manual.py`)
+
+浜名ワークスの解体マニュアル(`assets/semi-6/ref/manual/`、p13〜p15)に出てくる部品。描き方は今の素材と同じ。座標は `switches.json`(既存の項目は変えていない)。
+
+| 素材 | サイズ | 中身・使い方 |
+|---|---|---|
+| `sw_engine_remote` | 46×92 | エンジンリモートスイッチ(灰色の防水箱)。`slots` に `btn_sq`(上=始動・下=停止)、`lamp` に `lamp_amber`(点灯)/`lamp_amber_off`(エンジン確認ランプ。エンジンが回っている間 点灯) |
+| `sw_toggle_main_on` / `_off` | 40×60 | 昇降メインスイッチ(レバー式。上=ON)。ON でないとフロア昇降スイッチが効かない(マニュアル p4) |
+| `sw_toggle_pto_on` / `_off` | 40×60 | PTO スイッチ(トラクタの運転席。ON で油圧ポンプが回る) |
+| `limit_switch` / `limit_switch_on` | 34×30 | リミットスイッチ(柱の上。ローラー付きレバー)。フロアが上限に着くと `_on`(レバーが倒れる)。`pivot`=レバーの軸、`rollerAt`=ローラーの中心 |
+| `lamp_amber` / `lamp_amber_off` | 18×18 | 橙のランプ(`lamp_green` と同じ作り) |

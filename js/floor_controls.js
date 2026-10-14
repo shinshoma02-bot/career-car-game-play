@@ -103,6 +103,27 @@
     btnF2Flap.classList.toggle('on', fm.MECH.f2Flap);
   }
 
+  // ---- 動力(D43): エンジン・PTO・昇降メインスイッチ。ノーマル・ハードだけ操作が必要(イージー・シミュレーションでは、常に ON として扱い、行ごと隠す)----
+  var btnEngine = document.getElementById('btnEngine'), btnPto = document.getElementById('btnPto'), btnMain = document.getElementById('btnMain'), powerRow = document.getElementById('powerRow');
+  var PWD = 'assets/common/switches/';
+  function pwIcon(name) { return '<img src="' + PWD + name + '.png?v=1" alt="" style="height:22px;vertical-align:middle;margin-right:6px;pointer-events:none">'; }
+  function renderPower() {
+    if (!fm.powerState || !powerRow) return;
+    var s = fm.powerState();
+    powerRow.style.display = s.required ? '' : 'none';
+    if (!s.required) return;
+    btnEngine.innerHTML = pwIcon(s.engine ? 'lamp_amber' : 'lamp_amber_off') + (s.engine ? 'エンジン 停止' : 'エンジン 始動');
+    btnPto.innerHTML = pwIcon(s.pto ? 'sw_toggle_pto_on' : 'sw_toggle_pto_off') + 'PTO ' + (s.pto ? 'ON' : 'OFF');
+    btnMain.innerHTML = pwIcon(s.main ? 'sw_toggle_main_on' : 'sw_toggle_main_off') + '昇降メイン ' + (s.main ? 'ON' : 'OFF');
+    btnEngine.classList.toggle('on', s.engine); btnPto.classList.toggle('on', s.pto); btnMain.classList.toggle('on', s.main);
+  }
+  if (btnEngine) {
+    btnEngine.addEventListener('click', function () { fm.setPower('engine', !fm.powerState().engine); renderPower(); });
+    btnPto.addEventListener('click', function () { fm.setPower('pto', !fm.powerState().pto); renderPower(); });
+    btnMain.addEventListener('click', function () { fm.setPower('main', !fm.powerState().main); renderPower(); });
+    setInterval(renderPower, 400);
+  }
+
   // ---- スイッチ操作盤 ----
   var SWD = 'assets/common/switches/', V = '?v=3';
   // グループ(トレーラー上のスイッチの固まり)ごとに、載せるスイッチ。end=棚の端 / jack=アウトリガー / tire=6ボタンとランプ盤

@@ -849,7 +849,33 @@
     if (slot.stopKind === 'hole') return lidOpen[num] ? '落し蓋を開けた(タイヤが落ち込んで停止)' : '落し蓋を閉じている(停止するには蓋を開けるか、輪止めをセット)';
     return s ? '' : '輪止め未セット(5・6番は輪止めが必須)';
   }
+  // ---- 固縛(D43。マニュアル p3): 車を止めて輪止めをしたあと、タイヤの前後にフックを掛け、荷締機のハンドルを回してワイヤを張る ----
+  // ノーマル・ハードだけ必須(イージー・シミュレーション・チュートリアルは任意)。ハンドルを LASH_TURNS 回まわすと「締めた」。締めずに棚を動かすと減点、締めないとサイクル完了にならない
+  var LASH_TURNS = 6;
+  var btnLash = document.getElementById('btnLash');
+  function lashCar(num) { var o = num && state.occupied[num]; return o && o.live ? o.live : null; }
+  state.lashRequired = function () { var fm = window.FLOOR_MECH; return !!(fm && fm.powerState && fm.powerState().required); };
+  state.unlashed = function () { return Object.keys(state.occupied).filter(function (n) { var c = lashCar(n); return c && !(c.lashTurns >= LASH_TURNS); }); };
+  if (btnLash) btnLash.addEventListener('click', function () {
+    var num = state.targetSlot, c = lashCar(num);
+    if (!c) { setStatus('固縛する車のスロット(車を積んだ番号)を選んでください。'); return; }
+    if (c.lashTurns >= LASH_TURNS) { c.lashTurns = 0; setStatus(num + '番の固縛を外しました。'); }
+    else {
+      c.lashTurns = (c.lashTurns || 0) + 1;
+      setStatus(c.lashTurns >= LASH_TURNS ? num + '番を固縛しました(ワイヤが張れました)。' : num + '番: 荷締機のハンドルを回しています(' + c.lashTurns + '/' + LASH_TURNS + ')。');
+    }
+    updateChockUi();
+  });
+  function updateLashUi() {
+    if (!btnLash) return;
+    var num = state.targetSlot, c = lashCar(num), req = state.lashRequired();
+    btnLash.style.display = (num && !(cfg.slots[num] && cfg.slots[num].noChock)) ? '' : 'none';
+    btnLash.disabled = !c;
+    btnLash.textContent = !c ? '固縛(車を積んでから)' : (c.lashTurns >= LASH_TURNS ? '固縛を外す(固縛済み)' : '固縛: ハンドルを回す(' + (c.lashTurns || 0) + '/' + LASH_TURNS + ')' + (req ? '' : ' ※任意'));
+  }
+  setInterval(updateLashUi, 400);
   function updateChockUi() {
+    updateLashUi();
     var num = state.targetSlot;
     var none = !num;
     btnChockSet.disabled = btnChockFront.disabled = btnChockRear.disabled = btnLid.disabled = none;
@@ -1601,6 +1627,12 @@
       recordMiss('輪止め(タイヤ落とし)に当たっていないのに棚を動かした', 'minor');
       setStatus('棚を動かしました!車が輪止め(タイヤ落とし)に当たってからにしてください。(ミス: ' + state.misses + ')');
     }
+    if (lastShelfKey !== null && key !== lastShelfKey && state.lashRequired && state.lashRequired()) {   // 固縛していない車が載った棚を動かした(1台につき1回)
+      Object.keys(state.occupied).forEach(function (n) {
+        var o = state.occupied[n], c = o && o.live;
+        if (c && o.floor && !(c.lashTurns >= LASH_TURNS) && !c.lashMissed) { c.lashMissed = true; recordMiss(n + '番の車を固縛しないで、棚を動かした', 'minor'); setStatus(n + '番の車を固縛していません!荷締機でワイヤを張ってから棚を動かしてください。(ミス: ' + state.misses + ')'); }
+      });
+    }
     lastShelfKey = key;
     requestAnimationFrame(syncDynamicPath);
   }
@@ -1621,7 +1653,8 @@
   function checkRampHit() {
     var car = state.car, fm = window.FLOOR_MECH;
     if (T6 || !car || !fm || !fm.rampT || state.accident || state.frozen || car.seated || car.accident || car.rampHit) return;   // 1台につき1回(当たったあと、同じ車で繰り返し数えない)
-    if ((car.phase !== 'ready' && car.phase !== 'entering') || car.progress > 1) return;   // 待機中・入場中の車だけ(道板の上に乗った車は対象外)
+    if (car.phase === 'exiting' || car.onDeck) return;
+    if (car.progress > 1 && !car.groundRun) return;   // 道板の斜面に乗った車だけ対象外。地面で待っている車(前へ動かした後の、トレーラーの後端で止まった車も)は調べる(D41)
     var rt = fm.rampT(); if (rt <= 0 || rt >= 0.999) return;   // 出し入れの動きの途中だけ(出きって地面に着いた板に、待っている車が当たることは無い)
     var pts = rampPlatePoints(); if (!pts.length) return;
     var roof = fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y], 0), x0 = car.x - car.leftTireX;
