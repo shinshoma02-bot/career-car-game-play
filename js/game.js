@@ -1627,12 +1627,6 @@
       recordMiss('輪止め(タイヤ落とし)に当たっていないのに棚を動かした', 'minor');
       setStatus('棚を動かしました!車が輪止め(タイヤ落とし)に当たってからにしてください。(ミス: ' + state.misses + ')');
     }
-    if (lastShelfKey !== null && key !== lastShelfKey && state.lashRequired && state.lashRequired()) {   // 固縛していない車が載った棚を動かした(1台につき1回)
-      Object.keys(state.occupied).forEach(function (n) {
-        var o = state.occupied[n], c = o && o.live;
-        if (c && o.floor && !(c.lashTurns >= LASH_TURNS) && !c.lashMissed) { c.lashMissed = true; recordMiss(n + '番の車を固縛しないで、棚を動かした', 'minor'); setStatus(n + '番の車を固縛していません!荷締機でワイヤを張ってから棚を動かしてください。(ミス: ' + state.misses + ')'); }
-      });
-    }
     lastShelfKey = key;
     requestAnimationFrame(syncDynamicPath);
   }
