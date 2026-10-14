@@ -81,7 +81,7 @@
     var peak = 0.012 + 0.4 * Math.pow(sev, 1.25), resid = sev > 0.45 ? peak * 0.4 : 0, dur = 450 + 1100 * sev;
     var old = car.crash && car.crash.resid || 0;   // 前の凹みに重ねる(上限あり)
     // 損傷の合計(1.0で原型をとどめない=大破): 軽い衝突は小さく、重い衝突は大きく積み上がる。凹みは損傷に比例して深く、残る
-    car.damage = (car.damage || 0) + (opt.dmg !== undefined ? opt.dmg : 0.005 + 0.75 * sev * sev);
+    car.damage = (car.damage || 0) + (opt.dmg !== undefined ? opt.dmg : 0.003 + 0.78 * sev * sev * sev);   // 遅い衝突は軽く(sev の3乗。2026-10-14: 思いっきりでなくても大破した)
     var dm = Math.min(1.4, car.damage);
     car.crash = { t0: performance.now(), dur: dur, kind: at.kind, u: at.u, v: at.v, peak: Math.min(0.85, Math.max(peak + old * 0.5, dm * 0.62)), resid: Math.min(0.78, Math.max(resid, old, dm > 0.35 ? dm * 0.55 : 0)), sev: sev, seed: Math.random() * 1000 };
     if (car.damage >= 1) setTimeout(function () { wreck(car, '車が原型をとどめないほど壊れました。'); }, 700);
@@ -400,27 +400,25 @@
     if (key === 'lowroof' || key === 'lowfloor') { var at = floorContactAt(car); if (at) return { at: at }; }
     return undefined;
   }
-  function lowFloorBlocked(car) {
-    // 下段(4〜6番)へ向かう通り道の上で、上段フロアが棚の絵の高さ(=下段の車が入れる高さ)より下がっていたら通れない。
-    // 走行位置(初期状態)は絵より下がっているので、下段を積む前に上段の棚を上げる必要がある
-    var fm = window.FLOOR_MECH, xL = car.x - car.leftTireX - 30, name = null;
-    fm.FIDS.forEach(function (id) {
-      if (id === 'F5' || name) return;
-      var f = fm.FLOORS[id];
-      for (var x = f.x0; x <= f.x1; x += 15) {
-        var p = fm.onFloor(id, x, f.bottom(x));
-        if (p[0] >= xL && p[0] <= cfg.ramp.top[0] && p[1] > f.bottom(x) + 8 + fm.FRAME_GAP_PX) { name = f.name; return; }
-      }
-    });
-    return name;
-  }
   // 下段(4〜6番)へ向かう車の屋根が、上のフロア(1〜3番)の下面に当たるか(車の絵の形で、フロアの今の位置・傾きに対して。2026-10-09 ユーザー指示「フロアと接触せず積めること」)。
   // 以前は、棚が標準の高さにあれば通れて、背の高い車が1番フロアなどの下に入り込んで(貫通して)積めていた。当たる所では止まる(phys)
   function lowRoofBlocked(car) {
     var fm = window.FLOOR_MECH;
     if (!fm || !fm.envFits || !fm.ENV || !car.img) return null;
-    var occ = { img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, top = fm.carTopY(occ, [car.x, car.y], 0), x0 = car.x - car.leftTireX, L = new Float32Array(fm.ENV.n);
-    for (var i = 0; i < L.length; i++) { var x = fm.ENV.x0 + i * fm.ENV.dx; L[i] = x >= x0 && x <= x0 + car.w ? top(x) + fm.FRAME_GAP_PX : 1e9; }
+    // 車の屋根の輪郭を、今の車の傾き(道板・スロープの上では前が上がる)のまま世界の座標に置く。前タイヤの接地点が軸(描画 drawCars と同じ向き)
+    var th = 0, n = car.prof ? car.prof.length : 0, E = fm.ENV, L = new Float32Array(E.n), i;
+    if (car.pathTool && !car.groundRun) { var P = car.pathTool.at(car.progress), Q = car.pathTool.at(car.progress - (car.wbPx || 0)); th = Math.atan2(Q.y - P.y, Q.x - P.x); }
+    var cs = Math.cos(th), sn = Math.sin(th);
+    for (i = 0; i < L.length; i++) L[i] = 1e9;
+    var steps = Math.max(40, Math.ceil(car.w / 1.5));
+    for (var s = 0; s <= steps; s++) {
+      var u = s / steps, lx = u * car.w - car.leftTireX, hh = n ? car.h * car.prof[Math.min(n - 1, Math.floor(u * n))] : car.h, dy = -hh;
+      var wx = car.x + lx * cs - dy * sn, wy = car.y + lx * sn + dy * cs, ci = Math.floor((wx - E.x0) / E.dx);
+      if (ci >= 0 && ci < L.length && wy + fm.FRAME_GAP_PX < L[ci]) L[ci] = wy + fm.FRAME_GAP_PX;
+    }
+    var first = -1, last = -1;
+    for (i = 0; i < L.length; i++) if (L[i] < 1e9) { if (first < 0) first = i; last = i; }
+    for (i = first + 1; i < last; i++) if (L[i] >= 1e9) L[i] = L[i - 1];   // 輪郭の点の間の穴をうめる
     var bad = ['F1', 'F2', 'F3'].filter(function (id) { return !fm.envFits([L], [id], fm.curOffs()); });
     state.lowroofFloors = bad;   // (確認用)当たっているフロア
     return bad.length ? true : null;
@@ -472,13 +470,11 @@
     } else {
       // 出している4番扇動板が、下段を走る車の前に当たる(実物の板)
       // 出している4番扇動板は、5番と4番の間の橋(車は板の上に乗って通る。当たりで止めない・2026-10-13)。板の上の車の高さは rideBridge で合わせる
-      // 積む場所(スロット)にほぼ着いた所だけ調べる(スロープを上る途中の通過は、従来どおり lowFloorBlocked で見る)
-      if (car.arc && state.targetSlot && car.arc[state.targetSlot] !== undefined && car.progress >= car.arc[state.targetSlot] - 60 && car.progress <= car.arc[state.targetSlot] + 6 && lowRoofBlocked(car)) out.push({ key: 'lowroof', phys: true, msg: 'この車は背が高くて、上のフロアの下に入れません(当たります)。上のフロアを上げるか、車の向きを変えてください。' });
+      if (lowRoofBlocked(car)) out.push({ key: 'lowroof', phys: true, msg: 'この車は、上のフロアに当たって進めません(背が高いか、フロアが下がっています)。棚を上げてください。' });   // 位置に関わらず、絵の形が実際に重なる所だけ(2026-10-14 ユーザー指示「当たり判定が宙にある」)
       var hb = (id === 'L' || id === '4') && hangBlocksCar(car);
       // phys: true = 実物(フロア・4番扇動板・宙段・タイヤ)に当たる理由。シミュレーションでも、その位置で止まる(ぶつかった演出つき)。道板が出ていない・ジャッキで浮いている、は止めない(下の phys 無し)
       if (hb) out.push({ key: 'hang', phys: true, msg: '宙段フロアが上がっていて通れません。宙段を下げてから(格納してから)通ってください。' });
-      var lf = lowFloorBlocked(car);
-      if (lf) out.push({ key: 'lowfloor', phys: true, msg: lf + 'が下がっていて通れません。下段の車が入れる高さまで棚を上げてください。' });
+      // (旧)lowFloorBlocked: 棚が絵の高さより下がっていたら、車と重ならなくても通さなかった → 実際の重なり(上の lowroof)だけにした
       // 5番フロアがスロープなのに4番扇動板が出ていない: スロープを上って、上端で、垂れ下がった4番扇動板に当たって止まる
       if (id === '4' && !fm.bridgeReady() && car.bridgeWallArc !== undefined && car.progress >= car.bridgeWallArc - 1) {
         out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '4番扇動板が出ていないので、スロープの先(4番との隙間)へは進めません。4番扇動板を搬出してください。' });

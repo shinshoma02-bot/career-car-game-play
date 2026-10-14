@@ -466,8 +466,9 @@
     // 今の状態で発進すると事故になる理由(無ければ null)
     unsafeDeparture: function () {
       var fm = window.FLOOR_MECH, gs = window.GAME_STATE, car = gs && gs.car;
-      var onRamp = !!(car && !car.seated && car.progress > 0 && car.progress <= (car.rampArc || 0) + 5);   // まだ道板の上(床に乗っていない)
       var rampOut = !!(fm && (fm.MECH.ramp || fm.rampT() > 0.05));
+      // 道板が出ていない時は、車はトレーラーの後ろの地面にいる(後端にぶつかって止まっただけ)ので、「道板の上」ではない。後ろのタイヤがまだ道板の上なら、床には乗っていない
+      var onRamp = !!(rampOut && car && !car.seated && car.progress > 0 && car.progress - (car.wbPx || 0) <= (car.rampArc || 0) + 5);
       if (onRamp) return '車が道板の上にいるのに発進して、車が落ちました。';
       if (rampOut) return '道板を出したまま発進して、道板が地面に引っかかりました。';
       return null;
@@ -483,6 +484,7 @@
       if (unsafe && car && !car.seated && car.progress > 0) { car.accident = { t0: performance.now(), landed: false }; car.velocity = 0; }   // 道板の上の車は落ちる
       VIEW.fitAll();
       AN.unsafe = !!unsafe; AN.cb = cb || null;
+      AN.rampOut = !!(fm && (fm.MECH.ramp || fm.rampT() > 0.05));   // 出発の時に道板が出ていたか(出ていなければ、道板が落ちる演出は出さない)
       if (!unsafe && car && !car.seated && car.progress > 0 && !car.accident) {   // 床の上で止まった車は、先に降ろす
         car.cab = null; car.cabHitT = 0; car.ride = null; car.locked = false;
         AN.kind = 'clear'; AN.t0 = performance.now(); AN.car = car; AN.cv = 200; AN.last = 0;
@@ -520,7 +522,7 @@
     ctx.drawImage(backImg, 0, 0);
     ctx.restore();
 
-    if (AN.kind === 'out' && AN.unsafe && AN.off) { ctx.save(); ctx.translate(-AN.off, 0); if (AN.rampFall) drawRampFall(); else drawRamp(tilt); ctx.restore(); }   // 事故: 道板は地面に引っかかって置き去り
+    if (AN.kind === 'out' && AN.unsafe && AN.off && AN.rampOut) { ctx.save(); ctx.translate(-AN.off, 0); if (AN.rampFall) drawRampFall(); else drawRamp(tilt); ctx.restore(); }   // 事故: 道板は地面に引っかかって置き去り
     else drawRamp(tilt); // 道板は先端が地面に着くよう、傾きに合わせて角度を計算し直す(画面座標で描く)
 
     beginRig(tilt);
@@ -565,6 +567,36 @@
 
   // 検証用(2026-10-09 ユーザー指摘「検証が無理やり積んでいる。屋根が貫通・フロアを無視していた」への対策): 積んだ車と、各フロア(1・2・3・5番と宙段)の絵が、実際に重なっている画素数を測る。
   // 車は自分が載っているフロア(carrier)とは重なって当然なので、それ以外のフロアとの重なりだけを返す。{slot, floor, px} の一覧(px>0 のもの)。
+  // 検証用(2026-10-14): 今動かしている車(gs.car)が、各フロア(1・2・3・5番と宙段)の絵と重なっている画素数。当たり判定が「何も無い所」で出ていないかを、絵と突き合わせる
+  window.LIVE_OVERLAP = function () {
+    var gs = window.GAME_STATE, fm = window.FLOOR_MECH, car = gs && gs.car;
+    if (!car || !fm || !images) return null;
+    var W = cfg.stage.w, H = cfg.stage.h, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    var dc = cv.getContext('2d', { willReadFrequently: true }), keep = ctx, out = {};
+    var th = 0;
+    if (car.pathTool && !car.groundRun) { var P = car.pathTool.at(car.progress), Q = car.pathTool.at(car.progress - (car.wbPx || 0)); th = Math.atan2(Q.y - P.y, Q.x - P.x) * 180 / Math.PI; }
+    ctx = dc;
+    try {
+      dc.clearRect(0, 0, W, H); drawCarBody(car.img, car.x, car.y, car.w, car.h, car.leftTireX, th, null);
+      var cm = dc.getImageData(0, 0, W, H).data;
+      ['F1', 'F2', 'F3', 'F5'].forEach(function (id) {
+        dc.clearRect(0, 0, W, H); if (images[id]) drawTransformedFloor(id, images[id]);
+        var m = dc.getImageData(0, 0, W, H).data, n = 0;
+        for (var i = 3; i < m.length; i += 4) if (cm[i] > 160 && m[i] > 160) n++;
+        if (n) out[id] = n;
+      });
+      var C = chuudanArt();
+      if (C && fm.MECH.hang > 0.02) {   // 宙段(上がっている間)
+        dc.clearRect(0, 0, W, H);
+        var hp = fm.hangPose(), ha = hp.ang * Math.PI / 180;
+        dc.save(); dc.translate(hp.F[0], hp.F[1]); dc.rotate(ha); dc.drawImage(images.floor_chuudan, -C.floorPivot[0], -C.floorPivot[1]); dc.restore();
+        var m7 = dc.getImageData(0, 0, W, H).data, n7 = 0;
+        for (var k = 3; k < m7.length; k += 4) if (cm[k] > 160 && m7[k] > 160) n7++;
+        if (n7) out.F7 = n7;
+      }
+    } finally { ctx = keep; }
+    return out;
+  };
   window.OVERLAP_CHECK = function () {
     var gs = window.GAME_STATE, fm = window.FLOOR_MECH;
     if (!gs || !fm || !images) return null;
@@ -1651,7 +1683,7 @@
         rotDeg += curTilt * (1 - onRig);
       }
       // 道板の手前(地面)で待っている車は、トレーラーが走り出しても引っ張られず、地面に残る(2026-10-13 ユーザー指示)
-      var stay = AN.kind === 'out' && AN.off && st.car.x >= cfg.ramp.bottom[0] - 2 && !st.car.accident;
+      var stay = AN.kind === 'out' && AN.off && (!AN.rampOut || st.car.x >= cfg.ramp.bottom[0] - 2) && !st.car.accident;
       if (stay) { ctx.save(); ctx.translate(-AN.off, 0); }
       drawDrivingCar(car, rotDeg);
       if (stay) ctx.restore();
