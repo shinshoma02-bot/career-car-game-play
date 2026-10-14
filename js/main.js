@@ -1656,7 +1656,7 @@
       lunge = cb0.v0 * slideT - 0.5 * cb0.a * slideT * slideT;
       // 食い込み pen: 遅い(vImp 100で約16px)はコツン、速い(300以上)でめり込む(2026-10-13 メモ3。以前は 0.42×vImp で、遅くても大きくめり込んだ)
       if (cb0.hit && ct > cb0.tImp) { var ce2 = ct - cb0.tImp, pen = Math.min(150, 0.0016 * cb0.vImp * cb0.vImp); lunge = cb0.G + pen * (1 - Math.exp(-ce2 * 13)) - 0.07 * cb0.vImp * Math.min(1, ce2 * 1.6) * (1 - Math.exp(-ce2 * 2)); cabPitch = -Math.min(5, cb0.vImp / 50) * (1 - Math.exp(-ce2 * 9)) * Math.exp(-ce2 * 0.8); }
-      var deckX = cfg.floors.defs.F1.x0, over = deckX - (car.x - lunge) + 8;   // 前のタイヤが床の先端を越えた距離
+      var deckX = (cfg.floors && cfg.floors.defs ? cfg.floors.defs.F1.x0 : cfg.t6b.f1.front[0]), over = deckX - (car.x - lunge) + 8;   // 前のタイヤが床の先端を越えた距離
       if (over > 0) cabDrop = Math.min(48, over * 0.55);
       if (!cb0.hit) cabDrop = Math.max(cabDrop, 34 * Math.min(1, ct / (cb0.tStop + 0.25)));   // 届かずに止まる: 前のタイヤが床の端から落ちて、鼻が下がる(脱輪)
       if (cabDrop > 0) cabPitch -= Math.atan2(cabDrop, car.wbPx) * 180 / Math.PI;
@@ -2115,7 +2115,8 @@
     var tb = f2pt(kb.top), bb = slideBottom6b(tb, len(kb), kb.deck[1]), tg = f2pt(kg.top), bg = slideBottom6b(tg, len(kg), kg.deck[1]);
     [bb, bg].forEach(function (p) { place6b(images.slider, [15, 9], p, 0); });
     place6b(images[kg.img], [3 + kg.w / 2, 3 + kg.w / 2], bg, ang6b(bg, tg));
-    cyl6b(T6.cylF2, T6.cylF2.base, lerp6b(bg, tg, T6.cylF2.onGreen), images.cyl_f2_barrel, images.cyl_f2_rod);
+    var cb = T6.cylF2.baseFromGreen ? [bg[0] + T6.cylF2.baseFromGreen[0], bg[1] + T6.cylF2.baseFromGreen[1]] : T6.cylF2.base;   // 根元は左のアームの下のピンの近く(一緒に滑る。D40)
+    cyl6b(T6.cylF2, cb, lerp6b(bg, tg, T6.cylF2.onGreen), images.cyl_f2_barrel, images.cyl_f2_rod);
     place6b(images[kb.img], [3 + kb.w / 2, 3 + kb.w / 2], bb, ang6b(bb, tb));
   }
   function f1Pose6b(fm) {
@@ -2145,7 +2146,7 @@
     ctx.restore();
   }
   function drawWheels6b() {
-    var W = cfg.t6b.wheels, tw = W.trailer, im = images.wheel_drive, k = tw.r / 60;
+    var W = cfg.t6b.wheels, tw = W.trailer, im = images.wheel_trailer || images.wheel_drive, k = images.wheel_trailer ? 1 : tw.r / 60;   // wheel_trailer(D40 のイラストの車輪)は、縮めずに等倍
     if (im) ctx.drawImage(im, Math.round(tw.center[0] - im.width * k / 2), Math.round(tw.center[1] - im.height * k / 2), Math.round(im.width * k), Math.round(im.height * k));
     if (images.fender) ctx.drawImage(images.fender, tw.center[0] - 70, tw.center[1] - 72);
   }
@@ -2173,6 +2174,8 @@
     drawChocks('holes');
     if (chk.floors.checked) {
       drawF2Support6b(fm);
+      var RP6 = cfg.t6b.rearPost;   // 後ろの柱(回さない)。2番が水平(±maxDeg 度以内)の時だけ描く(下げると柱が地面に刺さるため。実車では外す・たたむ部品と考えた。D40)
+      if (RP6 && images.rear_post && Math.abs(fm.MECH.f2) <= RP6.maxDeg) ctx.drawImage(images.rear_post, RP6.at[0] - RP6.pivot[0], RP6.at[1] - RP6.pivot[1]);
       place6b(images.floor_f2, cfg.t6b.f2.pivot, cfg.t6b.f2.hinge, fm.MECH.f2);
       drawF1Cyl6b(fm);
       var P1 = f1Pose6b(fm);

@@ -153,7 +153,7 @@
   // 2番の後端が尻尾(道板の根元)まで下りていれば、道板↔2番(上段の道)がつながる
   function upperConnected() { return MECH.f2 >= F2.connectDeg; }
   // 1番の後端と2番のヒンジの高さが近ければ、2番↔1番がつながる(1番を上げ過ぎると段差で通れない)
-  function f1Connected() { return Math.abs((F1.rear[1] - MECH.f1) - F2.hinge[1]) <= 14; }
+  function f1Connected() { return Math.abs((F1.rear[1] - MECH.f1) - F2.hinge[1]) <= (F1.connectTol || 14); }
   function atTravel(id) { return id === 'F1' ? MECH.f1 < 0.5 : Math.abs(MECH.f2) < 0.5; }
   function f5Slope() { return MECH.bridge; }
   function slopeReady() { return MECH.bridge && slopeT() >= 1; }
