@@ -44,7 +44,7 @@
   btnF2Flap.addEventListener('click', function () { fm.toggleF2Flap(); renderMechButtons(); });
   // ---- 昇降ボタン自動切りかえ(任意でON/OFF。ブラウザに覚えさせる)----
   // 車を1台積む(固定する)と、次に動かすスイッチの操作盤へ自動で切り替わり、スイッチの真ん中へ寄る。その操作が終わると、さらに次のスイッチへ、を繰り返す。
-  // 「次に動かすスイッチ」は、積んだ台数と棚・5番・宙段・タイヤの状態から決める(wantGroup)。チュートリアルでは使わない(ガイドが操作盤を切り替えるため)
+  // 「次に動かすスイッチ」は、積んだ台数とフロア・5番・中段フロア・タイヤの状態から決める(wantGroup)。チュートリアルでは使わない(ガイドが操作盤を切り替えるため)
   var btnAutoSw = document.getElementById('btnAutoSw');
   var autoSw = true;
   try { autoSw = localStorage.getItem('autoSwitchPanel') !== '0'; } catch (e) { }
@@ -63,12 +63,12 @@
       if (!o[1] && !fm.f1Connected()) return 'front';
       return null;
     }
-    if (!['F1f', 'F1r', 'F2f'].every(raised)) return 'front';   // 下段へ入れるよう、棚を上げてピンで固定
+    if (!['F1f', 'F1r', 'F2f'].every(raised)) return 'front';   // 下段へ入れるよう、フロアを上げてピンで固定
     if (!['MID', 'F3r'].every(raised)) return 'rear';
     if (!o[4]) return fm.f5Slope() ? null : 'front';   // 4番: 5番フロアをスロープに(2番 前のシリンダー)
     if (!o[5]) return fm.atTravel('F5') ? null : 'front';
     if (!o[6]) return null;
-    if (!o[7] && M.hang < 1) return 'rear';   // 7台目: 宙段
+    if (!o[7] && M.hang < 1) return 'rear';   // 7台目: 中段フロア
     return M.tireOut ? 'tire' : null;
   }
   var chain = false, lastCount = -1, lastSwitchAt = 0;
@@ -124,12 +124,12 @@
 
   // ---- スイッチ操作盤 ----
   var SWD = 'assets/common/switches/', V = '?v=3';
-  // グループ(トレーラー上のスイッチの固まり)ごとに、載せるスイッチ。end=棚の端 / jack=アウトリガー / tire=6ボタンとランプ盤
+  // グループ(トレーラー上のスイッチの固まり)ごとに、載せるスイッチ。end=フロアの端 / jack=ジャッキ / tire=6ボタンとランプ盤
   var GROUPS = {
     front: { title: '前側のスイッチ(1番・2番)', items: [{ label: '1番 前', end: 'F1f' }, { label: '1番 後', end: 'F1r' }, { label: '2番 前', end: 'F2f' }] },
-    rear: { title: '後ろ側のスイッチ(3番・宙段)', items: [{ label: '3番 前(継ぎ目)', end: 'MID' }, { label: '3番 後', end: 'F3r' }, { label: '宙段', end: 'F7' }, { label: '宙段 後ろの柱', rearPin: true }] },
-    // アウトリガーとタイヤの突出(6ボタン・ランプ盤)は、一緒に操作する(タイヤを張り出す・戻す時にジャッキも使うため)
-    tire: { title: 'アウトリガーとタイヤ操作盤', tire: true, items: [{ label: 'アウトリガー', jack: true }] }
+    rear: { title: '後ろ側のスイッチ(3番・中段フロア)', items: [{ label: '3番 前(継ぎ目)', end: 'MID' }, { label: '3番 後', end: 'F3r' }, { label: '中段フロア', end: 'F7' }, { label: '中段フロア 後ろの柱', rearPin: true }] },
+    // ジャッキとスライド車軸の伸ばし(6ボタン・ランプ盤)は、一緒に操作する(タイヤを張り出す・戻す時にジャッキも使うため)
+    tire: { title: 'ジャッキとタイヤ操作盤', tire: true, items: [{ label: 'ジャッキ', jack: true }] }
   };
   var swPanel = document.getElementById('swPanel'), floorTitle = document.getElementById('floorTitle'), swHint = document.getElementById('swHint');
   var current = null, tireLamps = null;
@@ -153,8 +153,8 @@
     ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(function (ev) { el.addEventListener(ev, u); });
   }
 
-  // 2ボタン押ボタン(上・下)。押している間、その棚(ジャッキ・宙段)が動く
-  // 後ろの柱(宙段): シリンダーのように、押している間だけ連続で伸び縮みする(2026-10-08 ユーザー指示。以前は内側パイプの穴にピンを差す6段階)
+  // 2ボタン押ボタン(上・下)。押している間、そのフロア(ジャッキ・中段フロア)が動く
+  // 後ろの柱(中段フロア): シリンダーのように、押している間だけ連続で伸び縮みする(2026-10-08 ユーザー指示。以前は内側パイプの穴にピンを差す6段階)
   function rearPinCard(item) {
     var card = document.createElement('div'); card.className = 'swCard';
     var lab = document.createElement('div'); lab.className = 'swLabel'; lab.textContent = item.label; card.appendChild(lab);
@@ -174,7 +174,7 @@
     hold(m, -1); hold(pl, +1);
     row.appendChild(m); row.appendChild(p); row.appendChild(pl); card.appendChild(row);
     var note = document.createElement('div'); note.style.cssText = 'font-size:12px;color:#aab;line-height:1.5;margin-top:6px;max-width:150px;';
-    note.textContent = '押している間、後ろの柱が伸び縮み(縮=スロープが急に・伸=ゆるやかに)。宙段が格納〜スロープの位置の時だけ'; card.appendChild(note);
+    note.textContent = '押している間、後ろの柱が伸び縮み(縮=スロープが急に・伸=ゆるやかに)。中段フロアが格納〜スロープの位置の時だけ'; card.appendChild(note);
     setTimeout(renderRearPin, 0);
     return card;
   }
@@ -182,7 +182,7 @@
     var b = document.getElementById('rearPinLabel'), r = fm.rearLenRange ? fm.rearLenRange() : [0, 1];
     if (b) b.textContent = '柱 ' + Math.round(fm.rearPinLen() / window.TRAILER_CONFIG.pxPerMeter * 100) + 'cm';
   }
-  // フレーム側の固定ピン(赤い板): 位置を前後5段階で変える・抜き差し。刺してあると、上げた宙段のフロアがピンに当たって止まる
+  // フレーム側の固定ピン(赤い板): 位置を前後5段階で変える・抜き差し。刺してあると、上げた中段フロアのフロアがピンに当たって止まる
   function stopPinCard(item) {
     var card = document.createElement('div'); card.className = 'swCard';
     var lab = document.createElement('div'); lab.className = 'swLabel'; lab.textContent = item.label; card.appendChild(lab);
@@ -195,7 +195,7 @@
     p.addEventListener('click', function () { fm.toggleStopPin(); renderStopPin(); });
     row.appendChild(m); row.appendChild(p); row.appendChild(pl); card.appendChild(row);
     var note = document.createElement('div'); note.style.cssText = 'font-size:12px;color:#aab;line-height:1.5;margin-top:6px;max-width:150px;';
-    note.textContent = '−/＋で位置(前→後ろ)。ピンの位置で宙段の止まる高さが変わる。中央のボタンで抜く/刺す(位置の変更はスロープより下げてから)'; card.appendChild(note);
+    note.textContent = '−/＋で位置(前→後ろ)。ピンの位置で中段フロアの止まる高さが変わる。中央のボタンで抜く/刺す(位置の変更はスロープより下げてから)'; card.appendChild(note);
     return card;
   }
   function renderStopPin() {
@@ -213,13 +213,13 @@
     var b = box(44, 105, PEND2); b.appendChild(img('sw_pendant2', 0, 0, 44, 105, [0, 0], PEND2));
     function startHold(dir) { if (item.jack) fm.jackHoldStart(dir); else fm.holdStart(item.end, dir); }
     function stopHold() { if (item.jack) fm.jackHoldStop(); else fm.holdStop(); }
-    // 上=▲(-1。棚は上がる)/ 下=▼(+1)。アウトリガーは 下=脚を伸ばす(+1)・上=縮める(-1)
+    // 上=▲(-1。フロアは上がる)/ 下=▼(+1)。ジャッキは 下=脚を伸ばす(+1)・上=縮める(-1)
     var up = img('btn_cap_ue_big', 22, 26, 18, 18, [9, 9], PEND2), down = img('btn_cap_shita_big', 22, 44, 18, 18, [9, 9], PEND2);
     pressable(up, 'btn_cap_ue_big', function () { startHold(-1); }, stopHold);
     pressable(down, 'btn_cap_shita_big', function () { startHold(1); }, stopHold);
     b.appendChild(up); b.appendChild(down);
     card.appendChild(b);
-    if (item.end === 'F7') {   // 宙段: セットピンは廃止。真ん中のボタンはフレーム側の固定ピン(赤い板)の抜き差し、−/＋はその位置(前→後ろ5段階)
+    if (item.end === 'F7') {   // 中段フロア: セットピンは廃止。真ん中のボタンはフレーム側の固定ピン(赤い板)の抜き差し、−/＋はその位置(前→後ろ5段階)
       var row7 = document.createElement('div'); row7.className = 'pinRow';
       var m7 = document.createElement('button'); m7.className = 'pinStep'; m7.textContent = '−';
       var p7 = document.createElement('button'); p7.className = 'pinBtn'; p7.id = 'stopPinLabel';
@@ -262,9 +262,9 @@
     row.appendChild(lampBox); row.appendChild(pend);
     var cap = document.createElement('div');
     cap.style.cssText = 'font-size:12px;color:#aab;line-height:1.7;max-width:240px;';
-    cap.innerHTML = '<b>タイヤの突出・格納</b><br>① ジャッキを伸ばす(アウトリガー)<br>② 右引・左引でロック解除<br>③ 伸(突出)/縮(格納)<br>④ 右押・左押でロック<br>⑤ ジャッキを縮める<br><br>ランプ: 作業=解除済みでタイヤが浮いている / 右・左ロック=ロック中';
+    cap.innerHTML = '<b>スライド車軸の操作(伸・縮)</b><br>① ジャッキを伸ばす(ジャッキ)<br>② 右引・左引でロック解除<br>③ 伸/縮<br>④ 右押・左押でロック<br>⑤ ジャッキを縮める<br><br>ランプ: 作業=解除済みでタイヤが浮いている / 右・左ロック=ロック中';
     cap.style.maxWidth = 'none'; cap.style.margin = '8px 0 0';
-    wrap.help = cap;   // 説明文は、アウトリガーと横に並べるため、カードの外(パネルの下)に出す
+    wrap.help = cap;   // 説明文は、ジャッキと横に並べるため、カードの外(パネルの下)に出す
     wrap.appendChild(row);
     return wrap;
   }

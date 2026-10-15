@@ -1,0 +1,78 @@
+{
+ "note": "5番フロアのスロープの留め(make_slope_latch.py)。ステージ座標。描く順: bracket → 5番フロア → hook(5番と一緒に動く) → lever",
+ "pinAt": [
+  1003.0,
+  457.0
+ ],
+ "f5FrontLatched": [
+  1005.0,
+  451.0
+ ],
+ "f5DegLatched": 6.73,
+ "bracket": {
+  "size": [
+   16,
+   24
+  ],
+  "pinLocal": [
+   7,
+   13
+  ],
+  "file": "parts/slope_latch_bracket.png",
+  "at": [
+   996.0,
+   444.0
+  ],
+  "what": "中央の柱の後ろの面の金具とピン(動かない)。at=素材の左上のステージ座標"
+ },
+ "lever": {
+  "size": [
+   28,
+   28
+  ],
+  "pivot": [
+   7,
+   19
+  ],
+  "deg": 40,
+  "file": "parts/slope_latch_lever.png",
+  "at": [
+   1003.0,
+   457.0
+  ],
+  "what": "赤い取っ手のレバー(普段・斜め上 40度)。pivot をピンの中心 at に合わせる"
+ },
+ "lever_up": {
+  "size": [
+   28,
+   28
+  ],
+  "pivot": [
+   7,
+   19
+  ],
+  "deg": 82,
+  "file": "parts/slope_latch_lever_up.png",
+  "at": [
+   1003.0,
+   457.0
+  ],
+  "what": "レバーを上げた状態(82度)。ピンが抜けて、金具が外れる"
+ },
+ "hook": {
+  "size": [
+   20,
+   22
+  ],
+  "pivot": [
+   12,
+   3
+  ],
+  "catchLocal": [
+   10.7,
+   9.2
+  ],
+  "file": "parts/slope_latch_hook.png",
+  "what": "5番フロアの前端の引っかけ金具。pivot を5番の前端の点(frontPt)に合わせ、5番の角度で回して描く。5番を4番の高さ(hookOff)まで上げると catchLocal がピンに重なる"
+ }
+}

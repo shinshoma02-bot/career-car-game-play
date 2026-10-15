@@ -1,7 +1,7 @@
-// semi-6b(6台積み・宙段なし・台車1軸)のフロア機構。js/floor_mech.js(semi-6 用)の代わりに読まれ、同じ window.FLOOR_MECH という名前で
+// semi-6b(6台積み・中段フロアなし・台車1軸)のフロア機構。js/floor_mech.js(semi-6 用)の代わりに読まれ、同じ window.FLOOR_MECH という名前で
 // game.js・main.js・modes.js が使う最小限の口(onFloor・poseOf・MECH・道板・スロープ・curOffs など)を出す。
 // 動くもの: 1番(真上に昇降 0〜60px)・2番(前端のヒンジで傾く -4〜11度)・4番へのスロープ・道板。
-// 無いもの(semi-6 にあるもの): 宙段・3番・5番の可動・中央継ぎ目・アウトリガー・タイヤ突出・セットピン → MECH の該当項目は常に「無し」の値で持つ(他のファイルが参照して落ちないように)。
+// 無いもの(semi-6 にあるもの): 中段フロア・3番・5番の可動・中央継ぎ目・ジャッキ・スライド車軸の伸ばし・セットピン → MECH の該当項目は常に「無し」の値で持つ(他のファイルが参照して落ちないように)。
 // フロアの姿勢は assets/semi-6b/parts.json の poses(走行時⇔積み込み時)の間を、押している間だけ動く連続値で持つ:
 //   1番 MECH.f1 = 上げ量px(0=走行時・18=積み込み時・最大60) / 2番 MECH.f2 = 傾き度(0=走行時・10.5=積み込み時。負=後ろ上げ)
 (function () {
@@ -72,7 +72,7 @@
   }
   function occBox(occ) { return { x: occ.localX, y: occ.localY, w: occ.w, h: occ.h, leftTireX: occ.leftTireX, prof: occ.prof, rot: occ.rotDeg || 0 }; }
   function lowerList(id) { return id === 'F1' ? T.lower.f1Over : T.lower.f2Over; }
-  // 棚を offs の姿勢にした時に、下段に積んだ車(f1Over/f2Over の組み合わせ)に当たる理由。動かす向きが車に近づく(重なりが増える)時だけ止める
+  // フロアを offs の姿勢にした時に、下段に積んだ車(f1Over/f2Over の組み合わせ)に当たる理由。動かす向きが車に近づく(重なりが増える)時だけ止める
   function poseProblem(id, offs) {
     var gs = window.GAME_STATE, now = curOffs(), why = null;
     if (!gs) return null;

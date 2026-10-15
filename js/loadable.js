@@ -3,9 +3,9 @@
 //        ・6番は幅1.755m以下の車(必須)
 //        ・下段(4・5・6番)の車の屋根が、その上のフロアの下面にぶつからない高さまで、上のフロアを上げる必要がある(車の絵の形で判定)
 //        ・上げた分だけ、上段(1・2・3番)の車の屋根も高くなる → 荷姿の高さが、制限(modes.jsのheightLimitM)+余裕を超える並べ方しか無ければ「積めない」
-//  7台: 上の条件に加えて、宙段(7番)に載せる車・5番・6番が、宙段の動き(スロープ〜固定ピンの高さ)の間に当たらない組み合わせがあること(fm.hangLowerFit / hangUpperFit)。
-//        荷姿の高さは、2番前・3番前・3番後ろを「宙段と7番の車・下段の車に当たらない最も低い穴」まで下げた棚で評価する(check7。2026-10-07。以前は全てピンの上限に決め付けていた)。
-//        5番は、バック(鼻を宙段側へ)と前向き(軽トラの荷台を宙段側へ)の両方、5番の輪止めを前へ寄せる段数(0〜11段)も調べる
+//  7台: 上の条件に加えて、中段フロア(7番)に載せる車・5番・6番が、中段フロアの動き(スロープ〜固定ピンの高さ)の間に当たらない組み合わせがあること(fm.hangLowerFit / hangUpperFit)。
+//        荷姿の高さは、2番前・3番前・3番後ろを「中段フロアと7番の車・下段の車に当たらない最も低い穴」まで下げたフロアで評価する(check7。2026-10-07。以前は全てピンの上限に決め付けていた)。
+//        5番は、バック(鼻を中段フロア側へ)と前向き(軽トラの荷台を中段フロア側へ)の両方、5番の輪止めを前へ寄せる段数(0〜11段)も調べる
 (function () {
   var cfg = window.TRAILER_CONFIG, fm = window.FLOOR_MECH;
   if (!cfg || !fm) return;
@@ -17,7 +17,7 @@
   // 1番・4番(前の列)に積める車: 背の低い車(高さ LOW_MAX_PX 以下)か、軽トラ(荷台が低い)だけ(2026-10-09 ユーザー指示: 箱バン・ミニバンのような背の高い車は積めない)
   var LOW_MAX_PX = 192;
   function lowCar(d) { return d.h <= LOW_MAX_PX || /^truck/.test(d.e.id); }
-  // 棚を積み込み後に置く標準の高さ(各棚がピンに載った位置。通しプレイで使った値)
+  // フロアを積み込み後に置く標準の高さ(各フロアがピンに載った位置。通しプレイで使った値)
   var BASE = { F1f: -2.7, F1r: -3.6, F2f: 6.7, MID: -3.6, F3r: 3.6, F5f: 0, F5r: 0, F7: 0 };
 
   function dims(it, flip) {
@@ -31,7 +31,7 @@
   var F1_DOWN = 30;   // 1番フロアを標準の高さから下げられる最大(px。走行位置までは約35〜75px下がるが、控えめに)
   // 1番フロアを標準の高さ(BASE)から上げる量(px。負=下げられる量)。下の4番の車の屋根(lowerEnv)に、1番フロアの下面が当たらない最小の量を、実際の形で調べる(二分探索)
   var f1Cache = {};
-  // 1番フロアは、前(F1f)は最高の穴までしか上がらない(=ほとんど上がらない)、後ろ(F1r)は大きく上がる(ケツ上がり)。上げる量 s(px。上げる=正)の時の棚の高さ
+  // 1番フロアは、前(F1f)は最高の穴までしか上がらない(=ほとんど上がらない)、後ろ(F1r)は大きく上がる(ケツ上がり)。上げる量 s(px。上げる=正)の時のフロアの高さ
   function f1Offs(s) {
     var E = fm.ENDS, hiF = fm.offOfHole('F1f', E.F1f.holeMax), hiR = fm.offOfHole('F1r', E.F1r.holeMax), o = baseOffs();
     o.F1f = Math.max(hiF, BASE.F1f - s); o.F1r = Math.max(hiR, BASE.F1r - s);
@@ -54,12 +54,12 @@
   var COVER = { 4: ['F1', 'F2'], 5: ['F2'], 6: ['F3'] };   // その下段スロープの上にあるフロア
   function lowerNeed(d, slotNum) {
     var S = cfg.slots[slotNum], occ = { img: d.img, prof: d.prof, w: d.w, h: d.h, leftTireX: d.leftTireX };
-    var tx = S.tireX + 8, pos = [tx, S.deckY], x0 = tx - d.leftTireX, top = fm.carTopY(occ, pos, 0), hmax = 0;   // 高さの計算では、宙段用の許容(tol)は使わない
+    var tx = S.tireX + 8, pos = [tx, S.deckY], x0 = tx - d.leftTireX, top = fm.carTopY(occ, pos, 0), hmax = 0;   // 高さの計算では、中段フロア用の許容(tol)は使わない
     for (var x = x0; x <= x0 + d.w; x += 6) hmax = Math.max(hmax, S.deckY - top(x));
     // n=標準の高さから上げる量(px。下げられる時は負)。1番フロアは、下の4番の車が低ければ標準より下げられる(F1_DOWN まで)。2・3番は呼び出し側で 0 以上に丸める
     var n = Math.max(-F1_DOWN, hmax - REF_CLEAR), need = { F1: 0, F2: 0, F3: 0 };
     COVER[slotNum].forEach(function (id) { need[id] = n; });
-    // 2・3番フロアの上げる量は、車の絵の輪郭と棚の実際の形で求め直す(高さだけの近似だと、屋根がフロアに入り込んだ。2026-10-09)。着く前の60pxからの各位置で当たらないこと
+    // 2・3番フロアの上げる量は、車の絵の輪郭とフロアの実際の形で求め直す(高さだけの近似だと、屋根がフロアに入り込んだ。2026-10-09)。着く前の60pxからの各位置で当たらないこと
     var Lenv = lowerEnv(d, slotNum, 0);
     function envNeed(id, mk, rmax) {
       function ok(r) { return fm.envFits([Lenv], [id], mk(r)); }
@@ -103,12 +103,12 @@
   function isNarrow(e) { return (e.width || 0) <= (cfg.slots['6'].maxWidthM || Infinity); }
 
 
-  // ---- 7台(宙段): 2番前・3番前・3番後ろの棚を、宙段が当たらない最小の高さまで下げて評価する(2026-10-07) ----
-  // 以前は、宙段を使う時の棚を「ピンで固定できる上限」(FIT_OFFS)に固定して評価していたため、2・3番に背の高い車を入れると荷姿が高く出た。
-  // 実際は、宙段(と7番の車)の真上に来る3番前(MID)だけが高く、両端の2番前・3番後ろは、宙段の上を外れるので低くできる(棚は傾けられる)。
-  //  ・MID(3番前)の穴ごとに、2番前(F2f)・3番後ろ(F3r)を「宙段・7番の車・下段(4・5・6番)の車・棚の傾き・フレーム」に当たらない最も低い穴まで下げる
+  // ---- 7台(中段フロア): 2番前・3番前・3番後ろのフロアを、中段フロアが当たらない最小の高さまで下げて評価する(2026-10-07) ----
+  // 以前は、中段フロアを使う時のフロアを「ピンで固定できる上限」(FIT_OFFS)に固定して評価していたため、2・3番に背の高い車を入れると荷姿が高く出た。
+  // 実際は、中段フロア(と7番の車)の真上に来る3番前(MID)だけが高く、両端の2番前・3番後ろは、中段フロアの上を外れるので低くできる(フロアは傾けられる)。
+  //  ・MID(3番前)の穴ごとに、2番前(F2f)・3番後ろ(F3r)を「中段フロア・7番の車・下段(4・5・6番)の車・フロアの傾き・フレーム」に当たらない最も低い穴まで下げる
   //  ・その中で、上段(1〜3番)の車の屋根が最も低くなる MID を選ぶ。2番前は、5番が平らな時に上がる freeTop まで(以前の -60 は、5番がスロープの時だけ届く高さだった)
-  var TILT_MAX_DEG = 10;   // 2・3番の棚の傾きの上限(度)。実車の写真(7台積み)では2番が約13度傾いて積まれている。傾いた車の屋根の高さは roofY で計算に入れた(2026-10-09)ので、5→10に広げた(ランダム60デッキで、7台の積める割合 55%→67%、平均の高さ 4.29→4.21m)
+  var TILT_MAX_DEG = 10;   // 2・3番のフロアの傾きの上限(度)。実車の写真(7台積み)では2番が約13度傾いて積まれている。傾いた車の屋根の高さは roofY で計算に入れた(2026-10-09)ので、5→10に広げた(ランダム60デッキで、7台の積める割合 55%→67%、平均の高さ 4.29→4.21m)
   var D = { M: [], F2: [], F3: [] };   // 穴の高さの一覧(低い順。off が大きい=低い)
   (function () {
     var E = fm.ENDS, h;
@@ -123,10 +123,10 @@
     return a.sort(function (x, y) { return y - x; });
   }
   D.F3 = f3Dom;
-  // 5番の輪止めは前(キャビン側)へ最大 chockRange.front(cm)まで、step(cm)刻みで動かせる。車をその分前へ寄せると、宙段の前端に車の鼻が当たらなくなる
+  // 5番の輪止めは前(キャビン側)へ最大 chockRange.front(cm)まで、step(cm)刻みで動かせる。車をその分前へ寄せると、中段フロアの前端に車の鼻が当たらなくなる
   var CR5 = cfg.slots['5'].chockRange || {}, STEP5 = (CR5.step || 4) / 100 * PX, MAXSTEP5 = Math.round((CR5.front || 0) / (CR5.step || 4));
   var CAR_GAP_PX = 2;   // 4番の車の後ろ端と5番の車の前端の最小の間隔(重なると「駐車中の車にぶつかる」)
-  function minSteps5(d5, ph) {   // 宙段に当たらない最小の寄せ段数(無ければ -1)
+  function minSteps5(d5, ph) {   // 中段フロアに当たらない最小の寄せ段数(無ければ -1)
     return cached('S' + carKey({ entry: d5.e }, d5.flip) + ph, function () {
       for (var s = 0; s <= MAXSTEP5; s++) if (fm.hangLowerFit(d5, '5', s * STEP5).ok) return s;
       return -1;
@@ -149,8 +149,8 @@
     for (var sh = 15; sh <= 60; sh += 15) { var L2 = lowerEnv1(d, slotNum, (shiftPx || 0) - sh); for (var q = 0; q < L.length; q++) if (L2[q] < L[q]) L[q] = L2[q]; }
     return L;
   }
-  // 1つの制約(包絡線 L)について、MID の穴ごとに、その棚(end='F2f' か 'F3r')を下げられる最も低い高さを求める(表。入れられない MID は null)
-  //  棚を上げるほど余裕が増える(単調)ので、二分探索。傾き(TILT_MAX_DEG)も条件に入れる
+  // 1つの制約(包絡線 L)について、MID の穴ごとに、そのフロア(end='F2f' か 'F3r')を下げられる最も低い高さを求める(表。入れられない MID は null)
+  //  フロアを上げるほど余裕が増える(単調)ので、二分探索。傾き(TILT_MAX_DEG)も条件に入れる
   function frontierOne(L, floorId, end, domIn) {
     var E = fm.ENDS, out = [], base = baseOffs();
     function ok(m, v) {
@@ -172,7 +172,7 @@
   var cache = {};
   function cached(key, fn) { return cache[key] || (cache[key] = fn()); }
   function carKey(it, flip) { return it.entry.id + (flip ? 'r' : ''); }
-  // 宙段と7番の車(c7)に対する F2f・F3r の下限の表(固定ピンの穴 ph ごと)
+  // 中段フロアと7番の車(c7)に対する F2f・F3r の下限の表(固定ピンの穴 ph ごと)
   function hangFrontier(it, d7, ph) {
     return cached('H' + carKey(it) + ph, function () {
       var L = fm.hangUpperEnvelope(d7);
@@ -198,7 +198,7 @@
 
   function check7(items, fx, fw) {
     var idx = items.map(function (_, i) { return i; }), fr = items.map(function (it) { return dims(it, true); }), D2 = [fw, fr], roofCache = {};
-    function roofOf(i, f, slot, offs) {   // 上段の車の屋根の高さ(y)。向き f(0=前向き・1=バック)・スロット・棚の高さごとに1回だけ計算する
+    function roofOf(i, f, slot, offs) {   // 上段の車の屋根の高さ(y)。向き f(0=前向き・1=バック)・スロット・フロアの高さごとに1回だけ計算する
       var k = items[i].entry.id + '|' + f + '|' + slot + '|' + (slot === '1' ? offs.F1f.toFixed(1) + '/' + offs.F1r.toFixed(1) : offs.F2f.toFixed(1) + '/' + offs.MID.toFixed(1) + '/' + offs.F3r.toFixed(1));
       return roofCache[k] !== undefined ? roofCache[k] : (roofCache[k] = roofY(D2[f][i], slot, offs));
     }
@@ -217,7 +217,7 @@
         if (!fm.hangLowerFit(fw[i6], '6').ok) return;
         var hf = hangFrontier(items[i7], fw[i7], ph), l6 = lowerFrontier(items[i6], fw[i6], '6', false);
         var rest = idx.filter(function (i) { return t.indexOf(i) < 0; });   // 1〜4番に載せる4台
-        // 5番(宙段側へ車の鼻を向けるバック=反転 か、通常の前向き(軽トラの荷台を宙段側にする裏技))
+        // 5番(中段フロア側へ車の鼻を向けるバック=反転 か、通常の前向き(軽トラの荷台を中段フロア側にする裏技))
         [true, false].forEach(function (flip5) {
           if (fx && fx.flip5 !== undefined && !!fx.flip5 !== flip5) return;
           var d5 = flip5 ? dims(items[i5], true) : fw[i5]; d5.flip = flip5;
@@ -258,7 +258,7 @@
               if (bq < 0) return;
               okHere = true;
               var Hm = (cfg.ramp.groundY - bestTop) / PX;
-              var cost = fw[a3[0]].h + fw[i4].h + fw[i5].h + fw[i7].h + 0.5 * (fw[i5].w + fw[i7].w) + 0.5 * st5 + (flip5 ? 0 : 0.01);   // 1番・4番と、5番・宙段に入る車の高さ・長さ(同じ高さなら前向きの5番を好む)
+              var cost = fw[a3[0]].h + fw[i4].h + fw[i5].h + fw[i7].h + 0.5 * (fw[i5].w + fw[i7].w) + 0.5 * st5 + (flip5 ? 0 : 0.01);   // 1番・4番と、5番・中段フロアに入る車の高さ・長さ(同じ高さなら前向きの5番を好む)
               if (Hm < best7 - EPS || (Hm < best7 + EPS && cost < bestCost)) { best7 = Math.min(best7, Hm); bestCost = cost; fit = t; fitOrder = a3.concat([i4]); fitPin = ph; fitFlip5 = flip5; fitShelf = SH[bq]; fitNeedF1 = needF1; fitSteps5 = st5; fitFlips = Object.assign({ 4: f4 === 1 }, bflips); }
             });
           }); });
@@ -267,7 +267,7 @@
       if (okHere) pins.push(ph);
     }
     if (fm.stopPin) { fm.stopPin.hole = hole0; fm.stopPinResolve(); }
-    if (!fit) return { ok: false, why: '宙段に載せて6番・5番も積める組み合わせが無い(車が高い・長い)' };
+    if (!fit) return { ok: false, why: '中段フロアに載せて6番・5番も積める組み合わせが無い(車が高い・長い)' };
     if (best7 > CAP_M) return { ok: false, H: best7, why: '荷姿の高さが上限(' + CAP_M + 'm)を超える(最も低く積んでも ' + best7.toFixed(2) + 'm)' };   // 2026-10-09 ユーザー指示
     var shelf = { F2f: fitShelf.F2f, MID: fitShelf.MID, F3r: fitShelf.F3r };
     shelf.holes = { F2f: holeOf('F2f', shelf.F2f), MID: holeOf('MID', shelf.MID), F3r: fm.holeNo('F3r', shelf.F3r, shelf.MID) };

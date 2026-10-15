@@ -7,7 +7,7 @@
 
   function resolvePt(pt) { return pt === 'mid' ? M : pt; }
 
-  // ---- 端点(棚の上下量)----
+  // ---- 端点(フロアの上下量)----
   var ENDS = {};
   Object.keys(floorsCfg.ends).forEach(function (k) {
     var e = floorsCfg.ends[k];
@@ -42,7 +42,7 @@
   function curOffs() { var o = {}; for (var k in ENDS) o[k] = ENDS[k].off; return o; }
   // 前端・後端の上下量から、回転角(度)と前端の上下量を求める
   function poseOf(id, offs) {
-    if (id === 'F7') return { ang: hangPose().ang, dh: 0 };   // 宙段フロア(前端・後端の2点で決まらない別の動き)
+    if (id === 'F7') return { ang: hangPose().ang, dh: 0 };   // 中段フロア(前端・後端の2点で決まらない別の動き)
     var f = FLOORS[id], o = offs || curOffs(), pf = f.front.pt, pr = f.rear.pt;
     var of = o[f.front.end], orr = o[f.rear.end];
     var a = angOf(pr[0] - pf[0], (pr[1] + orr) - (pf[1] + of)) - angOf(pr[0] - pf[0], pr[1] - pf[1]);
@@ -53,7 +53,7 @@
     return [pivot[0] + dx * Math.cos(a) - dy * Math.sin(a), pivot[1] + pose.dh + dx * Math.sin(a) + dy * Math.cos(a)];
   }
   function onFloor(id, x, y, offs) {
-    if (id === 'F7') {   // 宙段: ローカル座標(格納時に平らな姿勢の絵)を、今の前端Fの位置・角度に移す
+    if (id === 'F7') {   // 中段フロア: ローカル座標(格納時に平らな姿勢の絵)を、今の前端Fの位置・角度に移す
       var hp = hangPose(), a = hp.ang * Math.PI / 180, dx = x - HANG.localX0, dy = y - HANG.localY;
       return [hp.F[0] + dx * Math.cos(a) - dy * Math.sin(a), hp.F[1] + dx * Math.sin(a) + dy * Math.cos(a)];
     }
@@ -66,10 +66,10 @@
   var FRAME_GAP_PX = (cfg.hangFloor && cfg.hangFloor.frameGapPx !== undefined) ? cfg.hangFloor.frameGapPx : 0.05 * cfg.pxPerMeter;   // 設定 hangFloor.frameGapPx(px)で変えられる(検証で、すき間を変えて、積める組み合わせの割合を比べた)
   var PINS = {}; Object.keys(floorsCfg.ends).forEach(function (k) { PINS[k] = null; });
   var PIN_TARGET = {};
-  // ---- 3番後ろ(F3r)のピンは、柱(x=post.x)で3番フロアを受ける(2026-10-08 ユーザー指摘「棚とピンの動きが連動していない」)----
-  // 3番フロアは、前=3番前(MID。x=1520)・後ろ=3番後ろ(F3r。x=2055)の2点で決まる直線。柱の位置(x=1795)の棚の上下量は P = MID + (F3r − MID)×r(r=(柱−前)/(後ろ−前)≒0.514)。
-  // ピンの高さは柱で固定(1穴=post.pitch)。棚がピンに載る=柱の位置の棚が P(穴) になる。だから、3番前(MID)を動かすと、同じ穴に載る3番後ろの高さも変わる。
-  // PINS.F3r は、今の3番前で換算した「3番後ろの載る高さ」(他の棚と同じ意味)を返す(getter)。差してある穴の柱での高さは F3_PIN_POST に持つ。
+  // ---- 3番後ろ(F3r)のピンは、柱(x=post.x)で3番フロアを受ける(2026-10-08 ユーザー指摘「フロアとピンの動きが連動していない」)----
+  // 3番フロアは、前=3番前(MID。x=1520)・後ろ=3番後ろ(F3r。x=2055)の2点で決まる直線。柱の位置(x=1795)のフロアの上下量は P = MID + (F3r − MID)×r(r=(柱−前)/(後ろ−前)≒0.514)。
+  // ピンの高さは柱で固定(1穴=post.pitch)。フロアがピンに載る=柱の位置のフロアが P(穴) になる。だから、3番前(MID)を動かすと、同じ穴に載る3番後ろの高さも変わる。
+  // PINS.F3r は、今の3番前で換算した「3番後ろの載る高さ」(他のフロアと同じ意味)を返す(getter)。差してある穴の柱での高さは F3_PIN_POST に持つ。
   var F3P = floorsCfg.ends.F3r.post || null, F3 = null, F3_PIN_POST = null, F3_PT = 0;
   if (F3P) F3 = { r: (F3P.x - floorsCfg.mid[0]) / (floorsCfg.defs.F3.rearPt[0] - floorsCfg.mid[0]), pp: F3P.pitch, pd: F3P.pitchDown || F3P.pitch };
   function f3Post(R, mid) { return mid + (R - mid) * F3.r; }
@@ -84,10 +84,10 @@
   // 描画用: 差したピンの(走行位置の穴を0とした)柱での高さ(下向きが正)。F3r 以外は null
   function pinPostOfHole(h) { return F3 ? f3PostOfHole(h) - F3_PT : 0; }   // 描画用: 穴hの柱での高さ(走行位置の穴=0、下向きが正)
   function pinPostRel(k) { return k === 'F3r' && F3 && F3_PIN_POST !== null ? F3_PIN_POST - F3_PT : null; }
-  // 柱の穴番号(実車の番号): 最下段=0番(ピンなし)、走行位置=hole番、ピンを差せる最大=holeMax番(棚の上限の1穴下)。
-  // 棚の絵(off=0)は変えずに番号を当てはめるので、走行位置より上と下で1穴の間隔が違う(上は細かい)。
-  function pitchUp(k) { if (k === 'F3r' && F3) return F3.pp / F3.r; var e = ENDS[k]; return e.pitchUpPx || (e.travel - e.r[0]) / (e.holeMax - e.hole + 1); }   // pitchUp(設定): 穴の間隔を実車に合わせて決めている棚(2番前)
-  function pitchDown(k) { if (k === 'F3r' && F3) return F3.pp / F3.r; var e = ENDS[k]; return e.pitchDownPx || (e.hole > 0 ? (e.r[1] - e.travel) / e.hole : 0); }   // pitchDown(設定): 走行位置より下の穴の間隔を決めている棚(3番後ろ。設定が無ければ、下の可動域を穴の数で割る)
+  // 柱の穴番号(実車の番号): 最下段=0番(ピンなし)、走行位置=hole番、ピンを差せる最大=holeMax番(フロアの上限の1穴下)。
+  // フロアの絵(off=0)は変えずに番号を当てはめるので、走行位置より上と下で1穴の間隔が違う(上は細かい)。
+  function pitchUp(k) { if (k === 'F3r' && F3) return F3.pp / F3.r; var e = ENDS[k]; return e.pitchUpPx || (e.travel - e.r[0]) / (e.holeMax - e.hole + 1); }   // pitchUp(設定): 穴の間隔を実車に合わせて決めているフロア(2番前)
+  function pitchDown(k) { if (k === 'F3r' && F3) return F3.pp / F3.r; var e = ENDS[k]; return e.pitchDownPx || (e.hole > 0 ? (e.r[1] - e.travel) / e.hole : 0); }   // pitchDown(設定): 走行位置より下の穴の間隔を決めているフロア(3番後ろ。設定が無ければ、下の可動域を穴の数で割る)
   function holeNo(k, off, mid) {
     var e = ENDS[k];
     if (k === 'F3r' && F3) return Math.max(0, Math.round(f3HoleOfPost(f3Post(off, mid === undefined ? ENDS.MID.off : mid))));   // 柱での高さで穴を決める(3番前の高さで変わる)
@@ -110,8 +110,8 @@
     var r = holeRange(k);
     return Math.max(r.bottom, Math.min(r.top, PIN_TARGET[k]));
   }
-  // 棚を動かしている間、その棚の近くの『フロアより下の差し込み口』を自動でピンの番号にする(あとから−/＋で変えられる)。
-  // フロアがちょうど10番の真上にいる時は9番、10番を超えて上がったら10番(ピンは棚の下に差して棚を受ける)
+  // フロアを動かしている間、そのフロアの近くの『フロアより下の差し込み口』を自動でピンの番号にする(あとから−/＋で変えられる)。
+  // フロアがちょうど10番の真上にいる時は9番、10番を超えて上がったら10番(ピンはフロアの下に差してフロアを受ける)
   function autoPinTarget(k) {
     if (PINS[k] !== null || !ENDS[k] || ENDS[k].holeMax === undefined) return;
     var e = ENDS[k], best = 1;
@@ -125,7 +125,7 @@
   function togglePin(k) {
     if (PINS[k] === null) {
       var h = pinTarget(k), off = offOfHole(k, h);
-      if (off < ENDS[k].off - 0.5) { onWarn(ENDS[k].label + 'の棚を' + h + '番より上に上げてからピンを差してください'); return; }
+      if (off < ENDS[k].off - 0.5) { onWarn(ENDS[k].label + 'のフロアを' + h + '番より上に上げてからピンを差してください'); return; }
       PINS[k] = off; PIN_TARGET[k] = h;
       onInfo(ENDS[k].label + ' ' + h + '番の穴にセットピンを差した');
     } else {
@@ -138,32 +138,32 @@
     }
   }
 
-  // 初期状態(走行位置): 全ての棚を走行位置に置き、セットピンを差して固定した状態。3番の前だけはピンを差さない
-  // フレーム側の固定ピン(赤い板。2枚目の写真): 宙段を上げて車を載せた時に、フロアの下面がこのピンに当たって止まる。前後に5段階の位置(SP_CFG.xs)。ピン穴の位置で止まる高さ(loadU)が決まる
+  // 初期状態(走行位置): 全てのフロアを走行位置に置き、セットピンを差して固定した状態。3番の前だけはピンを差さない
+  // フレーム側の固定ピン(赤い板。2枚目の写真): 中段フロアを上げて車を載せた時に、フロアの下面がこのピンに当たって止まる。前後に5段階の位置(SP_CFG.xs)。ピン穴の位置で止まる高さ(loadU)が決まる
   var SP_CFG = (cfg.hangFloor && cfg.hangFloor.stopPin) || null;
   var SP = { hole: SP_CFG ? SP_CFG.hole : 1, inserted: true };   // pts=[x,y]の5つ(前→後ろ。斜めの柱に沿って並ぶ)
   function initPins() {
     SP.inserted = true;   // 固定ピンは赤い板に最初から差してある(フロアの位置に関係なく抜き差しできる)
     Object.keys(floorsCfg.ends).forEach(function (k) {
       ENDS[k].off = ENDS[k].travel;
-      if (k === 'F7' && typeof MECH !== 'undefined' && MECH) { MECH.hang = 0; MECH.lockR = MECH.lockL = true; }   // サイクルのリセットで宙段も格納に戻し、車軸のロックも掛かった状態にする
+      if (k === 'F7' && typeof MECH !== 'undefined' && MECH) { MECH.hang = 0; MECH.lockR = MECH.lockL = true; }   // サイクルのリセットで中段フロアも格納に戻し、車軸のロックも掛かった状態にする
       if (ENDS[k].noTravelPin) { PINS[k] = null; delete PIN_TARGET[k]; }
       else { PINS[k] = ENDS[k].travel; PIN_TARGET[k] = ENDS[k].hole; }
     });
   }
-  // 棚がセットピンに載って固定されているか(ピンを差さない端は常にtrue)。
-  // ピン穴は棚の今の位置以下にしか差せないので、1穴分の隙間までは「載っている」とみなす
-  // 棚がセットピン(3番前は下端)にしっかり載って固定されているか(ピンを刺しただけでなく、フロアがピンに載っている)
+  // フロアがセットピンに載って固定されているか(ピンを差さない端は常にtrue)。
+  // ピン穴はフロアの今の位置以下にしか差せないので、1穴分の隙間までは「載っている」とみなす
+  // フロアがセットピン(3番前は下端)にしっかり載って固定されているか(ピンを刺しただけでなく、フロアがピンに載っている)
   function rested(k) {
     var e = ENDS[k];
-    if (k === 'F7') return MECH.hang <= 0.01 || (SP.inserted && Math.abs(MECH.hang - HANG.loadU) < 0.03);   // 宙段: 格納か、固定ピン(赤い板)に載って止まっている
-    if (e.noTravelPin) return e.off >= e.travel - 1.5 || (PINS[k] !== null && e.off >= PINS[k] - restTol(k) - 0.5);   // 3番前も、棚の少し下にピンがあれば固定扱い(棚をそのピンまで下げ切っていなくてよい)
-    // 支柱の短い棚(2番前): ピンを一番上の穴に差して昇降させた(伸ばした)状態は、ピンより上でも固定されている
+    if (k === 'F7') return MECH.hang <= 0.01 || (SP.inserted && Math.abs(MECH.hang - HANG.loadU) < 0.03);   // 中段フロア: 格納か、固定ピン(赤い板)に載って止まっている
+    if (e.noTravelPin) return e.off >= e.travel - 1.5 || (PINS[k] !== null && e.off >= PINS[k] - restTol(k) - 0.5);   // 3番前も、フロアの少し下にピンがあれば固定扱い(フロアをそのピンまで下げ切っていなくてよい)
+    // 支柱の短いフロア(2番前): ピンを一番上の穴に差して昇降させた(伸ばした)状態は、ピンより上でも固定されている
     if (e.freeTop !== undefined && PINS[k] !== null && PINS[k] <= pinLimitOff(k) + 0.5) return true;
-    // 棚が走行位置まで下がっていなくても、棚の少し下(最大2穴分)にピンが差してあれば固定されているとみなす(下段の車を積む間は棚を上げたままにするので、ピンは棚の位置付近に差せばよい。棚をそのピンまで下げ切っている必要はない。2026-10-06 ユーザー指示)
+    // フロアが走行位置まで下がっていなくても、フロアの少し下(最大2穴分)にピンが差してあれば固定されているとみなす(下段の車を積む間はフロアを上げたままにするので、ピンはフロアの位置付近に差せばよい。フロアをそのピンまで下げ切っている必要はない。2026-10-06 ユーザー指示)
     return PINS[k] !== null && e.off >= PINS[k] - restTol(k) - 0.5;
   }
-  // ピンの下に棚が入っていても「載っている」とみなす隙間(2穴分。ただし穴の間隔が8pxを超える棚(3番後ろ 14.4px)は、7pxまで)
+  // ピンの下にフロアが入っていても「載っている」とみなす隙間(2穴分。ただし穴の間隔が8pxを超えるフロア(3番後ろ 14.4px)は、7pxまで)
   function restTol(k) { var pp = pitchUp(k); return pp > 8 ? 7 : 2 * pp; }
   function floorPinsOk(id) { var f = FLOORS[id]; return rested(f.front.end) && rested(f.rear.end); }
   function pinned(k) {
@@ -174,10 +174,10 @@
   }
   initPins();
 
-  // ---- 宙段フロア(5番と6番の間の、持ち上がる短い棚=7台目)----
+  // ---- 中段フロア(5番と6番の間の、持ち上がる短いフロア=7台目)----
   // u=0 格納(下段の床に平ら)→ u=1 前(5番側)が先に上がり、後ろは接地のまま前へ滑る(車が乗れるスロープ)→ u=2 後ろも上がる。
   // 前端F・後端Rの位置は段階ごとに設定(trailer_config.hangFloor)で、その間を直線で補間する(長さはほぼ一定)。
-  // 他の棚と同じく、柱の中の支柱にセットピンを当てて固定する(ピンは仮想の上下量 ENDS.F7.off = -u×60、1穴=u0.1=6px。番号札 hole_scale_f7 の1穴6pxと同じ)。
+  // 他のフロアと同じく、柱の中の支柱にセットピンを当てて固定する(ピンは仮想の上下量 ENDS.F7.off = -u×60、1穴=u0.1=6px。番号札 hole_scale_f7 の1穴6pxと同じ)。
   var HANG = cfg.hangFloor;
   // 姿勢は実車と同じ四節リンクの計算(trailer_config.hangFloor.linkage)。リンク=車体(pivotF〜pivotR)・前の柱(長さ固定)・フロア(取付点の間)・後ろの柱(伸縮)。
   //  段階1(u 0→lockU): 前の柱が θ 0→theta1 まで持ち上がり、後ろの取付点は地面(groundY)を前へ滑る → 後ろの柱が縮む。
@@ -225,7 +225,7 @@
     RP.theta1 = hi;
   }
   function hangRebuild() { rearPinSolve(); HANG_TAB.length = 0; var prevAR = null; for (var hi = 0; hi <= HANG_N; hi++) { var hs = hangSolve(hi * 2 / HANG_N, prevAR); HANG_TAB.push(hs); prevAR = hs.aR; } stopPinSolve(); }   // 設定値を実行中に変えて比べる時(検証用)にも使う
-  // ピンの位置(穴 n)から、宙段を上から下げた時にフロア下面がピンに当たる u を求める(0.01 刻み)。HANG.loadU に入れる
+  // ピンの位置(穴 n)から、中段フロアを上から下げた時にフロア下面がピンに当たる u を求める(0.01 刻み)。HANG.loadU に入れる
   function stopPinSolve() {
     if (!SP_CFG) return;
     if (SP_CFG.us) { HANG.loadU = SP_CFG.us[SP.hole - 1]; return; }   // 穴ごとの止まる高さを設定で直接決める(D25のピンの穴は6px間隔で、フロア先端が通る道の上に並んでいないため、位置の計算では使えない)
@@ -245,7 +245,7 @@
   }
   function hangTop(u, x) { var e = hangEnds(u); return e.F[1] + (e.R[1] - e.F[1]) * (x - e.F[0]) / (e.R[0] - e.F[0]); }
   var HANG_REAR_SPEED = 30;   // 後ろの柱の伸縮の速さ(px/秒。約0.26m/秒)
-  var HANG_PIN_PX = 60;   // 宙段のピンの仮想の上下量: u=1あたり60px(0〜19番の20穴で120px、1穴6px)
+  var HANG_PIN_PX = 60;   // 中段フロアのピンの仮想の上下量: u=1あたり60px(0〜19番の20穴で120px、1穴6px)
   function syncHangEnd() { if (ENDS.F7) ENDS.F7.off = -MECH.hang * HANG_PIN_PX; }
   // 床の下面(上面+10px)がy(x)・x範囲[x0,x1]・屋根の高さtopYの車とぶつかるか(枠の内側5cmは隙間)
   // topY は車の屋根の高さ(数値)か、x→屋根の高さを返す関数(ボンネットは低く屋根は高い、実際の車の形で判定する)
@@ -280,7 +280,7 @@
     return prof;
   }
   // 積んだ車の一番高い所(y。小さいほど高い)。描画と同じく、車の絵をposを支点に rotDeg 回して、輪郭(profile)の全部の列で測る(2026-10-11)。
-  // 絵が読めない時は、回した4隅の一番高い所。傾いた宙段の上の車は、回した分だけ屋根が上がるので、傾きを入れないと高さが低く出る
+  // 絵が読めない時は、回した4隅の一番高い所。傾いた中段フロアの上の車は、回した分だけ屋根が上がるので、傾きを入れないと高さが低く出る
   function carRoofY(occ, pos, rotDeg) {
     var a = (rotDeg || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), L = occ.leftTireX, w = occ.w, h = occ.h, best = Infinity;
     var prof = occ.prof || (occ.img ? carProfile(occ.img) : null);
@@ -291,16 +291,16 @@
     return best;
   }
   // 積んだ車occ(床の位置pos)の、画面x での屋根の高さ(y)。絵が読めない時は全体を屋根の高さとする
-  // 宙段まわりは実車でもすき間がほぼ無い(車の屋根・ボンネットと棚が触れる寸前で積んでいる)ので、車を HANG.tol px 低く見て判定する(実車の許容)
+  // 中段フロアまわりは実車でもすき間がほぼ無い(車の屋根・ボンネットとフロアが触れる寸前で積んでいる)ので、車を HANG.tol px 低く見て判定する(実車の許容)
   function carTopY(occ, pos, tolOverride) {
-    var x0 = pos[0] - occ.leftTireX, prof = occ.prof || (occ.img ? carProfile(occ.img) : null), tol = tolOverride !== undefined ? tolOverride : ((HANG && (HANG.tolLower !== undefined ? HANG.tolLower : HANG.tol)) || 0);   // 下段(5・6番)の車と宙段の判定は tolLower(従来の40)。宙段に載せた車と2・3番の床の判定は tol(hangCarBoxOf)
+    var x0 = pos[0] - occ.leftTireX, prof = occ.prof || (occ.img ? carProfile(occ.img) : null), tol = tolOverride !== undefined ? tolOverride : ((HANG && (HANG.tolLower !== undefined ? HANG.tolLower : HANG.tol)) || 0);   // 下段(5・6番)の車と中段フロアの判定は tolLower(従来の40)。中段フロアに載せた車と2・3番の床の判定は tol(hangCarBoxOf)
     return function (x) {
       if (!prof) return pos[1] - occ.h + tol;
       var c = Math.max(0, Math.min(prof.length - 1, Math.floor((x - x0) / occ.w * prof.length)));
       return pos[1] - occ.h * prof[c] + tol;
     };
   }
-  // 宙段に載っている7台目(あれば): 姿勢uでの、車の前後の端のxと屋根の高さ
+  // 中段フロアに載っている7台目(あれば): 姿勢uでの、車の前後の端のxと屋根の高さ
   function hangCarBox(u) {
     var gs = window.GAME_STATE;
     return hangCarBoxOf(gs && gs.occupied['7'], u);
@@ -317,13 +317,13 @@
       hAt: function (x) { var tol = (HANG && HANG.tol) || 0; if (!prof) return occ.h - tol; var c = Math.max(0, Math.min(prof.length - 1, Math.floor((x - x0) / occ.w * prof.length))); return occ.h * prof[c] - tol; }
     };
   }
-  // 宙段の支柱は、3番前(継ぎ目)の棚の柱の一番下に埋まっている。3番前の棚が下がりきって(ピン無しで支柱が一番下に)いる間は、宙段の支柱が動かない
+  // 中段フロアの支柱は、3番前(継ぎ目)のフロアの柱の一番下に埋まっている。3番前のフロアが下がりきって(ピン無しで支柱が一番下に)いる間は、中段フロアの支柱が動かない
   function hangStuck() {
     var m = ENDS.MID;
-    if (m.off >= m.travel - 1.5) return '3番前の棚が一番下にあるので、宙段の支柱が動きません(3番前の柱の一番下に埋まっています)。3番前を少し上げてください';
+    if (m.off >= m.travel - 1.5) return '3番前のフロアが一番下にあるので、中段フロアの支柱が動きません(3番前の柱の一番下に埋まっています)。3番前を少し上げてください';
     return null;
   }
-  // 宙段を上げる時に、他のものにぶつからないか。ぶつかるなら理由
+  // 中段フロアを上げる時に、他のものにぶつからないか。ぶつかるなら理由
   //  - 下段(5・6番)に積んだ車の屋根  - 上のフロア(2・3番。車が載っていれば車の屋根まで)に床の下面がぶつからない高さ
   function hangProblem(nu) {
     var gs = window.GAME_STATE, why = null;
@@ -333,13 +333,13 @@
       if (!occ || why) return;
       var pos = occ.floor ? onFloor(occ.floor, occ.localX, occ.localY) : [occ.localX, occ.localY];
       var x0 = pos[0] - occ.leftTireX;
-      if (hangHits(x0, x0 + occ.w, carTopY(occ, pos), nu)) why = n + '番の車に当たる(宙段を上げられません)';
+      if (hangHits(x0, x0 + occ.w, carTopY(occ, pos), nu)) why = n + '番の車に当たる(中段フロアを上げられません)';
     });
     if (why) return why;
     return hangVsUpper(nu, null);
   }
-  // 宙段(姿勢nu)と上のフロア(2・3番)の干渉。offs指定時はその棚の姿勢で判定
-  // 戻り値 { why: 理由 or null, car: 当たったのが宙段に載せた車(true)か、フロア同士(false)か }
+  // 中段フロア(姿勢nu)と上のフロア(2・3番)の干渉。offs指定時はそのフロアの姿勢で判定
+  // 戻り値 { why: 理由 or null, car: 当たったのが中段フロアに載せた車(true)か、フロア同士(false)か }
   function hangVsUpperX(nu, offs, onlyIds, carOcc) {
     var e = hangEnds(nu), car = carOcc ? hangCarBoxOf(carOcc, nu) : hangCarBox(nu), res = { why: null, car: false };
     ['F2', 'F3'].forEach(function (id) {
@@ -350,13 +350,13 @@
         if (p[0] < e.F[0] || p[0] > e.R[0]) continue;
         var base = hangTop(nu, p[0]), top = base, inCar = !!(car && p[0] >= car.x0 && p[0] <= car.x1);
         if (inCar) top -= car.hAt(p[0]);
-        if (p[1] > top - 4) { res = { why: f.name + 'が低くて宙段' + (inCar ? '(と載せた車)' : '') + 'に当たる(' + f.name + 'を上げてください)', car: inCar && !(p[1] > base - 4) }; return; }
+        if (p[1] > top - 4) { res = { why: f.name + 'が低くて中段フロア' + (inCar ? '(と載せた車)' : '') + 'に当たる(' + f.name + 'を上げてください)', car: inCar && !(p[1] > base - 4) }; return; }
       }
     });
     return res;
   }
   function hangVsUpper(nu, offs, onlyIds) { return hangVsUpperX(nu, offs, onlyIds).why; }
-  // 宙段を姿勢nuにした時に、車にぶつかるもの(減点と演出の対象): 下段(5・6番)の車の屋根・ボンネット、宙段に載せた車と上のフロア
+  // 中段フロアを姿勢nuにした時に、車にぶつかるもの(減点と演出の対象): 下段(5・6番)の車の屋根・ボンネット、中段フロアに載せた車と上のフロア
   function hangContacts(nu) {
     var gs = window.GAME_STATE, out = [];
     if (nu <= 0.05 || !gs) return out;
@@ -365,27 +365,27 @@
       if (!occ) return;
       var pos = occ.floor ? onFloor(occ.floor, occ.localX, occ.localY) : [occ.localX, occ.localY];
       var x0 = pos[0] - occ.leftTireX;
-      if (hangHits(x0, x0 + occ.w, carTopY(occ, pos), nu)) out.push({ key: 'hang-' + n, slot: n, msg: n + '番の車に宙段がぶつかった' });
+      if (hangHits(x0, x0 + occ.w, carTopY(occ, pos), nu)) out.push({ key: 'hang-' + n, slot: n, msg: n + '番の車に中段フロアがぶつかった' });
     });
     var vu = hangVsUpperX(nu, null);
-    if (vu.why && vu.car) out.push({ key: 'hang-7', slot: '7', msg: '宙段に載せた車が上のフロアにぶつかった' });
+    if (vu.why && vu.car) out.push({ key: 'hang-7', slot: '7', msg: '中段フロアに載せた車が上のフロアにぶつかった' });
     return out;
   }
-  // ---- 宙段を使う7台の組み合わせが、物理的に積めるかの判定(デッキを引く時に使う)----
-  // c5=5番(バックで積む)・c6=6番・c7=宙段に載せる車。それぞれ {img, w, h, leftTireX}(画像は車の向きに合わせたもの)。
-  // 2・3番フロアは、宙段を使う時に、セットピンで固定できる上限の高さ(下の FIT_OFFS。2番前 -60・3番前=ピン最大28番・3番後ろ=ピン最大33番)まで上げた状態とする。
+  // ---- 中段フロアを使う7台の組み合わせが、物理的に積めるかの判定(デッキを引く時に使う)----
+  // c5=5番(バックで積む)・c6=6番・c7=中段フロアに載せる車。それぞれ {img, w, h, leftTireX}(画像は車の向きに合わせたもの)。
+  // 2・3番フロアは、中段フロアを使う時に、セットピンで固定できる上限の高さ(下の FIT_OFFS。2番前 -60・3番前=ピン最大28番・3番後ろ=ピン最大33番)まで上げた状態とする。
   // (2026-10-03: ユーザーが案2を選んだ。写真の測定で、ゲームの2番の床は実車より約26〜48px低いため。前の値は 2番前 -46・3番前 -72・3番後ろ -24)
   // 前半(u=0.5〜1.5。スロープで7番を積む間)は5番と7番だけ、全上げ(u=1.9〜2)の時は6番も居る
-  // 実際に棚をピンで固定できる、一番高い位置(ピン最大の穴の高さ)。【2026-10-07〜: LOADABLE.check は棚を最小の高さまで下げて評価する(loadable.js の check7)。FIT_OFFS は hangFit の shelf を省略した時の既定(最も余裕のある高さ)】判定(LOADABLE・hangFit)は、実際に届かない高さを前提にすると、
-  // 判定は通るのに本物では2・3番の棚に当たって宙段が上がり切らない組み合わせが出るので、この値で行う(2026-10-06。3番後ろは -60 でなく -58.5、3番前は -72 でなく -71.7)。
+  // 実際にフロアをピンで固定できる、一番高い位置(ピン最大の穴の高さ)。【2026-10-07〜: LOADABLE.check はフロアを最小の高さまで下げて評価する(loadable.js の check7)。FIT_OFFS は hangFit の shelf を省略した時の既定(最も余裕のある高さ)】判定(LOADABLE・hangFit)は、実際に届かない高さを前提にすると、
+  // 判定は通るのに本物では2・3番のフロアに当たって中段フロアが上がり切らない組み合わせが出るので、この値で行う(2026-10-06。3番後ろは -60 でなく -58.5、3番前は -72 でなく -71.7)。
   // 2番前は、ピンを刺さずに(freeTop)可動域の上限まで上げて、5番フロアを持ち上げる時の固定位置にできるので、上限の -60
   var FIT_OFFS = { F2f: -60, MID: offOfHole('MID', ENDS.MID.holeMax), F3r: Math.max(ENDS.F3r.r[0], offOfHole('F3r', ENDS.F3r.holeMax, offOfHole('MID', ENDS.MID.holeMax))) };   // 3番後ろの上限は、可動範囲の上限か、ピン最大の穴(3番前もピン最大の時)の高い方
-  // 宙段の動き(格納に近い所から固定ピンの高さ loadU まで)を調べる u の一覧。0.04 刻み(0.1 刻みでは、間で当たる組み合わせを見逃した 2026-10-06)
-  //  7台目を載せた宙段は、一番上(u=2)まで上げず、固定ピンで loadU(HANG.loadU)に止めて6番を積む。ピンは最初から刺さっていて loadU より上へは動かない(hangStep の onPin)ので、
+  // 中段フロアの動き(格納に近い所から固定ピンの高さ loadU まで)を調べる u の一覧。0.04 刻み(0.1 刻みでは、間で当たる組み合わせを見逃した 2026-10-06)
+  //  7台目を載せた中段フロアは、一番上(u=2)まで上げず、固定ピンで loadU(HANG.loadU)に止めて6番を積む。ピンは最初から刺さっていて loadU より上へは動かない(hangStep の onPin)ので、
   //  loadU までの動きだけを調べる(2026-10-07: 以前は loadU より上〜u=2 も調べていた。ピンを抜かない限り行かない範囲なので、判定が実車より厳しかった)
   function hangUsList() {
     var us = [0.05, 0.1, 0.15, 0.2], loadU = (HANG && HANG.loadU) || 2;
-    for (var ui = 0.22; ui <= 2 + 1e-9; ui += 0.02) us.push(Math.round(ui * 100) / 100);   // 0.02 刻み(2026-10-08: 0.04 刻みでは、u=0.50 付近のごく狭い範囲でだけ当たる組み合わせ(SUV・3段寄せ)を見逃して、5番に積んだ後に宙段が上がらなかった)
+    for (var ui = 0.22; ui <= 2 + 1e-9; ui += 0.02) us.push(Math.round(ui * 100) / 100);   // 0.02 刻み(2026-10-08: 0.04 刻みでは、u=0.50 付近のごく狭い範囲でだけ当たる組み合わせ(SUV・3段寄せ)を見逃して、5番に積んだ後に中段フロアが上がらなかった)
     us = us.filter(function (x) { return x < loadU - 1e-9; }); us.push(loadU);
     return us;
   }
@@ -394,29 +394,29 @@
     return { img: c.img, prof: c.prof, w: c.w, h: c.h, leftTireX: c.leftTireX, localX: isHang ? S.tireX : S.tireX + 8, localY: S.deckY };
   }
   function hangLowerHits(o, u) { var x0 = o.localX - o.leftTireX; return hangHits(x0, x0 + o.w, carTopY(o, [o.localX, o.localY]), u); }
-  // 5番(slotNum='5')・6番('6')の車と宙段の動きが当たらないか。棚の高さに関係しない
+  // 5番(slotNum='5')・6番('6')の車と中段フロアの動きが当たらないか。フロアの高さに関係しない
   //  shiftPx: 輪止めを前(キャビン側)へ動かして、車をその分(px)前へ寄せた位置(5番は輪止めを前へ最大44cm動かせる)
   function hangLowerFit(c, slotNum, shiftPx) {
     var o = hangO(c, slotNum, false); o.localX -= (shiftPx || 0);
     var us = hangUsList(), loadU = (HANG && HANG.loadU) || 2;
     for (var i = 0; i < us.length; i++) {
-      if (slotNum === '6' && us[i] < loadU - 0.1 - 1e-9) continue;   // 6番の車は、宙段を上げ切って(ピンの高さ)から積む
-      if (hangLowerHits(o, us[i])) return { ok: false, why: slotNum === '5' ? '5番の車(ボンネットの高さ)に宙段が当たる' : '6番の車に宙段が当たる' };
+      if (slotNum === '6' && us[i] < loadU - 0.1 - 1e-9) continue;   // 6番の車は、中段フロアを上げ切って(ピンの高さ)から積む
+      if (hangLowerHits(o, us[i])) return { ok: false, why: slotNum === '5' ? '5番の車(ボンネットの高さ)に中段フロアが当たる' : '6番の車に中段フロアが当たる' };
     }
     return { ok: true };
   }
-  // 宙段に載せた7台目と宙段が、上のフロア(2・3番)に当たらないか(棚の高さ offs で)。構造(フロアと宙段)・車どちらの干渉も不合格
+  // 中段フロアに載せた7台目と中段フロアが、上のフロア(2・3番)に当たらないか(フロアの高さ offs で)。構造(フロアと中段フロア)・車どちらの干渉も不合格
   function hangUpperFit(c7, offs) {
     var o7 = hangO(c7, '7', true), us = hangUsList();
     for (var i = 0; i < us.length; i++) {
       var vu = hangVsUpperX(us[i], offs, null, o7);
-      if (vu.why) return { ok: false, why: vu.car ? '宙段の車が2・3番フロアに当たる' : '宙段が2・3番フロアに当たる' };
+      if (vu.why) return { ok: false, why: vu.car ? '中段フロアの車が2・3番フロアに当たる' : '中段フロアが2・3番フロアに当たる' };
     }
     return { ok: true };
   }
-  // 7台目の車と宙段の動きから、上のフロアの下面(画面のx)ごとの「これより下に来てはいけない高さ y」の表(包絡線)を作る。
-  // 棚の高さの組み合わせを何千通りも調べるための高速版(hangVsUpperX と同じ式: 床の下面 y ≤ 宙段の上面 − 載せた車の高さ − 4)。x は2px刻み、隣の格子の小さい方(安全側)を使う
-  var ENV_X0 = 400, ENV_DX = 2, ENV_N = 1000;   // x=400〜2400(下段の車・宙段まで含む)
+  // 7台目の車と中段フロアの動きから、上のフロアの下面(画面のx)ごとの「これより下に来てはいけない高さ y」の表(包絡線)を作る。
+  // フロアの高さの組み合わせを何千通りも調べるための高速版(hangVsUpperX と同じ式: 床の下面 y ≤ 中段フロアの上面 − 載せた車の高さ − 4)。x は2px刻み、隣の格子の小さい方(安全側)を使う
+  var ENV_X0 = 400, ENV_DX = 2, ENV_N = 1000;   // x=400〜2400(下段の車・中段フロアまで含む)
   function hangUpperEnvelope(c7) {
     var o7 = hangO(c7, '7', true), us = hangUsList(), L = new Float32Array(ENV_N);
     for (var i = 0; i < ENV_N; i++) L[i] = 1e9;
@@ -473,7 +473,7 @@
     }
     return true;
   }
-  // c5=5番・c6=6番・c7=宙段に載せる車。{img, prof, w, h, leftTireX}(向きに合わせたもの)。offs = 2・3番の棚の高さ { F2f, MID, F3r }(無ければ FIT_OFFS=ピンで届く上限)
+  // c5=5番・c6=6番・c7=中段フロアに載せる車。{img, prof, w, h, leftTireX}(向きに合わせたもの)。offs = 2・3番のフロアの高さ { F2f, MID, F3r }(無ければ FIT_OFFS=ピンで届く上限)
   function hangFit(c5, c6, c7, shelf) {
     var offs = curOffs(); var sh = shelf || FIT_OFFS; offs.F2f = sh.F2f; offs.MID = sh.MID; offs.F3r = sh.F3r;
     var r = hangLowerFit(c5, '5'); if (!r.ok) return r;
@@ -500,16 +500,16 @@
     var onPin = SP_CFG && SP.inserted && h.dir > 0 && MECH.hang <= HANG.loadU + 1e-6;   // 固定ピンが刺さっていて、フロアがピンの高さより下にある → 上げるとピンに当たって、それより奥(上)へは動かない(下げる=来た道を戻る方向は止めない)
     if (onPin) nu = Math.min(nu, HANG.loadU);
     var gs = window.GAME_STATE;
-    var p = stuck || (nu === MECH.hang ? (h.dir < 0 && hangLow() > 0 && MECH.hang <= hangLow() + 1e-6 ? 'セットピンでこれ以上下がらない' : (onPin && MECH.hang >= HANG.loadU - 1e-6 ? 'フロアが固定ピンに当たって止まりました(ピンを抜くと奥へ動きます。戻る方向は動きます)' : '宙段は可動範囲いっぱい')) : null);
+    var p = stuck || (nu === MECH.hang ? (h.dir < 0 && hangLow() > 0 && MECH.hang <= hangLow() + 1e-6 ? 'セットピンでこれ以上下がらない' : (onPin && MECH.hang >= HANG.loadU - 1e-6 ? 'フロアが固定ピンに当たって止まりました(ピンを抜くと奥へ動きます。戻る方向は動きます)' : '中段フロアは可動範囲いっぱい')) : null);
     var hits = [];
     if (!p && nu !== MECH.hang) {
       // 載せた車が当たらない、フロア同士の干渉は構造上の制限(上げる時だけ。動かせない)
       if (h.dir > 0) { var vu = hangVsUpperX(nu, null); if (vu.why && !vu.car) p = vu.why; }
-      // 宙段の位置に関係なく、車がいる状態でも動かせる。車にぶつかったら減点・演出(イージーは手前で止まって注意だけ)
+      // 中段フロアの位置に関係なく、車がいる状態でも動かせる。車にぶつかったら減点・演出(イージーは手前で止まって注意だけ)
       // 他の箇所(車同士・輪止め)と同じ扱い: イージーはぶつかる手前で止まって注意だけ、ノーマル・ハードは減点してそのまま動く
-      if (!p) { hits = hangContacts(nu); if (hits.length && gs && gs.hints) p = hits[0].msg + '(宙段はそれ以上動きません)'; }
-      // イージー: 車が宙段に乗りかけている間は動かせない
-      if (!p && gs && gs.hints && gs.hangStraddle && gs.hangStraddle()) p = '車が宙段に乗りかけています。乗り終わるか、戻ってから動かしてください。';
+      if (!p) { hits = hangContacts(nu); if (hits.length && gs && gs.hints) p = hits[0].msg + '(中段フロアはそれ以上動きません)'; }
+      // イージー: 車が中段フロアに乗りかけている間は動かせない
+      if (!p && gs && gs.hints && gs.hangStraddle && gs.hangStraddle()) p = '車が中段フロアに乗りかけています。乗り終わるか、戻ってから動かしてください。';
     }
     if (hits.length) {
       hits.forEach(function (c) { if (!hangHitKeys[c.key]) { hangHitKeys[c.key] = true; if (window.FLOOR_MECH_HIT) window.FLOOR_MECH_HIT(c); } });
@@ -518,14 +518,15 @@
     else { MECH.hang = nu; syncHangEnd(); autoPinTarget('F7'); h.warned = false; }
     hangRaf = requestAnimationFrame(hangStep);
   }
-  // 宙段のスロープ状態(前が上がり、後ろは接地のまま): 車が下段の床から乗り込める
+  // 中段フロアのスロープ状態(前が上がり、後ろは接地のまま): 車が下段の床から乗り込める
   function hangSlope() { return MECH.hang >= 0.55 && MECH.hang <= 1.1; }
-  // 上げた宙段の後端が、下段の床の高さ(y510)から約40px以内なら、車が後端から乗り上がれる(宙段の道)。格納中は対象外
+  // 上げた中段フロアの後端が、下段の床の高さ(y510)から約40px以内なら、車が後端から乗り上がれる(中段フロアの道)。格納中は対象外
   function hangReachable() { return MECH.hang > 0.05 && 510 - hangPose().R[1] <= 40; }
   // ---- 5番フロア(2番前シリンダーの余力で二段階に持ち上がる)----
   var LIFT_MAX = cfg.floor5.liftMax, HOOK_OFF = cfg.floor5.hookOff;
   var MECH = { lockR: true, lockL: true, hang: 0, lift: 0, hook: false, stopper: true, bridge: false, f2Flap: false, slide: true, ramp: false };
   function applyF5() {
+    if (!MECH.stopper && MECH.lift < -HOOK_OFF - 1) MECH.stopper = true;   // 5番が4番の高さより下がったら、レバーは自動で普段の向きに戻り、ピンが出る(D45)
     if (MECH.stopper && -MECH.lift < HOOK_OFF - 3) MECH.hook = true;
     ENDS.F5r.off = 0;
     ENDS.F5f.off = MECH.hook ? Math.min(-MECH.lift, HOOK_OFF) : -MECH.lift;
@@ -535,12 +536,13 @@
   // 平らで金具が掛かっている普段の状態は、しまってあるので出さない(2026-10-08 ユーザー指示: ボタンをやめて、画面上で操作する)
   function stopperVisible() { return !!(MECH.hook || !MECH.stopper); }
   // 金具の位置(画面座標): 5番フロアの前端の下面。5番フロアの今の姿勢に付いていく
-  function stopperPos() { return onFloor('F5', FLOORS.F5.front.pt[0] + 28, FLOORS.F5.front.pt[1] + 10); }
+  function stopperPos() { return [1011, 447]; }   // タップする所: 赤いレバーの先(D45。以前は5番の前端の下面)
+  function f5FrontPt() { return onFloor('F5', FLOORS.F5.front.pt[0], FLOORS.F5.front.pt[1]); }
   function toggleStopper() {
     if (MECH.stopper) {
-      if (MECH.hook && MECH.lift < -HOOK_OFF) { onWarn('5番フロアを4番の高さより上げてから外してください'); return; }
-      MECH.stopper = false; MECH.hook = false; onInfo('ストッパーを外した');
-    } else { MECH.stopper = true; onInfo('ストッパーを掛けた'); }
+      if (MECH.hook && MECH.lift < -HOOK_OFF) { onWarn('5番フロアを4番の高さより上げてから、赤いレバーを上げてください'); return; }
+      MECH.stopper = false; MECH.hook = false; onInfo('レバーを上げて、スロープのピンを外した');
+    } else { MECH.stopper = true; onInfo('スロープのピンが出た'); }
     applyF5();
   }
 
@@ -741,7 +743,7 @@
     if (sp) return sp;
     return dynamicPoseProblem(ids, offs);
   }
-  // 棚の位置だけで決まる制限(可動範囲・フレーム・道板・シリンダー下限)。車や宙段の状態に関係しない(積める判定が使う)
+  // フロアの位置だけで決まる制限(可動範囲・フレーム・道板・シリンダー下限)。車や中段フロアの状態に関係しない(積める判定が使う)
   function staticPoseProblem(ids, offs) {
     for (var k in ENDS) { if (offs[k] < ENDS[k].r[0] || offs[k] > ENDS[k].r[1]) return '可動範囲いっぱい'; }
     if (onFloor('F3', FLOORS.F3.x1, 312, offs)[1] > RAMP_TOP[1] + 2) return '下段に当たる';   // 3番の後端(延長板の先)が道板の高さより下がらない
@@ -757,7 +759,7 @@
     return null;
   }
   function dynamicPoseProblem(ids, offs) {
-    if (MECH.hang > 0.05) {   // 上げてある宙段(と載せた車)に、2・3番のフロアが下がってぶつからない
+    if (MECH.hang > 0.05) {   // 上げてある中段フロア(と載せた車)に、2・3番のフロアが下がってぶつからない
       var hv = hangVsUpper(MECH.hang, offs, ids);
       if (hv) return hv;
     }
@@ -780,7 +782,7 @@
           var p = onFloor(id, x, f.bottom(x), of);
           cars.forEach(function (c) {
             if (p[0] < c.x0 || p[0] > c.x1) return;
-            // 5番の車が載っていても、2番前の棚を「ピン位置(赤ラインの1穴下)」まで下げるのは許可する。5番フロアを持ち上げる時の定位置で、これを許さないと5番の車が載った状態で5番フロアを上げられない
+            // 5番の車が載っていても、2番前のフロアを「ピン位置(赤ラインの1穴下)」まで下げるのは許可する。5番フロアを持ち上げる時の定位置で、これを許さないと5番の車が載った状態で5番フロアを上げられない
             if (c.n === 5 && id === 'F2' && of.F2f <= 8 && of.MID <= 8) return;
             var ov = p[1] - c.top(p[0]);
             if (ov > worst.v) worst = { v: ov, n: c.n };
@@ -856,7 +858,7 @@
     ensureHoldLoop();
   }
   function holdStop() {
-    if (hangHold) {   // 宙段は離した時、各段階(格納・スロープ・全上げ)の近くならぴたっとその位置に合わせる(格納位置(0番)より上にセットピンが入っている間は合わせない: ピンに載った位置から、段階の位置へ引き戻されてしまうため)
+    if (hangHold) {   // 中段フロアは離した時、各段階(格納・スロープ・全上げ)の近くならぴたっとその位置に合わせる(格納位置(0番)より上にセットピンが入っている間は合わせない: ピンに載った位置から、段階の位置へ引き戻されてしまうため)
       var onStopPin = SP_CFG && SP.inserted && MECH.hang >= HANG.loadU - 0.001;   // ピンに当たって止まっている間は、ピンより奥(上)の段階の位置(2)へは吸い付かせない
       [0, 1, 2].forEach(function (s) { if (!(onStopPin && s > HANG.loadU + 1e-6) && Math.abs(MECH.hang - s) < 0.08 && s >= hangLow() && !hangStuck() && !(s > MECH.hang && hangProblem(s))) MECH.hang = s; });
       syncHangEnd(); autoPinTarget('F7');
@@ -910,12 +912,12 @@
     var midPrev = cand.MID;
     // 2番前は可動域の上限(柱の赤テープ付近)までそのまま上げられる(以前の「赤ラインより上は5番をストッパーに掛けてから」は廃止)
     var hi = er[0];
-    // 3番前のシーソー連動で、ピンより下まで引き下げられている棚(3番後ろ)も、押した瞬間にピンの高さへ飛ばず、上げる向きに普通の速さで動かす
-    // 棚がセットピンより下にいる間(3番前を上げた時のシーソー連動で、ピンより下へ引き下げられた3番後ろなど)は、ピンは下げる動きの邪魔をしない。
-    // ピンは「その上に載った棚」を受けるだけ。ピンより下の棚は、可動範囲の下限(接地)まで下げられる
+    // 3番前のシーソー連動で、ピンより下まで引き下げられているフロア(3番後ろ)も、押した瞬間にピンの高さへ飛ばず、上げる向きに普通の速さで動かす
+    // フロアがセットピンより下にいる間(3番前を上げた時のシーソー連動で、ピンより下へ引き下げられた3番後ろなど)は、ピンは下げる動きの邪魔をしない。
+    // ピンは「その上に載ったフロア」を受けるだけ。ピンより下のフロアは、可動範囲の下限(接地)まで下げられる
     if (PINS[h.end] !== null && ENDS[h.end].off > PINS[h.end] + 0.5) lo = ENDS[h.end].r[1];
     lo = Math.max(lo, ENDS[h.end].off);
-    // 支柱の短い棚(2番前)は、ピン無しで上がるのは freeTop まで。ピンを一番上の穴に差し、かつ5番フロアがスロープ(ストッパーに乗った状態)の時だけ、赤テープ付近(range の上限)まで上がる。
+    // 支柱の短いフロア(2番前)は、ピン無しで上がるのは freeTop まで。ピンを一番上の穴に差し、かつ5番フロアがスロープ(ストッパーに乗った状態)の時だけ、赤テープ付近(range の上限)まで上がる。
     // 5番フロアを平らに戻したら、ピンが上限の穴のままでも freeTop まで(2026-10-07 ユーザー指示)。
     // ピンを抜いた時にすでに freeTop より上なら、そこより上へは上げられないだけで、下げるまでは位置はそのまま(押した瞬間に飛ばない)
     var topOff = er[0];
@@ -946,7 +948,7 @@
     return !MECH.f2Flap && flapT() <= 0 && slideReady() && Math.abs(a[1] - b[1]) <= 14; // 2番扇動板を開いている間は1番への道が切れる
   }
 
-  // ---- アウトリガー(6番のタイヤ張り出しを解除するためのジャッキ)----
+  // ---- ジャッキ(6番のタイヤ張り出しを解除するためのジャッキ)----
   var OUT = cfg.outrigger;
   var JACK_MAX = OUT.jackMax, JACK_CONTACT = OUT.jackContact;
   var KINGPIN = OUT.kingpin;
@@ -990,13 +992,13 @@
   function moveTire(dir) {
     if (MECH.lockR || MECH.lockL) { onWarn('車軸のロックが掛かっています。右引・左引でロックを解除してください'); return; }
     if (!tireOffGround()) { onWarn('ジャッキでタイヤを浮かせてから動かしてください'); return; }
-    if (dir === 'out' && MECH.tireOut) { onWarn('タイヤはすでに突出しています'); return; }
+    if (dir === 'out' && MECH.tireOut) { onWarn('スライド車軸はすでに伸びています'); return; }
     if (dir === 'in' && !MECH.tireOut) { onWarn('タイヤはすでに格納されています'); return; }
     MECH.tireOut = dir === 'out';
-    onInfo(MECH.tireOut ? 'タイヤを突出させた' : 'タイヤを格納した');
+    onInfo(MECH.tireOut ? 'スライド車軸を伸ばした' : 'タイヤを格納した');
   }
   function toggleTireOut() { moveTire(MECH.tireOut ? 'in' : 'out'); }
-  // いま押されているスイッチ(トレーラー上のスイッチの押した絵・操作盤用): {end,dir}・宙段・ジャッキ
+  // いま押されているスイッチ(トレーラー上のスイッチの押した絵・操作盤用): {end,dir}・中段フロア・ジャッキ
   function pressInfo() {
     return { hold: holding ? { end: holding.end, dir: holding.dir } : null, hang: hangHold ? hangHold.dir : 0, jack: jackHolding ? jackHolding.dir : 0 };
   }
@@ -1005,8 +1007,8 @@
   function onWarn(msg) { if (window.FLOOR_MECH_NOTIFY) window.FLOOR_MECH_NOTIFY(msg, 'warn'); }
   function onInfo(msg) { if (window.FLOOR_MECH_NOTIFY) window.FLOOR_MECH_NOTIFY(msg, 'info'); }
 
-  // 後ろの柱のセットピン穴の変更(宙段が格納位置にある時だけ。上がっている間は柱に荷重が掛かっていて抜けない)
-  // フレームの固定ピン: 位置(穴)の変更・抜き差し。宙段がスロープ(u≦1.05)以下の時だけ位置を変えられる。差せるのはフロアがピンの穴の高さ以上にある時だけ(棚のセットピンと同じ)
+  // 後ろの柱のセットピン穴の変更(中段フロアが格納位置にある時だけ。上がっている間は柱に荷重が掛かっていて抜けない)
+  // フレームの固定ピン: 位置(穴)の変更・抜き差し。中段フロアがスロープ(u≦1.05)以下の時だけ位置を変えられる。差せるのはフロアがピンの穴の高さ以上にある時だけ(フロアのセットピンと同じ)
   function setStopPinHole(n) {
     if (!SP_CFG) return false;
     n = Math.max(1, Math.min(SP_CFG.pts.length, Math.round(n)));
@@ -1018,22 +1020,22 @@
     if (!SP_CFG) return;
     if (SP.inserted) { SP.inserted = false; onInfo('固定ピンを抜いた'); return; }
     SP.inserted = true;   // フロアの位置に関係なく刺せる。ピンは赤い板に差しておく止め具で、上がってきたフロアがピンに当たると、それより奥(上)へは動かなくなる(戻る方向は止めない)
-    onInfo('固定ピンを刺した(宙段を上げるとピンに当たって止まります)');
+    onInfo('固定ピンを刺した(中段フロアを上げるとピンに当たって止まります)');
   }
   function setRearPinHole(n) {
     n = Math.max(1, Math.min(RP_CFG.holes || 1, Math.round(n)));
     if (n === RP.hole && Math.abs(RP.len - (LK.rearMin + (n - 1) * (RP_CFG.pitch || 0))) < 0.01) return true;
-    if (MECH.hang > 0.05) { onWarn('宙段を格納位置に戻してから、後ろの柱のピンを差し替えてください'); return false; }
+    if (MECH.hang > 0.05) { onWarn('中段フロアを格納位置に戻してから、後ろの柱のピンを差し替えてください'); return false; }
     RP.hole = n; RP.len = LK.rearMin + (n - 1) * (RP_CFG.pitch || 0); hangRebuild(); syncHangEnd();
     onInfo('後ろの柱のピン: ' + n + '番穴(柱の縮み幅 ' + Math.round(hangSolve(0).rear - RP.len) + 'px)');
     return true;
   }
   // 後ろの柱の長さを、シリンダーのように連続で伸び縮みさせる(押している間 dir=+1 伸ばす / -1 縮める)。
-  // 宙段が格納〜スロープの姿勢(u ≦ lockU)の間だけ動かせる(それより上げた後は、柱の長さは固定)。宙段に車が載っている・乗りかけている間、動かした結果フロアが下段の車に当たる時は動かさない
+  // 中段フロアが格納〜スロープの姿勢(u ≦ lockU)の間だけ動かせる(それより上げた後は、柱の長さは固定)。中段フロアに車が載っている・乗りかけている間、動かした結果フロアが下段の車に当たる時は動かさない
   function rearLenStep(dir, dt) {
     var gs = window.GAME_STATE;
-    if (MECH.hang > (LK.lockU || 1) + 0.02) { onWarn('宙段を上げた後は、後ろの柱の長さは変えられません。スロープの位置か格納位置まで戻してください'); return false; }
-    if (gs && gs.occupied && gs.occupied['7']) { onWarn('宙段に車が載っているので、後ろの柱の長さは変えられません'); return false; }
+    if (MECH.hang > (LK.lockU || 1) + 0.02) { onWarn('中段フロアを上げた後は、後ろの柱の長さは変えられません。スロープの位置か格納位置まで戻してください'); return false; }
+    if (gs && gs.occupied && gs.occupied['7']) { onWarn('中段フロアに車が載っているので、後ろの柱の長さは変えられません'); return false; }
     var nl = Math.max(LK.rearMin, Math.min(REAR_LEN_MAX, RP.len + dir * (HANG_REAR_SPEED || 30) * dt));
     if (Math.abs(nl - RP.len) < 1e-6) return false;
     var old = RP.len; RP.len = nl;
@@ -1045,7 +1047,7 @@
     }
     return true;
   }
-  // 荷物の変更(配車担当への連絡・時間切れ)で、トレーラーを積み始めの状態に戻す: 道板・4番扇動板・ジャッキ・タイヤ・ロック・5番フロア・宙段・セットピンを初期位置へ
+  // 荷物の変更(配車担当への連絡・時間切れ)で、トレーラーを積み始めの状態に戻す: 道板・4番扇動板・ジャッキ・タイヤ・ロック・5番フロア・中段フロア・セットピンを初期位置へ
   function resetAll() {
     holdStop(); if (typeof jackHoldStop === 'function') jackHoldStop();
     MECH.ramp = false; RAMP.t = 0; RAMP.last = null;
@@ -1054,7 +1056,7 @@
     MECH.jack = 0; MECH.tireOut = false; MECH.lockR = MECH.lockL = true;
     POWER.engine = true; POWER.pto = false; POWER.main = false;
     applyF5();
-    initPins();   // 棚を走行位置・ピンを初期状態へ。宙段も格納(hang=0)に戻る
+    initPins();   // フロアを走行位置・ピンを初期状態へ。中段フロアも格納(hang=0)に戻る
     syncHangEnd();
   }
   window.FLOOR_MECH = {
@@ -1067,7 +1069,7 @@
     poseOf: poseOf, tf: tf, onFloor: onFloor, curOffs: curOffs,
     holeNo: holeNo, holeRange: holeRange, pinTarget: pinTarget, snapToHole: snapToHole,
     stepPinTarget: stepPinTarget, togglePin: togglePin,
-    toggleStopper: toggleStopper, stopperVisible: stopperVisible, stopperPos: stopperPos, toggleBridge: toggleBridge, f5Slope: f5Slope,
+    toggleStopper: toggleStopper, stopperVisible: stopperVisible, stopperPos: stopperPos, f5FrontPt: f5FrontPt, toggleBridge: toggleBridge, f5Slope: f5Slope,
     toggleRamp: toggleRamp, rampUpdate: rampUpdate, rampReady: rampReady, rampT: function () { rampUpdate(); return RAMP.t; },
     toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, carTiresOn: carTiresOn, bridgeSeg: bridgeSeg, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, bridgeHitsBody: bridgeHitsBody, bridgeSurfaceY: bridgeSurfaceY, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
     holdStart: holdStart, holdStop: holdStop,

@@ -1,9 +1,9 @@
-// トレーラー semi-6b(6台積み・宙段なし・台車1軸)のゲーム設定。index.html が #trailer=semi-6b の時だけ読む(semi-6 は js/trailer_config.js)。
+// トレーラー semi-6b(6台積み・中段フロアなし・台車1軸)のゲーム設定。index.html が #trailer=semi-6b の時だけ読む(semi-6 は js/trailer_config.js)。
 // 素材と座標の元は assets/semi-6b/parts.json と make_semi6b.py。ここの値を変えたら trailer_config_semi6b.json も同じにする(node で JSON.stringify して出力できる)。
 // 座標はどれもステージ座標(2520×724、1m=114px、地面 y=577)。フロア上のスロットの tireX・deckY は「走行時の姿勢のステージ座標」(フロアが動くと js/floor_mech_6b.js の onFloor で変換される)。
 window.TRAILER_CONFIG = {
   "id": "semi-6b",
-  "name": "6台積みセミトレーラー(semi-6b・宙段なし・台車1軸)",
+  "name": "6台積みセミトレーラー(semi-6b・中段フロアなし・台車1軸)",
   "stage": { "w": 2520, "h": 724 },
   "yard": { "bg": "assets/common/yard/yard_bg.png", "ground": "assets/common/yard/yard_ground.png", "frameBack": "assets/semi-6b/frame_back_clear.png", "v": 2 },
   "pxPerMeter": 114,

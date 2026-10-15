@@ -112,7 +112,7 @@
     setStatus('大破!' + reason);
     setTimeout(function () { if (window.GAME_MODE && window.GAME_MODE.onAccident) window.GAME_MODE.onAccident(reason); }, 1900);
   }
-  // 輪止め・タイヤ止め・落し蓋の穴を勢いよく乗り越える: ぶつかるのではなく、乗り上げる衝撃(前が持ち上がり、ガタンと跳ねて、ばねのように揺れが残る)。穴は前が落ち込んでから上がる
+  // 輪止め・タイヤストッパ・落し蓋の穴を勢いよく乗り越える: ぶつかるのではなく、乗り上げる衝撃(前が持ち上がり、ガタンと跳ねて、ばねのように揺れが残る)。穴は前が落ち込んでから上がる
   function rideOver(car, speed, kind) {
     var v = Math.abs(speed), sev = Math.max(0, Math.min(1, (v - 300) / 290));   // 乗り越えられる最低の勢い(約350px/秒)から最高速度まで
     car.ride = { t0: performance.now(), dur: 900 + 700 * sev, sev: sev, kind: kind === 'hole' ? 'hole' : 'chock' };
@@ -151,18 +151,18 @@
     accident(car, what + 'の端に、車の後ろがひっかかって傾いてしまいました(ゆっくり出すと、後ろのタイヤが外れます)。', edgeX);
   }
 
-  // ---- 輪止め・タイヤ止め・タイヤ落とし(第5章)----
+  // ---- 輪止め・タイヤストッパ・タイヤ落とし(第5章)----
   // 車は「タイヤが最初に当たる障害物」の位置で止まる。障害物は次のいずれか(cfg.slots[n].stopKind):
-  //   stopper(1・4番): フロア端に元からあるタイヤ止め。手前(後方)に輪止めを追加でセットできる
+  //   stopper(1・4番): フロア端に元からあるタイヤストッパ。手前(後方)に輪止めを追加でセットできる
   //   hole(2・3番)   : タイヤ落とし。落し蓋を開けるとタイヤが落ち込んで止まる。蓋を閉じたまま上に輪止めもセットできる
   //   none(5・6番)   : 床の穴に輪止めをはめ込む(必須)。輪止めが無いと止まれない
   // chocks[slot] = { set:bool, step:int }: 輪止めの有無と、基準位置(tireX)からの段数(+は後方=道板側=画面右、-は前方)。
   // lidOpen[slot]: 落し蓋を開けているか(2・3番)。可動範囲・1段の距離はchockRange(cm)。
-  // 車が輪止め(タイヤ止め・落とし)の位置より約8px手前(後方)で止まる。輪止めの絵はタイヤ接地点の前に置くので、タイヤが輪止めに届く手前で当たるように
+  // 車が輪止め(タイヤストッパ・落とし)の位置より約8px手前(後方)で止まる。輪止めの絵はタイヤ接地点の前に置くので、タイヤが輪止めに届く手前で当たるように
   var STOP_OFFSET_PX = 8;
   var chocks = {}, lidOpen = {};
   state.chocks = chocks; state.lidOpen = lidOpen;
-  // 1番は元のタイヤ止めを廃止し、輪止めを基準位置(可動範囲の一番手前側)にセットした状態から始める(そこから奥へ動かせる)
+  // 1番は元のタイヤストッパを廃止し、輪止めを基準位置(可動範囲の一番手前側)にセットした状態から始める(そこから奥へ動かせる)
   function setDefaultChocks() {
     Object.keys(cfg.slots).forEach(function (n) { if (cfg.slots[n].defaultChock) chocks[n] = { set: true, step: 0 }; });
   }
@@ -170,7 +170,7 @@
   function chockLimits(num) {
     var r = cfg.slots[num].chockRange || {};
     var step = r.step || 1, front = Math.round((r.front || 0) / step);
-    // 前方にも動かせないスロット(1〜4番)は、元のタイヤ止め/穴に重ならない後方1段目から
+    // 前方にも動かせないスロット(1〜4番)は、元のタイヤストッパ/穴に重ならない後方1段目から
     // 輪止めを置ける最前の段: 前へ動かせる(front)なら負の段。動かせない時は、元の輪止め・穴・止め具がある所(2〜4番)は後方1段目から、何も無い所(1番。基準の輪止め=フロア先端)は基準位置(0)から
     return { min: front ? -front : ((cfg.slots[num].stopKind === 'none' || r.fromBase) ? 0 : 1), max: Math.round((r.rear || 0) / step), stepCm: step };
   }
@@ -184,7 +184,7 @@
     if (slot.stopKind === 'hole' && lidOpen[num]) return { kind: 'hole', dx: 0 };
     return null;
   }
-  // 宙段(7番)の落とし穴: 落し蓋の操作は無い。格納中は下段の窪みにはまっていて関係なく、上げた時には最初から穴が空いている(載せた車がいる間は空いたまま)
+  // 中段フロア(7番)の落とし穴: 落し蓋の操作は無い。格納中は下段の窪みにはまっていて関係なく、上げた時には最初から穴が空いている(載せた車がいる間は空いたまま)
   function syncHangHole() {
     var fm = window.FLOOR_MECH;
     if (fm && cfg.slots['7']) lidOpen['7'] = fm.MECH.hang > 0.05 || !!state.occupied['7'];
@@ -200,7 +200,7 @@
 
   function setStatus(msg) { gameStatusEl.textContent = msg; }
   // ミスの記録はここに集約(モード側が「リアルモードは即終了」などを決める)
-  // severity: 'major'(ぶつかる・乗り越える・脱輪・ピン無しで下へ入る等=安全上重大)/ 'minor'(手順の不備=道板未展開・棚を動かした・積めない車種等)
+  // severity: 'major'(ぶつかる・乗り越える・脱輪・ピン無しで下へ入る等=安全上重大)/ 'minor'(手順の不備=道板未展開・フロアを動かした・積めない車種等)
   function recordMiss(reason, severity) {
     state.misses++;
     updateMissHud();
@@ -210,8 +210,8 @@
   function updateMissHud() { missCountEl.textContent = 'ミス: ' + state.misses; }
 
   // ---- 経路(道)----
-  // 積み込み先は事前に選ばない。車は「今つながっている道」を矢印で走り、道の上で最初に当たる輪止め・タイヤ止め・落としで止まる。
-  // 止まったスロットがその車の積み込み先になる。道は棚などの状態で決まる:
+  // 積み込み先は事前に選ばない。車は「今つながっている道」を矢印で走り、道の上で最初に当たる輪止め・タイヤストッパ・落としで止まる。
+  // 止まったスロットがその車の積み込み先になる。道はフロアなどの状態で決まる:
   //   U(上段) = 道板↔3番がつながっている: 3番 → 2番 → 1番の順に通る
   //   4(5番スロープ) = 5番フロアをスロープにして4番扇動板を搬出済み: 6番 → 5番 → 4番の順に通る
   //   L(下段) = 上記以外: 6番 → 5番の順に通る
@@ -272,7 +272,7 @@
       pts.push(slotPt('1', 'F1'));
       tg['3'] = slotPt('3', 'F3'); tg['2'] = slotPt('2', 'F2'); tg['1'] = slotPt('1', 'F1');
     } else if (id === '7') {
-      // 宙段(7台目): 下段の床を進み、接地した宙段の後端から前上がりのスロープを上って、宙段の上の基準位置へ
+      // 中段フロア(7台目): 下段の床を進み、接地した中段フロアの後端から前上がりのスロープを上って、中段フロアの上の基準位置へ
       pts.push(slotPt('7', 'F7'));
       pts.splice(3, 0, { floor: 'F7', x: fm.hangEndLocal ? fm.hangEndLocal() : 1785, y: 510 });
       tg['6'] = slotPt('6'); tg['7'] = slotPt('7', 'F7');
@@ -295,13 +295,13 @@
     var hasFloor = pts.some(function (p) { return !!p.floor; });
     return { id: id, raw: pts, tg: tg, extra: extra, slots: ROUTE_SLOTS[id], hasFloor: hasFloor };
   }
-  // いま走れる道。車がまだ動き出していない間(道板の手前にいる間)は、棚の状態に合わせて選び直す
+  // いま走れる道。車がまだ動き出していない間(道板の手前にいる間)は、フロアの状態に合わせて選び直す
   function lowRoute(id) { return id === 'L' || id === '4'; }
   function chooseRoute() {
     var fm = window.FLOOR_MECH;
     if (T6) return fm.chooseRoute6b();
     if (fm.upperConnected()) return 'U';
-    // 宙段は、少し斜めに上げた状態(後端が接地に近い)なら後端から乗れるので宙段の道。もっと高く上げてあれば下段の道(6・5番)のまま
+    // 中段フロアは、少し斜めに上げた状態(後端が接地に近い)なら後端から乗れるので中段フロアの道。もっと高く上げてあれば下段の道(6・5番)のまま
     if (fm.hangReachable()) return '7';
     // 5番フロアがスロープなら、4番扇動板が出ていなくても、スロープを上る道('4')を走る(4番扇動板が出ていなければ、スロープの上端で4番扇動板に当たって止まる。routeProblems の 'bridge')
     if (fm.f5Slope()) return '4';
@@ -401,7 +401,7 @@
     return undefined;
   }
   // 下段(4〜6番)へ向かう車の屋根が、上のフロア(1〜3番)の下面に当たるか(車の絵の形で、フロアの今の位置・傾きに対して。2026-10-09 ユーザー指示「フロアと接触せず積めること」)。
-  // 以前は、棚が標準の高さにあれば通れて、背の高い車が1番フロアなどの下に入り込んで(貫通して)積めていた。当たる所では止まる(phys)
+  // 以前は、フロアが標準の高さにあれば通れて、背の高い車が1番フロアなどの下に入り込んで(貫通して)積めていた。当たる所では止まる(phys)
   function lowRoofBlocked(car) {
     var fm = window.FLOOR_MECH;
     if (!fm || !fm.envFits || !fm.ENV || !car.img) return null;
@@ -423,9 +423,9 @@
     state.lowroofFloors = bad;   // (確認用)当たっているフロア
     return bad.length ? true : null;
   }
-  // 宙段が上がっている(格納でない)間に、下段の車が宙段の下を通ろうとしていないか
+  // 中段フロアが上がっている(格納でない)間に、下段の車が中段フロアの下を通ろうとしていないか
   function hangBlocksCar(car) {
-    // 車の前後の余白は取らない。余白を取ると、積める組み合わせの判定(hangFit、余白なし)を通った車が、実際には宙段の下の位置まで進めなくなる
+    // 車の前後の余白は取らない。余白を取ると、積める組み合わせの判定(hangFit、余白なし)を通った車が、実際には中段フロアの下の位置まで進めなくなる
     var fm = window.FLOOR_MECH, x0 = car.x - car.leftTireX;
     return fm.hangHits(x0, x0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), fm.MECH.hang);
   }
@@ -470,19 +470,19 @@
     } else {
       // 出している4番扇動板が、下段を走る車の前に当たる(実物の板)
       // 出している4番扇動板は、5番と4番の間の橋(車は板の上に乗って通る。当たりで止めない・2026-10-13)。板の上の車の高さは rideBridge で合わせる
-      if (lowRoofBlocked(car)) out.push({ key: 'lowroof', phys: true, msg: 'この車は、上のフロアに当たって進めません(背が高いか、フロアが下がっています)。棚を上げてください。' });   // 位置に関わらず、絵の形が実際に重なる所だけ(2026-10-14 ユーザー指示「当たり判定が宙にある」)
+      if (lowRoofBlocked(car)) out.push({ key: 'lowroof', phys: true, msg: 'この車は、上のフロアに当たって進めません(背が高いか、フロアが下がっています)。フロアを上げてください。' });   // 位置に関わらず、絵の形が実際に重なる所だけ(2026-10-14 ユーザー指示「当たり判定が宙にある」)
       var hb = (id === 'L' || id === '4') && hangBlocksCar(car);
-      // phys: true = 実物(フロア・4番扇動板・宙段・タイヤ)に当たる理由。シミュレーションでも、その位置で止まる(ぶつかった演出つき)。道板が出ていない・ジャッキで浮いている、は止めない(下の phys 無し)
-      if (hb) out.push({ key: 'hang', phys: true, msg: '宙段フロアが上がっていて通れません。宙段を下げてから(格納してから)通ってください。' });
-      // (旧)lowFloorBlocked: 棚が絵の高さより下がっていたら、車と重ならなくても通さなかった → 実際の重なり(上の lowroof)だけにした
+      // phys: true = 実物(フロア・4番扇動板・中段フロア・タイヤ)に当たる理由。シミュレーションでも、その位置で止まる(ぶつかった演出つき)。道板が出ていない・ジャッキで浮いている、は止めない(下の phys 無し)
+      if (hb) out.push({ key: 'hang', phys: true, msg: '中段フロアが上がっていて通れません。中段フロアを下げてから(格納してから)通ってください。' });
+      // (旧)lowFloorBlocked: フロアが絵の高さより下がっていたら、車と重ならなくても通さなかった → 実際の重なり(上の lowroof)だけにした
       // 5番フロアがスロープなのに4番扇動板が出ていない: スロープを上って、上端で、垂れ下がった4番扇動板に当たって止まる
       if (id === '4' && !fm.bridgeReady() && car.bridgeWallArc !== undefined && car.progress >= car.bridgeWallArc - 1) {
         out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '4番扇動板が出ていないので、スロープの先(4番との隙間)へは進めません。4番扇動板を搬出してください。' });
       }
-      // 台車のタイヤを突出させていないと、6番の横を通れるのは軽自動車(幅1.48m以下)だけ。それ以外(5ナンバー・3ナンバー)は、6番に止まる(積む)分には従来どおりだが、6番を通り過ぎて5・4・7番へは行けない(2026-10-07 ユーザー指示)
+      // 台車のスライド車軸を伸ばしていないと、6番の横を通れるのは軽自動車(幅1.48m以下)だけ。それ以外(5ナンバー・3ナンバー)は、6番に止まる(積む)分には従来どおりだが、6番を通り過ぎて5・4・7番へは行けない(2026-10-07 ユーザー指示)
       var s6 = cfg.slots['6'];
       if (s6.maxWidthNoTireM && !fm.MECH.tireOut && (car.entry.width || 0) > s6.maxWidthNoTireM && car.arc && car.arc['6'] !== undefined && car.progress > car.arc['6'] + TIRE_PASS_MARGIN_PX) {
-        out.push({ key: 'tirepass', phys: true, msg: '台車のタイヤを突出させていないので、6番の横は軽自動車しか通れません。アウトリガーでタイヤを浮かせて突出させてください。' });
+        out.push({ key: 'tirepass', phys: true, msg: '台車のスライド車軸を伸ばしていないので、6番の横は軽自動車しか通れません。ジャッキでタイヤを浮かせて突出させてください。' });
       }
       // 5番フロアが平らでない(持ち上がっている途中など)のに、5番フロアの後端から先へ進もうとした(実際の5番フロアの縁で止まる)
       if (id === 'L' && !fm.atTravel('F5') && car.f5EdgeArc !== undefined && car.progress >= car.f5EdgeArc - 1) out.push({ key: 'f5flat', phys: true, stopAt: car.f5EdgeArc, msg: '5番フロアが平らになっていません。5番フロアを平らに戻すか、スロープにして4番扇動板を出してください。' });
@@ -604,7 +604,7 @@
   // イージー/ノーマル: 6台全部を並べて表示し、タップした車が入場する。ハード: 1台ずつ表示し、◀▶で別の車を選ぶ。
   // 道板の手前で待機中の車・載せ終えた車は、リストの中で暗く表示する(退場した車はリストに戻る)。
   state.deckSize = 6;   // 今のサイクルの台数(6か7。newDeckで決める)
-  // チュートリアル(#mode=tutorial): 常に7台(宙段あり)で、積めない荷物は出さない(js/tutorial.js)
+  // チュートリアル(#mode=tutorial): 常に7台(中段フロアあり)で、積めない荷物は出さない(js/tutorial.js)
   state.forceDeckSize = /mode=tutorial/.test(location.hash) ? 7 : 0;
   if (state.forceDeckSize) state.impossibleChance = 0;
   if (T6) state.impossibleChance = 0;   // semi-6b は積めない荷物を出さない(積める判定は js/loadable_6b.js の簡易版)
@@ -686,7 +686,7 @@
           state.sel = i; syncPending(); beginEntry();
         });
         var tag = document.createElement('div');
-        tag.className = 'deckTag'; tag.textContent = (state.deck.tutorialFixed ? ['1番用', '2番用', '3番用', '4番用', '5番用', '7番用(宙段)', '6番用'][i] + ' ' : '') + (DECK_TAG[it.status] ? DECK_TAG[it.status] + ' ' : '') + '幅' + (it.entry.width || 0).toFixed(2) + 'm';
+        tag.className = 'deckTag'; tag.textContent = (state.deck.tutorialFixed ? ['1番用', '2番用', '3番用', '4番用', '5番用', '7番用(中段フロア)', '6番用'][i] + ' ' : '') + (DECK_TAG[it.status] ? DECK_TAG[it.status] + ' ' : '') + '幅' + (it.entry.width || 0).toFixed(2) + 'm';
         var b = document.createElement('button');
         b.type = 'button'; b.textContent = it.flip ? '後ろ向き(バック)' : '前向き(頭から)';
         if (it.status === 'road' && !carFlippable()) b.style.visibility = 'hidden';
@@ -741,7 +741,7 @@
     if (car && car.deckItem && car.deckItem.status === 'road') car.deckItem.status = 'wait';
     refreshDeck();
   }
-  // 新しいサイクルの車を引く: 台数は6台か7台(ランダム。7台目は宙段)。引いた組み合わせが物理的に積めるか(LOADABLE.check)を判定して、
+  // 新しいサイクルの車を引く: 台数は6台か7台(ランダム。7台目は中段フロア)。引いた組み合わせが物理的に積めるか(LOADABLE.check)を判定して、
   // 積めなければ引き直す(ミニバン・SUV・箱バンだらけで積めない組み合わせを出さない)。車の画像は車種ごとに1回だけ読み込んで使い回す
   var itemCache = {};
   function loadItem(entry) {
@@ -772,14 +772,14 @@
     while (out.length < size && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     return Promise.all(out.map(loadItem)).then(function (items) { items.drawTries = 1; items.loadable = { ok: false, why: '6番に載せられる車が無い' }; items.impossible = true; return items; });
   }
-  // チュートリアルの最初の荷物: 車を厳選した固定デッキ(ガイドの順 = 1番・2番・3番・4番・5番・7番(宙段)・6番)。js/tutorial.js が車名つきで案内する
-  //  選び方(2026-10-07。宙段の判定を直したあとの LOADABLE.check の固定割り当てで、候補約2400通りを実際の高さ計算で比べた結果):
-  //   ・宙段を使う時は、宙段(と7番の車)の真上に来る3番前の棚だけが高くなり、2番前・3番後ろは宙段の上を外れるので低くできる(棚は傾けて使う)。そのため、2番・3番に背の高い車を入れても荷姿はほとんど高くならない
+  // チュートリアルの最初の荷物: 車を厳選した固定デッキ(ガイドの順 = 1番・2番・3番・4番・5番・7番(中段フロア)・6番)。js/tutorial.js が車名つきで案内する
+  //  選び方(2026-10-07。中段フロアの判定を直したあとの LOADABLE.check の固定割り当てで、候補約2400通りを実際の高さ計算で比べた結果):
+  //   ・中段フロアを使う時は、中段フロア(と7番の車)の真上に来る3番前のフロアだけが高くなり、2番前・3番後ろは中段フロアの上を外れるので低くできる(フロアは傾けて使う)。そのため、2番・3番に背の高い車を入れても荷姿はほとんど高くならない
   //     (ミニバン・SUVを2・3番に入れた並びは 4.07m、1・4番に入れた並びは 4.04m。変更前は 4.68m と 4.37m だった)。2番=ミニバン(minivan-4, 高さ1.84m)、3番=SUV(suv-0, 1.59m)
-  //   ・1番・4番は、4番の車の屋根が1番の棚を押し上げるので、背の低い車: 1番=セダン(sedan-0, 1.43m)、4番=スポーツタイプ(sports-0, 1.44m)
-  //   ・5番(バック)は、宙段が持ち上がる時に鼻が当たらない短くてボンネットの低い車: ハッチバック(hatch-0, 長さ3.86m)。宙段(7番)は、屋根が2・3番の棚の下に収まる一番背の低い車: スポーツタイプ(sports-5, 1.24m)
+  //   ・1番・4番は、4番の車の屋根が1番のフロアを押し上げるので、背の低い車: 1番=セダン(sedan-0, 1.43m)、4番=スポーツタイプ(sports-0, 1.44m)
+  //   ・5番(バック)は、中段フロアが持ち上がる時に鼻が当たらない短くてボンネットの低い車: ハッチバック(hatch-0, 長さ3.86m)。中段フロア(7番)は、屋根が2・3番のフロアの下に収まる一番背の低い車: スポーツタイプ(sports-5, 1.24m)
   //   ・6番は幅1.755m以下の5ナンバー: コンパクトカー(compact-0, 幅1.695m)
-  //   ・並べ方は、荷姿 4.07m・宙段の固定ピンは6つの穴のどれでも成立・5番の輪止めは基準位置のまま(前へ寄せる必要なし)。宙段の車と2・3番の棚の余裕 約15px、5番の車と宙段の余裕 約21px(候補の中で余裕が大きい組み合わせ)
+  //   ・並べ方は、荷姿 4.07m・中段フロアの固定ピンは6つの穴のどれでも成立・5番の輪止めは基準位置のまま(前へ寄せる必要なし)。中段フロアの車と2・3番のフロアの余裕 約15px、5番の車と中段フロアの余裕 約21px(候補の中で余裕が大きい組み合わせ)
   var TUTORIAL_DECK = ['sedan-0', 'minivan-4', 'suv-0', 'sports-0', 'hatch-0', 'sports-5', 'compact-0'];
   function drawTutorialDeck() {
     var entries = TUTORIAL_DECK.map(function (id) { return lib.filter(function (e) { return e.id === id; })[0]; });
@@ -850,7 +850,7 @@
     return s ? '' : '輪止め未セット(5・6番は輪止めが必須)';
   }
   // ---- 固縛(D43。マニュアル p3): 車を止めて輪止めをしたあと、タイヤの前後にフックを掛け、荷締機のハンドルを回してワイヤを張る ----
-  // ノーマル・ハードだけ必須(イージー・シミュレーション・チュートリアルは任意)。ハンドルを LASH_TURNS 回まわすと「締めた」。締めずに棚を動かすと減点、締めないとサイクル完了にならない
+  // ノーマル・ハードだけ必須(イージー・シミュレーション・チュートリアルは任意)。ハンドルを LASH_TURNS 回まわすと「締めた」。締めずにフロアを動かすと減点、締めないとサイクル完了にならない
   var LASH_TURNS = 6;
   var btnLash = document.getElementById('btnLash');
   function lashCar(num) { var o = num && state.occupied[num]; return o && o.live ? o.live : null; }
@@ -884,10 +884,10 @@
     btnLid.style.display = (num && cfg.slots[num].stopKind === 'hole') ? '' : 'none';
     Array.prototype.forEach.call(document.querySelectorAll('#slotSel button'), function (b) { b.classList.toggle('on', b.dataset.slot === num); });
     if (none) { btnChockSet.textContent = '輪止めをセット'; chockLabelEl.textContent = '上のボタンでスロットを選ぶと、輪止め・落し蓋を操作できます'; return; }
-    if (cfg.slots[num].noChock) {   // 宙段: 輪止めも落し蓋の操作も無い
+    if (cfg.slots[num].noChock) {   // 中段フロア: 輪止めも落し蓋の操作も無い
       btnChockSet.disabled = btnChockFront.disabled = btnChockRear.disabled = btnLid.disabled = true;
       btnLid.style.display = 'none'; btnChockSet.textContent = '輪止めをセット';
-      chockLabelEl.textContent = '宙: 輪止めはありません。宙段を上げると、落としの穴が最初から空いています(タイヤが落ち込んで停止)';
+      chockLabelEl.textContent = '宙: 輪止めはありません。中段フロアを上げると、落としの穴が最初から空いています(タイヤが落ち込んで停止)';
       return;
     }
     var c = chocks[num], set = !!(c && c.set), lim = chockLimits(num);
@@ -903,7 +903,7 @@
   function canEditStops(num) {
     if (state.occupied[num]) return false;
     var car = state.car;
-    if (car && (car.seated || car.locked)) return true;   // もう止まった(OK)車・固定した車は、輪止めの範囲に近づいている車ではない。7番の車は、6番の場所を通って宙段へ行くので、止まった後も「6番の輪止めに近づいている」と誤判定していた
+    if (car && (car.seated || car.locked)) return true;   // もう止まった(OK)車・固定した車は、輪止めの範囲に近づいている車ではない。7番の車は、6番の場所を通って中段フロアへ行くので、止まった後も「6番の輪止めに近づいている」と誤判定していた
     if (!car || !car.route || !car.arc || car.arc[num] === undefined) return true;
     if (car.phase !== 'ready' && car.phase !== 'moving' && car.phase !== 'entering') return true;
     var lim = chockLimits(num);
@@ -914,7 +914,7 @@
   }  function editGuard() {
     var num = state.targetSlot;
     if (!num) return null;
-    if (cfg.slots[num].noChock) { setStatus('宙段には輪止めも落し蓋の操作もありません(上げると穴が空いています)。'); return null; }
+    if (cfg.slots[num].noChock) { setStatus('中段フロアには輪止めも落し蓋の操作もありません(上げると穴が空いています)。'); return null; }
     if (!canEditStops(num)) { setStatus('車が輪止めの位置まで近づいたので、もう動かせません。'); return null; }
     return num;
   }
@@ -944,7 +944,7 @@
     lidOpen[num] = !lidOpen[num];
     afterStopEdit(num, lidOpen[num] ? '落し蓋を開けました。' : '落し蓋を閉じました。');
   });
-  // 経路を(棚の今の位置で)引き直す: 座標・長さ・各スロットの基準点までの距離
+  // 経路を(フロアの今の位置で)引き直す: 座標・長さ・各スロットの基準点までの距離
   function rebuildPath(car) {
     var pts = resolvePath(car.rawPath);
     car.pts = pts;
@@ -990,7 +990,7 @@
     if (!slotPop || slotPop.style.display === 'none') return;
     var num = state.targetSlot;
     if (!num) { slotPop.style.display = 'none'; return; }
-    document.getElementById('spTitle').textContent = num + '番' + (num === '7' ? '(宙段)' : '');
+    document.getElementById('spTitle').textContent = num + '番' + (num === '7' ? '(中段フロア)' : '');
     Object.keys(spMap).forEach(function (k) {
       var s = document.getElementById(spMap[k]), d = document.getElementById(k);
       if (!s || !d) return;
@@ -1018,7 +1018,7 @@
     var fm = window.FLOOR_MECH, best = null, bestD = Infinity;
     Object.keys(cfg.slots).forEach(function (num) {
       var s = cfg.slots[num], c = s.floor || s.carrier, p = c && fm ? fm.onFloor(c, s.tireX, s.deckY) : [s.tireX, s.deckY];
-      if (num === '7' && !(fm && fm.MECH.hang > 0.05)) return;   // 宙段が格納の間は、フロアと一緒に隠れている
+      if (num === '7' && !(fm && fm.MECH.hang > 0.05)) return;   // 中段フロアが格納の間は、フロアと一緒に隠れている
       var x0 = p[0] - 30, x1 = p[0] + 470, dy = y - p[1];
       if (x < x0 || x > x1 || dy < -150 || dy > 30) return;
       var d = Math.abs(x - (p[0] + 120)) + Math.abs(dy + 40);
@@ -1092,8 +1092,8 @@
     var up = 62 * fm.flapT(), dfx = x < pa[0] ? pa[0] - x : (x > pb[0] ? x - pb[0] : 0), dfy = y < pa[1] - up ? pa[1] - up - y : (y > pa[1] + 10 ? y - pa[1] - 10 : 0);
     var df = Math.hypot(dfx, dfy);
     if (df <= tol) cand(df + 2, function () { fm.toggleF2Flap(); });
-    // 5番ストッパー(画面に出ている間だけ。ボタンは無い): タップで外す/掛ける
-    if (fm.stopperVisible && fm.stopperVisible()) { var spp = fm.stopperPos(), dsp = Math.hypot(x - spp[0], y - (spp[1] + 8)) - 13; if (dsp <= tol) cand(Math.max(0, dsp), function () { fm.toggleStopper(); }); }
+    // 5番のスロープのピンの赤いレバー(画面に出ている間だけ。ボタンは無い): タップでレバーを上げて外す(D45)
+    if (fm.stopperVisible && fm.stopperVisible()) { var spp = fm.stopperPos(), dsp = Math.hypot(x - spp[0], y - spp[1]) - 14; if (dsp <= tol) cand(Math.max(0, dsp), function () { fm.toggleStopper(); }); }
     // 落し蓋(落とし穴)と輪止め
     Object.keys(cfg.slots).forEach(function (num) {
       var slot = cfg.slots[num];
@@ -1302,9 +1302,9 @@
   }
 
   // ---- 走行の物理 ----
-  // 輪止め・タイヤ止め・落としは「道の上の障害物」。ぶつかった瞬間の速度が閾値未満なら、その位置でぴたっと止まって
+  // 輪止め・タイヤストッパ・落としは「道の上の障害物」。ぶつかった瞬間の速度が閾値未満なら、その位置でぴたっと止まって
   // 即OK。閾値以上なら勢いを一部失いながら乗り越える(ミス)。止まったスロットがその車の積み込み先になる。
-  // イージー: 通れない状態(道板・棚・駐車中の車など)では前へ進めない / ノーマル・ハード: 進めるが、ぶつかる・仕様上できない動きはミス。
+  // イージー: 通れない状態(道板・フロア・駐車中の車など)では前へ進めない / ノーマル・ハード: 進めるが、ぶつかる・仕様上できない動きはミス。
   var CONTACT_MARGIN_PX = 2;   // 輪止めの少し手前(約4px)から当たりとみなす(当たってから前に出ないとOKにならない、を防ぐ)
 
   // 道の上の障害物(いま有効なもの)を手前から順に
@@ -1355,7 +1355,7 @@
       present[p.key] = true;
       if (state.freeMode) {
         // シミュレーション(自由に操作できる練習用): 道板が出ていない等の「決まりごと」では、動作を制限しない。進んでぶつかったら、その時にぶつかったアニメーション(揺れ・グシャッ)と理由を表示する(減点なし)。
-        // 実物(フロア・4番扇動板・宙段・タイヤ)に当たる理由(phys)は、その位置で止まる(通り抜けない)
+        // 実物(フロア・4番扇動板・中段フロア・タイヤ)に当たる理由(phys)は、その位置で止まる(通り抜けない)
         if (pressedDir > 0 && !car.missedKeys[p.key]) {
           car.missedKeys[p.key] = true;
           impact(car, p.key, Math.abs(car.velocity), contactOpt(car, p.key));
@@ -1390,7 +1390,7 @@
     var maxProgress = car.pathLen + OVERSHOOT_CAP_PX;
     var bars = barriersOf(car);
 
-    // すでに通り過ぎている障害物は「乗り越えた」扱いにしておく(棚が動いて位置がずれた時など。ミスにはしない)
+    // すでに通り過ぎている障害物は「乗り越えた」扱いにしておく(フロアが動いて位置がずれた時など。ミスにはしない)
     bars.forEach(function (b) { if (!car.beyond[b.slot] && before > b.s + CONTACT_MARGIN_PX + 1) car.beyond[b.slot] = true; });
     var hit = null, back = null, i;
     for (i = 0; i < bars.length; i++) {
@@ -1507,7 +1507,7 @@
   }
 
   // ---- セットピン(第8章)----
-  // 下段(4〜6番)へ向かって上段フロアの下に入る時は、そのフロアの両端の棚にセットピンを刺して、フロアがピンに載っていることが現場ルール
+  // 下段(4〜6番)へ向かって上段フロアの下に入る時は、そのフロアの両端のフロアにセットピンを刺して、フロアがピンに載っていることが現場ルール
   // (シリンダー/ワイヤー破断時の落下防止。刺してから潜る)。ピンが無いのにフロアの下へ入ったら、フロアごとに1回ミス(重大)。
   // 3番前(継ぎ目)は下端に載るのでピンは不要。上段へ向かう道(上段の車)は対象外。
   var FLOOR_NAME = { F1: '1番', F2: '2番', F3: '3番' };
@@ -1525,7 +1525,7 @@
   }
   // ---- 輪止め・落としに当たった(OK)----
   // 当たって止まっていれば「OK」。もう一度車をタップすると固定され、次の車に移れる(動かせば外れる)。
-  // OKの間、その車は「載っている車」(occupied)として扱い、棚を動かしても床と一緒に動く。
+  // OKの間、その車は「載っている車」(occupied)として扱い、フロアを動かしても床と一緒に動く。
   var SEATED_TOLERANCE_PX = 12;
   function updateSeated(car, bars) {
     var b = null;
@@ -1579,19 +1579,19 @@
     refreshDeck();
     if (state.occupied[car.slot] && state.occupied[car.slot].live === car) delete state.occupied[car.slot];
     if (window.GAME_MODE && window.GAME_MODE.onUndock) window.GAME_MODE.onUndock(car.slot);
-    setStatus('輪止め(タイヤ止め・落とし)から外れました。');
+    setStatus('輪止め(タイヤストッパ・落とし)から外れました。');
   }
   // 動いているフロアの上に道が伸びている車(1〜3番)は、操作していない間も
   // フロアの現在の傾きに合わせて経路・進行先を再計算し続ける(同時操作対応)。
   var lastShelfKey = null, lastHang = null;
-  // 車が宙段に乗りかけている(前のタイヤが後端より先、後ろのタイヤはまだ後端より手前=またいでいる)か
+  // 車が中段フロアに乗りかけている(前のタイヤが後端より先、後ろのタイヤはまだ後端より手前=またいでいる)か
   function hangStraddle(car) {
     if (!car || car.seated || !car.route || car.route.id !== '7' || !car.pts || !car.pathTool || !(car.phase === 'ready' || car.phase === 'moving')) return false;
-    var arcR = car.pathTool.arcOf(car.pts[3]);   // 宙段の後端の、経路上の距離
+    var arcR = car.pathTool.arcOf(car.pts[3]);   // 中段フロアの後端の、経路上の距離
     return car.progress > arcR - 12 && car.progress - car.wbPx < arcR + 12;
   }
   state.hangStraddle = function () { return hangStraddle(state.car); };
-  // 宙段が車にぶつかった(floor_mech.jsから)。イージーは手前で止まって注意だけ。ノーマル・ハードは減点+揺れ+グシャッ
+  // 中段フロアが車にぶつかった(floor_mech.jsから)。イージーは手前で止まって注意だけ。ノーマル・ハードは減点+揺れ+グシャッ
   window.FLOOR_MECH_HIT = function (c) {
     var occ = state.occupied[c.slot], car = (occ && occ.live) || state.car;
     var hk = /^hang/.test(c.key || '') ? 'hang' : 'generic';
@@ -1618,22 +1618,22 @@
   function syncDynamicPath() {
     var car = state.car, fm = window.FLOOR_MECH;
     syncHangHole();
-    // 乗りかけの車(前のタイヤは宙段の上、後ろのタイヤはまだ下段)をまたいだまま宙段を動かすと、タイヤが外れる(脱輪)
+    // 乗りかけの車(前のタイヤは中段フロアの上、後ろのタイヤはまだ下段)をまたいだまま中段フロアを動かすと、タイヤが外れる(脱輪)
     var hg = fm.MECH.hang;
     if (car && hangStraddle(car)) {
       if (lastHang !== null && Math.abs(hg - lastHang) > 0.0005 && (!state.hints || state.freeMode) && !car.hangDerailed) {
         car.hangDerailed = true;
         car.derail = { t0: performance.now(), dur: 1100 };
         impact(car, 'derail', 90, { recoil: false });
-        if (state.freeMode) setStatus('脱輪!車が乗りかけの時に宙段を動かしました。');
+        if (state.freeMode) setStatus('脱輪!車が乗りかけの時に中段フロアを動かしました。');
         else {
-          recordMiss('車が乗りかけの時に宙段を動かして脱輪した', 'major');
-          setStatus('脱輪!車が乗りかけの時に宙段を動かしました。(ミス: ' + state.misses + ')');
+          recordMiss('車が乗りかけの時に中段フロアを動かして脱輪した', 'major');
+          setStatus('脱輪!車が乗りかけの時に中段フロアを動かしました。(ミス: ' + state.misses + ')');
         }
       }
     } else if (car) car.hangDerailed = false;
     lastHang = hg;
-    // 道が分かれる前(道板の上にいる間)は、棚の今の状態で走れる道(上段/下段/5番スロープ経由)に選び直す。
+    // 道が分かれる前(道板の上にいる間)は、フロアの今の状態で走れる道(上段/下段/5番スロープ経由)に選び直す。
     // 3番後ろのフロアが接地していれば上段、そうでなければ下段
     if (car && car.route && !car.seated && !car.locked && (car.phase === 'entering' || car.phase === 'ready' || car.phase === 'moving')) {
       var want = chooseRoute();
@@ -1650,11 +1650,11 @@
       }
     }
     if (car && car.route && car.dynamicPath && (car.phase === 'ready' || car.phase === 'moving')) {
-      var anchor = car.seated || !car.pts ? null : locateOnPath(car.pts, car.progress);   // 棚を動かす前の、経路上の位置(どの区間のどこか)
+      var anchor = car.seated || !car.pts ? null : locateOnPath(car.pts, car.progress);   // フロアを動かす前の、経路上の位置(どの区間のどこか)
       rebuildPath(car);
       var pts = car.pts;
       if (anchor) {
-        // 床の上にいる車(OKでない車も)は、棚を動かしても床の上の同じ位置に居続ける。
+        // 床の上にいる車(OKでない車も)は、フロアを動かしても床の上の同じ位置に居続ける。
         // 同じ床の上の区間は剛体なので区間の始点からの距離を保ち、床と床・床と地面をつなぐ区間(長さが変わる)は割合を保つ
         var raw = car.rawPath, rigid = !!raw[anchor.i].floor && raw[anchor.i].floor === raw[anchor.i + 1].floor;
         var segLen = Math.hypot(pts[anchor.i + 1].x - pts[anchor.i].x, pts[anchor.i + 1].y - pts[anchor.i].y);
@@ -1671,13 +1671,13 @@
     }
     // 輪止めに当たったまま止まっている車は、状態が変わった時(タイヤを張り出して6番に積めるようになった等)にもOKを判定し直す
     if (car && car.route && car.arc && car.contacted && !car.seated && !car.locked && (car.phase === 'ready' || car.phase === 'moving')) updateSeated(car, barriersOf(car));
-    // 輪止め(タイヤ落とし)に当たっていない車がいる間に棚を動かしたら減点(1台につき1回)
-    var offsNow = fm.curOffs(); offsNow = Object.assign({}, offsNow); delete offsNow.F7;   // 宙段を動かした場合は、脱輪・ぶつかりで別に判定する(ここでは数えない)
+    // 輪止め(タイヤ落とし)に当たっていない車がいる間にフロアを動かしたら減点(1台につき1回)
+    var offsNow = fm.curOffs(); offsNow = Object.assign({}, offsNow); delete offsNow.F7;   // 中段フロアを動かした場合は、脱輪・ぶつかりで別に判定する(ここでは数えない)
     var key = JSON.stringify(offsNow) + '|' + fm.MECH.lift;
     if (lastShelfKey !== null && key !== lastShelfKey && car && car.phase === 'moving' && car.progress > 0 && !car.seated && !car.shelfMissed) {
       car.shelfMissed = true;
-      recordMiss('輪止め(タイヤ落とし)に当たっていないのに棚を動かした', 'minor');
-      setStatus('棚を動かしました!車が輪止め(タイヤ落とし)に当たってからにしてください。(ミス: ' + state.misses + ')');
+      recordMiss('輪止め(タイヤ落とし)に当たっていないのにフロアを動かした', 'minor');
+      setStatus('フロアを動かしました!車が輪止め(タイヤ落とし)に当たってからにしてください。(ミス: ' + state.misses + ')');
     }
     lastShelfKey = key;
     requestAnimationFrame(syncDynamicPath);

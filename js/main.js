@@ -1,7 +1,7 @@
 (function () {
   var cfg = window.TRAILER_CONFIG;
   var assets = window.TRAILER_ASSETS;
-  var IS6B = cfg.id === 'semi-6b';   // 2台目のトレーラー(宙段なし・台車1軸)。素材・機構・描き方が semi-6 と違う(下の「semi-6b」の節。js/floor_mech_6b.js)
+  var IS6B = cfg.id === 'semi-6b';   // 2台目のトレーラー(中段フロアなし・台車1軸)。素材・機構・描き方が semi-6 と違う(下の「semi-6b」の節。js/floor_mech_6b.js)
   var statusEl = document.getElementById('status');
   var canvas = document.getElementById('stage');
   var ctx = canvas.getContext('2d');
@@ -91,7 +91,7 @@
     return cv;
   }
   // フレームの絵に焼き込まれた固定ピンの赤い板(穴6つ)を、設定 hangFloor.stopPin.plate の shift だけ動かす。
-  // 宙段の止まる高さ(stopPin.us)に合わせてピンの位置を決めたので、板の穴もそこへ合わせる(素材は書き換えず、読み込み時に絵の中の赤い板だけ切り出して置き直す)
+  // 中段フロアの止まる高さ(stopPin.us)に合わせてピンの位置を決めたので、板の穴もそこへ合わせる(素材は書き換えず、読み込み時に絵の中の赤い板だけ切り出して置き直す)
   function movePinPlate(g) {
     var P = cfg.hangFloor && cfg.hangFloor.stopPin && cfg.hangFloor.stopPin.plate;
     if (!P || !P.shift || (!P.shift[0] && !P.shift[1])) return;
@@ -205,7 +205,8 @@
     loadImage(floorSrc('F2')).then(function (img) { images.F2 = NA ? img : cleanF2(img); }),
     loadImage(floorSrc('F3')).then(function (img) { images.F3 = img; }),
     loadImage(floorSrc('F5')).then(function (img) { images.F5 = img; })
-  ].concat(IS6B ? [] : ['limit_switch', 'limit_switch_on'].map(function (k) { return loadImage('assets/common/switches/' + k + '.png?v=1').then(function (img) { images['sw_' + k] = img; }, function () { }); }),
+  ].concat(IS6B ? [] : ['bracket', 'lever', 'lever_up', 'hook'].map(function (k) { return loadImage('assets/semi-6/parts/slope_latch_' + k + '.png?v=1').then(function (img) { images['sl_' + k] = img; }, function () { }); }),
+    IS6B ? [] : ['limit_switch', 'limit_switch_on'].map(function (k) { return loadImage('assets/common/switches/' + k + '.png?v=1').then(function (img) { images['sw_' + k] = img; }, function () { }); }),
     IS6B ? [] : ['hook', 'winch_body', 'winch_handle'].map(function (k) { return loadImage('assets/common/tiedown/' + k + '.png?v=1').then(function (img) { images['td_' + k] = img; }, function () { }); }),
     NA && NA.parts ? Object.keys(NA.parts).map(function (k) { return loadImage(newSrc(NA.parts[k])).then(function (img) { images[k] = img; }); }) : [],
     NA && NA.switchParts ? NA.switchParts.map(function (k) { return loadImage(newSrc(NA.switchDir + k + '.png')).then(function (img) { images[k] = img; }); }) : []);
@@ -550,7 +551,7 @@
     drawSlidePlate();   // スライド板は内側の機構: 車とフロア・フレームの奥に描いて、外側からは見えないようにする
     drawCars();
     drawParts();
-    if (images.tailOcc) ctx.drawImage(images.tailOcc, TAIL.x0, TAIL.y0);   // 後端の部材は車より手前
+    // (後端の箱は、frame_front に入れたので、奥の枠から切り出して重ねる処理(tailOcc)は不要。D46。2026-10-15。設定 newArt.tail は、道板のない時に車が止まる位置(tail.x1)に使うので残す)
     drawChocks('holes');
     if (chk.floors.checked) {
       drawCarOcclusion();
@@ -570,7 +571,7 @@
     drawSwitches();
     drawSwitchGroupFrame();
     if (chk.floors.checked) drawMechanismFront();
-    lashQueue.forEach(function (q) { if (q[0] === '7') drawLashing(q[0], q[1], q[2], q[3], q[4]); });   // 宙段の荷締め機は、宙段フロアの上(フロアより後に描く)
+    lashQueue.forEach(function (q) { if (q[0] === '7') drawLashing(q[0], q[1], q[2], q[3], q[4]); });   // 中段フロアの荷締め機は、中段フロアの上(フロアより後に描く)
     drawChockMarkers();
     drawSlotMarks();
     if (chk.hit.checked) drawHitBoxes();
@@ -587,9 +588,9 @@
     drawYardLight();   // 昼以外は、全体に色を掛ける
   }
 
-  // 検証用(2026-10-09 ユーザー指摘「検証が無理やり積んでいる。屋根が貫通・フロアを無視していた」への対策): 積んだ車と、各フロア(1・2・3・5番と宙段)の絵が、実際に重なっている画素数を測る。
+  // 検証用(2026-10-09 ユーザー指摘「検証が無理やり積んでいる。屋根が貫通・フロアを無視していた」への対策): 積んだ車と、各フロア(1・2・3・5番と中段フロア)の絵が、実際に重なっている画素数を測る。
   // 車は自分が載っているフロア(carrier)とは重なって当然なので、それ以外のフロアとの重なりだけを返す。{slot, floor, px} の一覧(px>0 のもの)。
-  // 検証用(2026-10-14): 今動かしている車(gs.car)が、各フロア(1・2・3・5番と宙段)の絵と重なっている画素数。当たり判定が「何も無い所」で出ていないかを、絵と突き合わせる
+  // 検証用(2026-10-14): 今動かしている車(gs.car)が、各フロア(1・2・3・5番と中段フロア)の絵と重なっている画素数。当たり判定が「何も無い所」で出ていないかを、絵と突き合わせる
   window.LIVE_OVERLAP = function () {
     var gs = window.GAME_STATE, fm = window.FLOOR_MECH, car = gs && gs.car;
     if (!car || !fm || !images) return null;
@@ -608,7 +609,7 @@
         if (n) out[id] = n;
       });
       var C = chuudanArt();
-      if (C && fm.MECH.hang > 0.02) {   // 宙段(上がっている間)
+      if (C && fm.MECH.hang > 0.02) {   // 中段フロア(上がっている間)
         dc.clearRect(0, 0, W, H);
         var hp = fm.hangPose(), ha = hp.ang * Math.PI / 180;
         dc.save(); dc.translate(hp.F[0], hp.F[1]); dc.rotate(ha); dc.drawImage(images.floor_chuudan, -C.floorPivot[0], -C.floorPivot[1]); dc.restore();
@@ -681,7 +682,7 @@
   // 画面座標の点をトレーラー座標へ(rigToWorldの逆)
   function worldToRig(p, tilt) { return rigToWorld(p, -tilt); }
 
-  // エアサス: タイヤを突出させてジャッキを縮め、タイヤが接地したら台車の車高が少し下がる(約1秒で沈む/戻る)。
+  // エアサス: スライド車軸を伸ばしてジャッキを縮め、タイヤが接地したら台車の車高が少し下がる(約1秒で沈む/戻る)。
   // 車高が下がる=キングピンを支点にトレーラー後部がairSusDrop px下がる。タイヤ自体は地面に残る
   var airSusCur = 0, airSusLast = null;
   function updateAirSus() {
@@ -730,7 +731,7 @@
     return [k[0] + dx * Math.cos(a) - dy * Math.sin(a), k[1] + dx * Math.sin(a) + dy * Math.cos(a)];
   }
 
-  // タイヤ突出のアニメーション(0=格納、1=突出。約0.5秒で滑らかに移行)
+  // スライド車軸の伸ばしのアニメーション(0=格納、1=突出。約0.5秒で滑らかに移行)
   var tireOutT = 0, tireOutLast = null;
   function updateTireOut() {
     var now = performance.now(), dt = tireOutLast === null ? 0 : Math.min(0.1, (now - tireOutLast) / 1000);
@@ -746,26 +747,34 @@
   // 全フロアを重ね直す(フロア画像は該当箇所以外ほぼ透明なので、余分な重ね描きをしても
   // 見た目への影響はない)。
   function drawCarOcclusion() {
+    if (images.sl_bracket) ctx.drawImage(images.sl_bracket, 996, 444);   // 5番のスロープのピンの金具(中央の柱の後ろの面。動かない。D45)
     ['F1', 'F2', 'F3', 'F5'].forEach(function (id) {
       if (images[id]) drawTransformedFloor(id, images[id]);
     });
+    drawSlopeHook();
     drawHangFloor();
+  }
+  // 5番の前端の引っかけ金具(5番と一緒に動く)。pivot [12,3] を5番の前端の点に合わせ、5番の角度で回す(D45)
+  function drawSlopeHook() {
+    var fm = window.FLOOR_MECH; if (!images.sl_hook || !fm || !fm.f5FrontPt) return;
+    var p = fm.f5FrontPt(), ang = fm.poseOf('F5').ang * Math.PI / 180;
+    ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(ang); ctx.drawImage(images.sl_hook, -12, -3); ctx.restore();
   }
 
   // フロアの現在の傾き(ang)・上下量(dh)に合わせて画像を変形して描く
-  // 宙段フロア(5番と6番の間の持ち上がる棚): 素材の前端pivot(3,10)を今の前端の位置に合わせ、前端→後端の角度に回して描く
-  // 宙段の新素材(実車合わせ: 前の柱は1本物、後ろは長い柱+中から伸びる支柱、前の柱と平行に持ち上げシリンダー)が読めているか
+  // 中段フロア(5番と6番の間の持ち上がるフロア): 素材の前端pivot(3,10)を今の前端の位置に合わせ、前端→後端の角度に回して描く
+  // 中段フロアの新素材(実車合わせ: 前の柱は1本物、後ろは長い柱+中から伸びる支柱、前の柱と平行に持ち上げシリンダー)が読めているか
   function chuudanArt() {
     var C = NA && NA.chuudan;
     return C && images.floor_chuudan && images.chuudan_arm_front && images.chuudan_post_outer && images.chuudan_post_inner && images.chuudan_base && images.cyl_rod && images.cyl_barrel ? C : null;
   }
-  // 宙段の窪みの奥(車・宙段より先に描く。下段の床・フレームの上)
+  // 中段フロアの窪みの奥(車・中段フロアより先に描く。下段の床・フレームの上)
   function drawPitBack() {
     var C = chuudanArt();
     if (C && images.hang_pit_back) ctx.drawImage(images.hang_pit_back, C.pitBack[0], C.pitBack[1]);
   }
-  // 柱 → 宙段フロア → 窪みの手前の縁 の順に描く(柱の上端が宙段の受け金具に隠れてつながって見える)。
-  // 柱は宙段の今の姿勢に合わせて、下端ピン(車体側・固定)から宙段の受け金具(前 armPinF・後ろ armPinR)へ向ける
+  // 柱 → 中段フロア → 窪みの手前の縁 の順に描く(柱の上端が中段フロアの受け金具に隠れてつながって見える)。
+  // 柱は中段フロアの今の姿勢に合わせて、下端ピン(車体側・固定)から中段フロアの受け金具(前 armPinF・後ろ armPinR)へ向ける
   function drawChuudan(C, fm) {
     var p = fm.hangPose(), a = p.ang * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
     function onFl(pt) { var dx = pt[0] - C.floorPivot[0], dy = pt[1] - C.floorPivot[1]; return [p.F[0] + dx * ca - dy * sa, p.F[1] + dx * sa + dy * ca]; }
@@ -780,8 +789,8 @@
     var mouth = [pr[0] + Math.cos(rr) * 90, pr[1] + Math.sin(rr) * 90];   // 外筒のピン穴(外筒の画像 x=100 − pivot 10 = 付け根から90px)
     if (images.pin_rear) { ctx.save(); ctx.translate(mouth[0], mouth[1]); ctx.rotate(rr); ctx.drawImage(images.pin_rear, -6, -6); ctx.restore(); }
     else { ctx.save(); ctx.translate(mouth[0], mouth[1]); ctx.rotate(rr); ctx.fillStyle = '#c33'; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1; ctx.fillRect(-10, -9, 4, 18); ctx.strokeRect(-10, -9, 4, 18); ctx.fillStyle = '#d9dde0'; ctx.beginPath(); ctx.arc(-8, 0, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); }
-    // 宙段フロア → 前端の受け耳(D18。フロア上面の上に出る柱の受け)→ 前の柱(柱の上端が耳の穴に重なる)の順に描く。後ろの柱はフロアの下(上で先に描いた)
-    // 宙段フロアは、下段(6番)の床の窪みに収まる時、床の上面より下は見えない(2026-10-10 ユーザー指摘「宙段の後方が6番フロアを貫通」)。
+    // 中段フロア → 前端の受け耳(D18。フロア上面の上に出る柱の受け)→ 前の柱(柱の上端が耳の穴に重なる)の順に描く。後ろの柱はフロアの下(上で先に描いた)
+    // 中段フロアは、下段(6番)の床の窪みに収まる時、床の上面より下は見えない(2026-10-10 ユーザー指摘「中段フロアの後方が6番フロアを貫通」)。
     // 物理(付け根・長さ)は変えず、描画だけ 6番の床の上面(deckY)で切る。
     var DECK_Y = (cfg.hangFloor && cfg.hangFloor.clipDeckY) || 510;   // 床の絵の上面の高さ(車の接地 deckY は 525 に下げたので、deckY は使わない。2026-10-13 検証で発見)
     ctx.save();   // 切り抜き用(下の最後の restore と対)
@@ -789,7 +798,7 @@
     ctx.beginPath(); ctx.rect(-6000, -6000, 12000, 6000 + DECK_Y + 2); ctx.clip();
     ctx.translate(p.F[0], p.F[1]);
     ctx.rotate(a);
-    // 宙段フロアの絵は、長さ 325px(設定 hangFloor.len の基準)で描いてある。設定の長さ(len)に合わせて、前端を支点に横へ伸ばす(2026-10-10 ユーザー指示「フロアの長さが変わってない」)
+    // 中段フロアの絵は、長さ 325px(設定 hangFloor.len の基準)で描いてある。設定の長さ(len)に合わせて、前端を支点に横へ伸ばす(2026-10-10 ユーザー指示「フロアの長さが変わってない」)
     var FLEN = (cfg.hangFloor && cfg.hangFloor.len) || 325, FBASE = 325;
     ctx.scale(FLEN / FBASE, 1);
     ctx.drawImage(images.floor_chuudan, -C.floorPivot[0], -C.floorPivot[1]);
@@ -858,7 +867,7 @@
     var fm = window.FLOOR_MECH;
     if (!fm || !fm.hangPose) return;
     var C = chuudanArt();
-    if (C) drawChuudan(C, fm);   // 宙段の素材が読めていなければ描かない(素材は全て読み込んでからゲームが始まる)
+    if (C) drawChuudan(C, fm);   // 中段フロアの素材が読めていなければ描かない(素材は全て読み込んでからゲームが始まる)
   }
   var F2_TIP_CUT_X = 966;   // 2番フロアの先端(x=953〜。R24 で 885→953、900→966)は、スライド板が入る分、ここ(柱の手前)まで切り取って描く(2026-10-07 ユーザー許可)
   function drawTransformedFloor(id, img) {
@@ -969,11 +978,11 @@
     ctx.drawImage(cv, -info.pivot[0], -info.pivot[1]);
     ctx.restore();
   }
-  // c=シリンダーの定義(anchor=車体側の根元)、L=今の取付点間の長さ、deg=根元から棚側へ向かう角度
+  // c=シリンダーの定義(anchor=車体側の根元)、L=今の取付点間の長さ、deg=根元からフロア側へ向かう角度
   function drawCylinderArt(c, L, deg) {
     var at = c.anchor;
     if (c.tele && NA.cylInfo.cyl2_rod && !c.two) {
-      // 入れ子式: 外筒 → 1段目 → ロッドの順に伸びる。1か所が出る長さは、外筒の長さ以内(取付点の間隔=棚の高さは変えない。2026-10-13 ユーザー指示)
+      // 入れ子式: 外筒 → 1段目 → ロッドの順に伸びる。1か所が出る長さは、外筒の長さ以内(取付点の間隔=フロアの高さは変えない。2026-10-13 ユーザー指示)
       var bt = Math.min(c.barrel, L - 6), st = Math.max(20, bt * 0.95), e1 = Math.min(Math.max(0, L - bt), st);
       drawStrip('cyl2_rod', st, at, deg, L - st);
       drawStrip('cyl2_stage1', st, at, deg, bt + e1 - st);
@@ -1019,7 +1028,7 @@
   // 固縛(D43): 車のタイヤの前後にフックを掛け、床の荷締機のハンドルを回してワイヤを張る。回数(car.lashTurns)が増えるほど張る。車の座標(前タイヤの接地点が原点・後ろが+x・床の傾きで回す)で描く
   var LASH_TURNS_DRAW = 6, LASH_SC = 0.9;   // 荷締機(ガチャ)の絵は、実物大の 0.62 倍で小さくスマートに描く
   // 荷締め機は各スロットに1つずつ(ユーザー指示 2026-10-15。実車の写真の赤丸の位置)。dir=ワイヤーが出ている向き(+1=後ろ・-1=前)、f=後ろ向きの時の位置(前タイヤから後ろへ、軸距に対する割合)
-  //  上段: 1番=後ろ向き・2番=後ろ向き・3番=前向き / 下段: 4番=前向き・5番=後ろ向き・6番=前向き / 宙段(7番)=前向き(宙段フロアの上に付く。宙段が格納の間は、フロアと一緒に隠れる)
+  //  上段: 1番=後ろ向き・2番=後ろ向き・3番=前向き / 下段: 4番=前向き・5番=後ろ向き・6番=前向き / 中段フロア(7番)=前向き(中段フロアの上に付く。中段フロアが格納の間は、フロアと一緒に隠れる)
   var LASH_SPEC = { '1': { dir: 1, f: 0.87, dx: 20, dy: -2 }, '2': { dir: 1, f: 0.93, dx: 45, dy: 1 }, '3': { dir: -1, dx: 0, dy: 3 }, '4': { dir: -1, dx: -90, dy: -16 }, '5': { dir: 1, f: 0.12, dx: -30, dy: -8.5 }, '6': { dir: -1, dx: 20, dy: -8.5 }, '7': { dir: -1, dx: 50, dy: -2 } };   // dx=後ろへ(+)/前へ(-)の調整(px)・dy=下へ下げる量(px。台の底=wy+14×LASH_SC を、フレームの上の面に合わせる。上段は床のフレームの上面付近、下段(4〜6番)は、タイヤの接地面より約15px上=外枠のフレームの上)
   // 1つの荷締め機(と、車がいればフックとワイヤー)を、前タイヤの接地点を原点・後ろが +x の座標で描く。car=null なら、荷締め機だけ(標準の車の寸法)
   function drawLashUnit(num, car, sink) {
@@ -1055,7 +1064,7 @@
     drawLashUnit(num, c.live, sink);
     ctx.restore();
   }
-  // 車がいないスロット(1〜6番)の荷締め機。宙段(7番)は、車が載っている時だけ(格納の間は見えない)
+  // 車がいないスロット(1〜6番)の荷締め機。中段フロア(7番)は、車が載っている時だけ(格納の間は見えない)
   function drawLashFixtures() {
     var st = window.GAME_STATE; if (!st || !lashReady()) return;
     ['1', '2', '3', '4', '5', '6'].forEach(function (n) {
@@ -1069,8 +1078,8 @@
     if (M && im && M.pillarScaleHome) ctx.drawImage(im, M.pillarScaleHome[0], M.pillarScaleHome[1]);
   }
   // 3番前(継ぎ目MID)の実車の機構: シリンダーは柱の左の面に沿って x=1500 に真上へ立ち(根元 y=518)、上端は柱の側面の金具(mid_slider)に付く。
-  // 金具のピンは、継ぎ目の y - 6。金具は、柱の中の部材とつながって棚と一緒に動く(柱の中の部材は、横から見えないので描かない)。
-  // 金具のピンと、2番の棚の下の金具(2番と一緒に動く)を、リンク(44px)でつなぐ。シリンダーの長さ = 根元 y − 金具のピンの y(102〜284)
+  // 金具のピンは、継ぎ目の y - 6。金具は、柱の中の部材とつながってフロアと一緒に動く(柱の中の部材は、横から見えないので描かない)。
+  // 金具のピンと、2番のフロアの下の金具(2番と一緒に動く)を、リンク(44px)でつなぐ。シリンダーの長さ = 根元 y − 金具のピンの y(102〜284)
   function midLinkArt() {
     var M = NA && NA.midLink;
     return M && images.mid_link && images.mid_slider && images.mid_cyl_barrel && images.mid_cyl_stage1 && images.mid_cyl_rod ? M : null;
@@ -1085,7 +1094,7 @@
     drawStrip('mid_cyl_rod', M.rodLen, M.cylAnchor, -90, L - M.rodLen);
     drawStrip('mid_cyl_stage1', M.stage1Len, M.cylAnchor, -90, M.barrelLen + s1 - M.stage1Len);   // 外筒の口 + 1段目の伸び − 1段目の長さ
     drawStrip('mid_cyl_barrel', M.barrelLen, M.cylAnchor, -90, 0);
-    // リンク: 金具のピン → 2番の棚の下の金具。距離は姿勢で少し変わるので、横に伸び縮みさせて描く
+    // リンク: 金具のピン → 2番のフロアの下の金具。距離は姿勢で少し変わるので、横に伸び縮みさせて描く
     var lp = fm.onFloor('F2', M.linkTopOnF2[0], M.linkTopOnF2[1]);
     var vx = lp[0] - pin[0], vy = lp[1] - pin[1], d = Math.hypot(vx, vy);
     ctx.save();
@@ -1095,37 +1104,27 @@
     ctx.drawImage(images.mid_link, -M.linkPivot[0], -M.linkPivot[1]);
     ctx.restore();
     ctx.drawImage(images.mid_slider, pin[0] - M.sliderPivot[0], pin[1] - M.sliderPivot[1]);
-  }  // 前景フレームより手前に出る機構(β版で z-index:6 だったもの): シリンダー・アウトリガー
+  }  // 前景フレームより手前に出る機構(β版で z-index:6 だったもの): シリンダー・ジャッキ
   function drawMechanismFront() {
     var fm = window.FLOOR_MECH;
     if (!fm) return;
 
     drawPulley(fm.WIRE_TOP); // 1番後ろのワイヤーが掛かる、後ろの柱のてっぺんの滑車
-    if (fm.stopperVisible && fm.stopperVisible()) drawStopperHook(fm);
+    drawStopperHook(fm);
 
   }
 
-  // 5番ストッパー(5番フロア前端の下面の引っかけ金具。黄黒の縞)。掛かっている時は床の縁を受ける形、外してある時は横へ跳ね上げた形。
-  // タップできる印として、まわりをゆっくり光らせる(タップは game.js の mechanismAt)
+  // 5番のスロープのピンの、赤いレバー(中央の柱の後ろの面。D45。マニュアルの図とユーザーの説明どおり)。普段は斜め上40度。5番が4番の高さに掛かっている間にタップすると、
+  // レバーが上がって(82度)ピンが外れ、5番を下げられる。5番が4番の高さより下がると、レバーは自動で普段の向きに戻る(ピンが出る)。タップできる間は、まわりをゆっくり光らせる
+  var LEVER_AT = [1003, 457];
   function drawStopperHook(fm) {
-    var p = fm.stopperPos(), ang = fm.poseOf('F5').ang * Math.PI / 180, set = fm.MECH.stopper;
-    var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260);
-    ctx.save();
-    ctx.translate(p[0], p[1]); ctx.rotate(ang);
-    ctx.fillStyle = 'rgba(255,214,80,' + (0.18 + 0.22 * pulse) + ')';
-    ctx.beginPath(); ctx.arc(0, 4, 17 + 3 * pulse, 0, Math.PI * 2); ctx.fill();
-    if (!set) ctx.rotate(-1.15);   // 外してある時は、ヒンジ(根元)を軸に、上へ跳ね上げる
-    // 金具の板(黄黒の縞)
-    ctx.save(); ctx.beginPath(); ctx.rect(-5, 0, 10, 22); ctx.clip();
-    ctx.fillStyle = '#f2c230'; ctx.fillRect(-5, 0, 10, 22);
-    ctx.fillStyle = '#1b1f22';
-    for (var k = -2; k < 5; k++) { ctx.beginPath(); ctx.moveTo(-5, k * 8); ctx.lineTo(5, k * 8 - 8); ctx.lineTo(5, k * 8 - 3); ctx.lineTo(-5, k * 8 + 5); ctx.closePath(); ctx.fill(); }
-    ctx.restore();
-    ctx.strokeStyle = '#1b1f22'; ctx.lineWidth = 1.3; ctx.strokeRect(-5, 0, 10, 22);
-    // 床の縁を受ける爪(掛かっている時は縁の下へ、外してある時は開く)
-    ctx.fillStyle = '#9aa3a9'; ctx.beginPath(); ctx.moveTo(5, 16); ctx.lineTo(13, 16); ctx.lineTo(13, 22); ctx.lineTo(5, 22); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#5c646a'; ctx.beginPath(); ctx.arc(0, 2, 2.2, 0, Math.PI * 2); ctx.fill();   // ヒンジのボルト
-    ctx.restore();
+    var up = !fm.MECH.stopper, im = images[up ? 'sl_lever_up' : 'sl_lever'];
+    if (!im) return;
+    if (fm.stopperVisible && fm.stopperVisible()) {
+      var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260);
+      ctx.save(); ctx.fillStyle = 'rgba(255,90,70,' + (0.16 + 0.2 * pulse) + ')'; ctx.beginPath(); ctx.arc(LEVER_AT[0] + 8, LEVER_AT[1] - 10, 16 + 3 * pulse, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    ctx.drawImage(im, LEVER_AT[0] - 7, LEVER_AT[1] - 19);
   }
 
   function drawPulley(p) {
@@ -1146,7 +1145,7 @@
     var mlArt = midLinkArt();
     if (mlArt) drawMidLink(mlArt, fm);
     fm.CYLS.forEach(function (c) {
-      if (c.hidden) return;   // 3番の左の斜めシリンダー(f2mid)は描かない(2026-10-13 ユーザー指示。棚の動きの判定には使う)
+      if (c.hidden) return;   // 3番の左の斜めシリンダー(f2mid)は描かない(2026-10-13 ユーザー指示。フロアの動きの判定には使う)
       if (mlArt && c.id === 'midvert') return;   // 新しい機構(金具+リンク+専用の二段シリンダー)で描く
       var r = fm.cylLen(c);
       if (NA && images.cyl_barrel) drawCylinderArt(c, r.L, r.deg);
@@ -1277,7 +1276,7 @@
     ctx.restore();
   }
 
-  // アウトリガー(ジャッキ): タイヤ後方の台車フレーム内に縦のシリンダー、下の梁から角パイプの足が出る(実車写真準拠)。
+  // ジャッキ: タイヤ後方の台車フレーム内に縦のシリンダー、下の梁から角パイプの足が出る(実車写真準拠)。
   // 前景フレームより先に描くので、フレームの部材がシリンダーの手前に重なって「フレーム内部」に見える。
   // 足先はjack=jackContactで地面に接地し、それ以上伸ばすとトレーラーが持ち上がる(足先は地面に残る)。
   // part: 'cyl'=シリンダー(前景フレームの奥) / 'leg'=梁から下の足と接地板(前景の地面の影より手前に描いて、接地が見えるように)
@@ -1329,7 +1328,7 @@
   }
 
   // 台車タイヤ(実車写真準拠): 黒いタイヤ+トレッド、銀色のスチールディスクホイール(飾り穴10・ナット10・黒いハブキャップ)、フェンダー。
-  // タイヤを突出させると手前(外側)に出るので、接地点はそのままで少し大きく見え、フェンダーより手前に来る。
+  // スライド車軸を伸ばすと手前(外側)に出るので、接地点はそのままで少し大きく見え、フェンダーより手前に来る。
   // ※画像wheel_v2.b64.txtは応援サイトが部品取りに使っているため差し替えず、ゲームではこちらを描く
   function drawTrailerWheel() {
     var w = cfg.outrigger.wheel, t = tireOutT, e = t * t * (3 - 2 * t);
@@ -1664,7 +1663,7 @@
         acc.landT = performance.now();
       }
     }
-    // 脱輪(宙段を動かされて乗りかけのタイヤが外れた): 前のめりに傾いてガクンと沈み、揺れながら戻る
+    // 脱輪(中段フロアを動かされて乗りかけのタイヤが外れた): 前のめりに傾いてガクンと沈み、揺れながら戻る
     var drY = 0, drDeg = 0, dr = car.derail;
     if (dr) {
       var dp = (performance.now() - dr.t0) / dr.dur;
@@ -1825,7 +1824,7 @@
       var now = performance.now(), dt = a.last === null ? 0 : Math.min(0.1, (now - a.last) / 1000);
       a.last = now;
       var step = dt / 0.6, target = st.lidOpen[num] ? 1 : 0;
-      if (cfg.slots[num].instantLid) { a.t = target; return; }   // 宙段の穴は、上げた時には最初から空いている(蓋の動きは見せない)
+      if (cfg.slots[num].instantLid) { a.t = target; return; }   // 中段フロアの穴は、上げた時には最初から空いている(蓋の動きは見せない)
       a.t = a.t < target ? Math.min(target, a.t + step) : Math.max(target, a.t - step);
     });
   }
@@ -1837,7 +1836,7 @@
     Object.keys(cfg.slots).forEach(function (num) {
       var slot = cfg.slots[num];
       if (slot.stopKind !== 'hole') return;
-      if (slot.instantLid && chuudanArt()) return;   // 宙段の穴は宙段フロアの絵に描いてある
+      if (slot.instantLid && chuudanArt()) return;   // 中段フロアの穴は中段フロアの絵に描いてある
       var t = lidT(num); if (t <= 0) return;
       var e = t * t * (3 - 2 * t);
       placeOnSlot(slot, 0, function () {
@@ -1884,7 +1883,7 @@
     return true;
   }
   // セットピン: 柱の穴は横から見えないので、見えるのは差したピンの赤いコの字の取手だけ(柱の前の面から前へ出る)。
-  // 抜いている間は、鎖でぶら下がる絵を、次に差す穴(ピンボタンの番号)の位置に出す。位置は pinMarks(その棚の端の柱のx、棚が走行位置の絵の時のy)+ピンの上下量
+  // 抜いている間は、鎖でぶら下がる絵を、次に差す穴(ピンボタンの番号)の位置に出す。位置は pinMarks(そのフロアの端の柱のx、フロアが走行位置の絵の時のy)+ピンの上下量
   function drawPins() {
     var fm = window.FLOOR_MECH;
     if (!NA || !images.pin || !fm || !fm.PINS) return;
@@ -1893,13 +1892,13 @@
       var rel = fm.pinPostRel(k);   // 3番後ろ: 柱での高さ(3番前の高さに関係なく、穴の位置)
       if (rel === null && k === 'F3r' && v === null) rel = fm.pinPostRel('F3r') === null ? (function () { var h = fm.pinTarget(k), e = fm.ENDS.F3r; return fm.pinPostOfHole(h); })() : null;
       var off = v !== null ? v : fm.offOfHole(k, fm.pinTarget(k));
-      // 穴の絵の間隔(柱の上で等間隔)は、棚の動き(off)と同じとは限らない。pinScale があれば、走行位置の穴(m[1])を基準に、穴1つあたりの描画の間隔を拡大して描く(3番後ろ: 棚は1穴3.13pxだが、柱の穴は実写どおり約7px間隔)
+      // 穴の絵の間隔(柱の上で等間隔)は、フロアの動き(off)と同じとは限らない。pinScale があれば、走行位置の穴(m[1])を基準に、穴1つあたりの描画の間隔を拡大して描く(3番後ろ: フロアは1穴3.13pxだが、柱の穴は実写どおり約7px間隔)
       var sc = (cfg.pinScale && cfg.pinScale[k]) || 1, y = rel !== null ? m[1] + rel : (sc === 1 ? m[1] + off : m[1] + (off - fm.ENDS[k].travel) * sc);
       if (v === null) img = images.pin_out;
       if (img) ctx.drawImage(img, m[0] - 4, y - 6);
     });
   }
-  // トレーラー上のスイッチ・ランプ盤(実寸=素材の0.27倍)。上端の中央を設定の位置に合わせる。2ボタンは、その棚を動かしている間、上/下を押した絵にする。
+  // トレーラー上のスイッチ・ランプ盤(実寸=素材の0.27倍)。上端の中央を設定の位置に合わせる。2ボタンは、そのフロアを動かしている間、上/下を押した絵にする。
   // 斜材に沿うもの(ランプ盤・6ボタン)は約30度傾けて置く(上端が後ろへ)
   function drawSwitches() {
     var fm = window.FLOOR_MECH;
@@ -1997,7 +1996,7 @@
       }
     });
   }
-  // 輪止め・タイヤ止め・穴の位置の目印。輪止め本体は小さくて柱の陰に隠れるため、矢印とラベルを最前面に描く。
+  // 輪止め・タイヤストッパ・穴の位置の目印。輪止め本体は小さくて柱の陰に隠れるため、矢印とラベルを最前面に描く。
   //  - 選択中のスロット: 輪止めを置ける位置の目盛り+今止まる位置(大きな矢印とラベル)
   //  - それ以外: セット中の輪止め/開いている落し蓋だけ小さな矢印
   function drawChockMarkers() {
@@ -2032,7 +2031,7 @@
             ctx.fillStyle = 'rgba(255,150,40,0.85)'; ctx.beginPath(); ctx.arc(0, -4, 4, 0, Math.PI * 2); ctx.fill();
           });
         }
-        // 輪止めが無い間も、元のタイヤ止め・落し蓋の位置は示す
+        // 輪止めが無い間も、元のタイヤストッパ・落し蓋の位置は示す
         if (!stop && slot.stopKind === 'hole') {
           placeOnSlot(slot, 0, function () { arrow('落し蓋(閉)', 'rgba(150,170,180,0.95)', true); });
         }
@@ -2047,7 +2046,7 @@
     });
   }
 
-  // 輪止め(タイヤ止め・落とし)に当たって止まっている車に「OK」を出す。以前の選択中スロットの四角い囲いは廃止
+  // 輪止め(タイヤストッパ・落とし)に当たって止まっている車に「OK」を出す。以前の選択中スロットの四角い囲いは廃止
   function drawSlotMarks() {
     if (window.UI_HIDDEN) return;   // UI非表示の時は、輪止め・固定などの文字を描かない
     var st = window.GAME_STATE;
@@ -2109,7 +2108,7 @@
   }
 
   // =====================================================================
-  // semi-6b(6台積み・宙段なし・台車1軸)の描画。素材は assets/semi-6b/、置き方は make_semi6b.py の compose() と同じ。
+  // semi-6b(6台積み・中段フロアなし・台車1軸)の描画。素材は assets/semi-6b/、置き方は make_semi6b.py の compose() と同じ。
   // 描く順(parts.json drawOrder): 奥の枠 → 道板・スロープ → 車 → 2番の支え・シリンダー → 2番 → 1番のシリンダー → 1番 → 手前の枠 → 台車タイヤ → フェンダー → トラクタ → トラクタの車輪
   // 車は手前の枠(中央の柱・下段の側板)より奥に描く(車が柱の後ろを通って見える)。機構の姿勢は fm.MECH.f1(1番の上げ量px)・f2(2番の傾き度)・道板・スロープの時間で決まる。
   // =====================================================================

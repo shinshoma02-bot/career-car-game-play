@@ -8,12 +8,12 @@
   // スコアの調整値(第9.2章: 合算方法は単純な加減算で開始。実際に遊んで調整する)
   var SCORE = {
     perCar: 100,          // 1台の積み込み完了ごとに加点
-    perMinor: 30,         // 軽いミス(手順の不備: 道板未展開・棚を動かした・積めない車種等)1回の減点
+    perMinor: 30,         // 軽いミス(手順の不備: 道板未展開・フロアを動かした・積めない車種等)1回の減点
     perMajor: 80,         // 重いミス(ぶつかる・乗り越える・脱輪・ピン無しで下へ入る等)1回の減点
     minorLimit: 3,        // リアルモード: 重いミスは即終了、軽いミスはこの回数で終了
     heightLimitM: (cfg.score && cfg.score.heightLimitM) || 4.1,    // これを超えた分だけ減点(第9.1章)。トレーラーごとに trailer_config の score.heightLimitM で決める(semi-6b は 4.6)
     minHOffsetM: 0.05,    // この組み合わせをいちばん低く積める高さ(積める判定で計算。実測とほぼ一致、1/3の組み合わせで0.2m高めに出る)+この余裕まで、減点しない(車の組み合わせで決まる高さは、積む人のせいではないので)
-    hangExtraM: 0.7,      // 宙段を使う7台のサイクルは、宙段のために2・3番を高く上げるので、高さ制限をこの分だけ緩める(実測: 7台で約0.6m高くなる)
+    hangExtraM: 0.7,      // 中段フロアを使う7台のサイクルは、中段フロアのために2・3番を高く上げるので、高さ制限をこの分だけ緩める(実測: 7台で約0.6m高くなる)
     perMeterOver: 1000,   // 高さ超過1mあたりの減点(=10cmで100点)
     // 配車担当への連絡(積めない荷物。第16章)
     dispatchMaxBonus: 300,   // 積めない荷物に、出題の直後に気づいて連絡した時のボーナス(難易度の倍率を掛ける)
@@ -45,10 +45,10 @@
   function mult() { return mode === 'sim' ? 1 : (DIFF_MULT[diff] || 1); }
   var lastHeightM = null, cycleStartMisses = 0;
 
-  // 今のサイクルの高さ制限(7台サイクルは宙段の分だけ緩める)
+  // 今のサイクルの高さ制限(7台サイクルは中段フロアの分だけ緩める)
   function limitM() {
     var lim = SCORE.heightLimitM + (state.deckSize >= 7 && !state.deckMinH ? SCORE.hangExtraM : 0);   // 7台も、基準が計算できれば、下の基準を使う
-    // 6台は、その組み合わせをいちばん低く積んでも届かない分(車が高い組み合わせ)は減点しない。減点するのは、並べ方や棚の上げ過ぎで、避けられた高さだけ
+    // 6台は、その組み合わせをいちばん低く積んでも届かない分(車が高い組み合わせ)は減点しない。減点するのは、並べ方やフロアの上げ過ぎで、避けられた高さだけ
     if (state.deckMinH && isFinite(state.deckMinH)) lim = Math.max(lim, state.deckMinH + SCORE.minHOffsetM);
     return lim;
   }
@@ -66,7 +66,7 @@
     $('modeBarName').textContent = (isTut ? 'チュートリアル' : MODES[mode].name) + (mode === 'sim' ? '' : '・' + DIFFS[diff] + '(×' + mult() + ')') + (window.TRAILER_CONFIG && window.TRAILER_CONFIG.id === 'semi-6b' ? '・6台積み' : '');   // 2台目のトレーラーを選んでいる時は、バーに出して区別する
     $('modeBarTime').textContent = t;
     $('modeBarCycles').textContent = 'サイクル ' + stats.cycles;
-    $('modeBarCars').textContent = '積込 ' + stats.docks + '台' + (state.deckSize >= 7 ? '(今回7台・宙段あり)' : '');
+    $('modeBarCars').textContent = '積込 ' + stats.docks + '台' + (state.deckSize >= 7 ? '(今回7台・中段フロアあり)' : '');
     // 積み込んだ状態の、地面から一番高い所の高さ(今のフロアの位置で計算。高さ制限を超えると赤)
     var hm = Object.keys(state.occupied).length ? loadHeightM() : null;
     $('modeBarHeight').textContent = hm === null ? '' : '荷姿の高さ ' + hm.toFixed(2) + 'm';
@@ -78,7 +78,7 @@
   // 積んだ車のうち一番高い所の地上高(m)。フロア上の車はフロアの現在位置で計算する
   function loadHeightM() {
     var top = Infinity;
-    Object.keys(state.occupied).forEach(function (n) {   // 描画と同じ位置・同じ傾き(床の傾き+車の回転)で、車の一番高い所を測る(2026-10-11。傾いた宙段の7台目で低く出ていた)
+    Object.keys(state.occupied).forEach(function (n) {   // 描画と同じ位置・同じ傾き(床の傾き+車の回転)で、車の一番高い所を測る(2026-10-11。傾いた中段フロアの7台目で低く出ていた)
       var c = state.occupied[n], pos = [c.localX, c.localY], rot = c.rotDeg || 0;
       if (c.floor) { pos = fm.onFloor(c.floor, c.localX, c.localY); rot += fm.poseOf(c.floor).ang; }
       top = Math.min(top, fm.carRoofY ? fm.carRoofY(c, pos, rot) : pos[1] - c.h);   // carRoofY の無いトレーラー(semi-6b)は、従来どおり車の枠の上端(2026-10-13 検証で発見)
@@ -103,14 +103,14 @@
       return fm.cycleReady();
     }
     if (state.lashRequired && state.lashRequired() && state.unlashed && state.unlashed().length) return false;   // ノーマル・ハード: 全ての車を固縛してから完了(D43)
-    // 1〜6番がそろっている(宙段の7台目は任意。数だけで判定すると、宙段があるのに5番が空でも完了してしまう)
+    // 1〜6番がそろっている(中段フロアの7台目は任意。数だけで判定すると、中段フロアがあるのに5番が空でも完了してしまう)
     if (['1', '2', '3', '4', '5', '6'].some(function (n) { return !state.occupied[n]; })) return false;
-    if (state.deckSize >= 7 && !state.occupied['7']) return false;   // 7台のサイクルは、宙段の7台目も積む
+    if (state.deckSize >= 7 && !state.occupied['7']) return false;   // 7台のサイクルは、中段フロアの7台目も積む
     if (state.car && !state.car.seated && state.car.phase !== 'docked') return false;   // 動作中の車がいない(全て輪止めに当たって止まっている)
-    // 上段の棚は全てセットピンに載って固定(下段に車がいると走行位置までは下げられないので、位置は問わない)。5番フロアは平ら
+    // 上段のフロアは全てセットピンに載って固定(下段に車がいると走行位置までは下げられないので、位置は問わない)。5番フロアは平ら
     if (!Object.keys(state.occupied).every(function (n) { var c = state.occupied[n].live; return c && c.locked; })) return false;   // 全ての車をタップで固定してから完了
-    if (!['F1f', 'F1r', 'F2f', 'MID', 'F3r'].every(fm.rested) || !fm.atTravel('F5')) return false;   // 全ての棚がピン(3番前は下端)に載っている
-    // 宙段フロアは格納(平ら)に戻す。7台目が載っている間は、上げたまま(最後まで上がった状態)でよい。支柱はセットピンに載せて固定
+    if (!['F1f', 'F1r', 'F2f', 'MID', 'F3r'].every(fm.rested) || !fm.atTravel('F5')) return false;   // 全てのフロアがピン(3番前は下端)に載っている
+    // 中段フロアは格納(平ら)に戻す。7台目が載っている間は、上げたまま(最後まで上がった状態)でよい。支柱はセットピンに載せて固定
     // 7台目が載っている間は、セットピンで loadU(hangFloor.loadU)付近に止めた高さでよい(1穴=u0.1、ピンは穴の位置以下にしか載らないので0.15の余裕)
     if (fm.MECH.hang > 0.01 && !(state.occupied['7'] && fm.MECH.hang >= (((window.TRAILER_CONFIG.hangFloor || {}).loadU) || 2) - 0.15)) return false;
     if (!fm.rested('F7')) return false;
