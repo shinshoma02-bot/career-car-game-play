@@ -1047,6 +1047,10 @@
     animateExit(go);   // まだOKでない車は来た道を戻って退場してから切り替える
   }
   function tapCar(c) {
+    if ((c.lashTurns || 0) >= LASH_TURNS) {   // 固縛完了の車は、車をタップしても外れない(間違えてタップしやすいため。外すのは荷締め機のボタンだけ。ユーザー指示 2026-10-15)
+      setStatus('固縛完了の車は、車をタップしても外れません。外すには「固縛を外す」ボタンを押してください。');
+      return;
+    }
     if (c === state.car) {
       if (c.locked) { c.locked = false; setStatus('この車を矢印で動かせます。'); }
       else if (c.seated) { c.locked = true; c.velocity = 0; setStatus('その位置で固定しました。次の車を呼べます。'); }

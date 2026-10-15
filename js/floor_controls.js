@@ -286,7 +286,7 @@
     swPanel.appendChild(cards);
     if (tc && tc.help) swPanel.appendChild(tc.help);
     renderPinButtons(); renderRearPin(); renderStopPin();
-    swPanel.scrollIntoView({ block: 'nearest' });
+    // (以前は、操作盤へ画面を自動でスクロールしていたが、ストレスになるのでやめた。ユーザー指示 2026-10-15)
   }
   function close() {
     current = null; tireLamps = null;
