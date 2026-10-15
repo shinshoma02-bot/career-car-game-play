@@ -86,8 +86,6 @@
     if (g !== current && Date.now() - lastSwitchAt > 700) {
       lastSwitchAt = Date.now();
       open(g);
-      var TC = window.TRAILER_CONFIG, cfgG = (TC.newArt && TC.newArt.switchGroups || []).filter(function (x) { return x.id === g; })[0];
-      if (cfgG && window.VIEW) window.VIEW.focusSwitches(cfgG.rect);
     }
   }, 500);
   function renderMechButtons() {

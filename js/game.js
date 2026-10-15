@@ -1796,7 +1796,7 @@
     }
     if (best) {
       if (window.SWITCH_UI) window.SWITCH_UI.open(best.id);
-      if (window.VIEW) window.VIEW.focusSwitches(best.rect);   // 操作するスイッチの真ん中へ寄る
+      // (以前は、操作するスイッチの真ん中へカメラを寄せていたが、やめた。ユーザー指示 2026-10-15。車を動かす時の、車に合わせたカメラの動きは、そのまま)
       return;
     }
     // 車をタップ: 操作対象にする / OKの車なら固定する(固定した車はタップで操作対象に戻る)。
