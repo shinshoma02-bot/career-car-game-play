@@ -561,7 +561,7 @@
     drawPillarScale();
     drawLimitSwitch();
     drawLashFixtures();
-    lashQueue.forEach(function (q) { drawLashing(q[0], q[1], q[2], q[3]); });
+    lashQueue.forEach(function (q) { if (q[0] !== '7') drawLashing(q[0], q[1], q[2], q[3], q[4]); });
     if (chk.floors.checked) drawJack('leg');
     if (chk.wheel.checked) drawTrailerWheel();
     drawChocks('blocks'); // 輪止め本体は小さく、下段では前景フレームの梁に隠れるので手前に描く
@@ -570,6 +570,7 @@
     drawSwitches();
     drawSwitchGroupFrame();
     if (chk.floors.checked) drawMechanismFront();
+    lashQueue.forEach(function (q) { if (q[0] === '7') drawLashing(q[0], q[1], q[2], q[3], q[4]); });   // 宙段の荷締め機は、宙段フロアの上(フロアより後に描く)
     drawChockMarkers();
     drawSlotMarks();
     if (chk.hit.checked) drawHitBoxes();
@@ -1019,16 +1020,16 @@
   var LASH_TURNS_DRAW = 6, LASH_SC = 0.9;   // 荷締機(ガチャ)の絵は、実物大の 0.62 倍で小さくスマートに描く
   // 荷締め機は各スロットに1つずつ(ユーザー指示 2026-10-15。実車の写真の赤丸の位置)。dir=ワイヤーが出ている向き(+1=後ろ・-1=前)、f=後ろ向きの時の位置(前タイヤから後ろへ、軸距に対する割合)
   //  上段: 1番=後ろ向き・2番=後ろ向き・3番=前向き / 下段: 4番=前向き・5番=後ろ向き・6番=前向き / 宙段(7番)=前向き(宙段フロアの上に付く。宙段が格納の間は、フロアと一緒に隠れる)
-  var LASH_SPEC = { '1': { dir: 1, f: 0.87, dx: 20, dy: -2 }, '2': { dir: 1, f: 0.93, dx: 45, dy: 1 }, '3': { dir: -1, dx: 0, dy: 3 }, '4': { dir: -1, dx: -55, dy: -16 }, '5': { dir: 1, f: 0.12, dx: -30, dy: -8.5 }, '6': { dir: -1, dx: 20, dy: -8.5 }, '7': { dir: -1, dx: 50, dy: -2 } };   // dx=後ろへ(+)/前へ(-)の調整(px)・dy=下へ下げる量(px。台の底=wy+14×LASH_SC を、フレームの上の面に合わせる。上段は床のフレームの上面付近、下段(4〜6番)は、タイヤの接地面より約15px上=外枠のフレームの上)
+  var LASH_SPEC = { '1': { dir: 1, f: 0.87, dx: 20, dy: -2 }, '2': { dir: 1, f: 0.93, dx: 45, dy: 1 }, '3': { dir: -1, dx: 0, dy: 3 }, '4': { dir: -1, dx: -90, dy: -16 }, '5': { dir: 1, f: 0.12, dx: -30, dy: -8.5 }, '6': { dir: -1, dx: 20, dy: -8.5 }, '7': { dir: -1, dx: 50, dy: -2 } };   // dx=後ろへ(+)/前へ(-)の調整(px)・dy=下へ下げる量(px。台の底=wy+14×LASH_SC を、フレームの上の面に合わせる。上段は床のフレームの上面付近、下段(4〜6番)は、タイヤの接地面より約15px上=外枠のフレームの上)
   // 1つの荷締め機(と、車がいればフックとワイヤー)を、前タイヤの接地点を原点・後ろが +x の座標で描く。car=null なら、荷締め機だけ(標準の車の寸法)
-  function drawLashUnit(num, car, swingCar) {
+  function drawLashUnit(num, car, sink) {
     var sp = LASH_SPEC[num]; if (!sp) return;
     var r = car ? (car.wheelRPx || 28) : 30, wb = car ? (car.wbPx || 290) : 296, dir = sp.dir;
     var turns = car ? (car.lashTurns || 0) : 0, hooked = !!car && (!!car.locked || turns > 0), tight = Math.min(1, turns / LASH_TURNS_DRAW);
     var ss = car && car.lashStroke ? (performance.now() - car.lashStroke) / 450 : 1, swing = ss < 1 ? Math.sin(Math.PI * Math.max(0, ss)) : 0;
     var wx = (dir > 0 ? wb * sp.f : r + 30) + (sp.dx || 0), wy = -10 + (sp.dy || 0), woy = wy + 5.6 * LASH_SC;
     if (hooked) {
-      var tx = dir > 0 ? wb - r * 0.8 : r * 0.8, ty = -r * 0.62, hpx = tx + (dir > 0 ? -7.6 : 7.6), hpy = ty + 16.5;
+      var tx = dir > 0 ? wb - r * 0.8 : r * 0.8, ty = -r * 0.62 + (sink || 0), hpx = tx + (dir > 0 ? -7.6 : 7.6), hpy = ty + 16.5;
       ctx.save(); ctx.strokeStyle = '#25282b'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(hpx, hpy); ctx.quadraticCurveTo((hpx + wx) / 2, (hpy + woy) / 2 + (1 - tight) * 16, wx, woy); ctx.stroke();
       ctx.strokeStyle = 'rgba(190,195,200,0.5)'; ctx.lineWidth = 0.9; ctx.stroke();
@@ -1039,11 +1040,19 @@
     // ハンドルは、ワイヤーが出ている向きの反対側から上へ約90度振って戻る(ラチェット)
     ctx.rotate(dir > 0 ? Math.PI + swing * Math.PI / 2 : -swing * Math.PI / 2); ctx.drawImage(images.td_winch_handle, -4, -4.5); ctx.restore();
   }
+  // 固縛で車が沈む量(px)。巻き取った回数に比例(1回あたり約1px、6回で最大6px)。ばねのように、少し遅れて追いつく(戻す時も同じ)
+  var LASH_SINK_PER_TURN = 1;
+  function lashSink(car) {
+    if (!car) return 0;
+    var target = car.locked ? Math.min(LASH_TURNS_DRAW, car.lashTurns || 0) * LASH_SINK_PER_TURN : 0, now = performance.now(), dt = Math.min(0.1, (now - (car.lashSinkT || now)) / 1000);
+    car.lashSinkT = now; car.lashSinkCur = (car.lashSinkCur || 0) + (target - (car.lashSinkCur || 0)) * Math.min(1, dt * 7);
+    return car.lashSinkCur;
+  }
   function lashReady() { return !IS6B && images.td_hook && images.td_winch_body && images.td_winch_handle; }
-  function drawLashing(num, c, pos, rotDeg) {
+  function drawLashing(num, c, pos, rotDeg, sink) {
     if (!c.live || !lashReady()) return;
     ctx.save(); ctx.translate(pos[0], pos[1]); ctx.rotate(rotDeg * Math.PI / 180);
-    drawLashUnit(num, c.live);
+    drawLashUnit(num, c.live, sink);
     ctx.restore();
   }
   // 車がいないスロット(1〜6番)の荷締め機。宙段(7番)は、車が載っている時だけ(格納の間は見えない)
@@ -1731,8 +1740,9 @@
       } else {
         pos = [c.localX, c.localY];
       }
-      drawCarBody(c.img, pos[0], pos[1], c.w, c.h, c.leftTireX, rotDeg, c.live);
-      lashQueue.push([num, c, pos, rotDeg]);   // 固縛の部品は、手前のフレームより前に描く(フレームの梁に隠れないように)
+      var sink = lashSink(c.live);   // ワイヤーを巻き取るたびに、車が少しずつ下へ引かれて沈む(ユーザー指示 2026-10-15)
+      drawCarBody(c.img, pos[0], pos[1] + sink, c.w, c.h, c.leftTireX, rotDeg, c.live);
+      lashQueue.push([num, c, pos, rotDeg, sink]);   // 固縛の部品は、手前のフレームより前に描く(フレームの梁に隠れないように)
     });
 
     if (st.car && !st.car.seated) {
