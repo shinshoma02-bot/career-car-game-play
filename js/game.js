@@ -859,19 +859,21 @@
   if (btnLash) btnLash.addEventListener('click', function () {
     var num = state.targetSlot, c = lashCar(num);
     if (!c) { setStatus('固縛する車のスロット(車を積んだ番号)を選んでください。'); return; }
+    if (!c.locked) { setStatus(num + '番: 先に車をタップして、ワイヤーを引っ掛けてください。'); return; }
     if (c.lashTurns >= LASH_TURNS) { c.lashTurns = 0; setStatus(num + '番の固縛を外しました。'); }
     else {
-      c.lashTurns = (c.lashTurns || 0) + 1;
-      setStatus(c.lashTurns >= LASH_TURNS ? num + '番を固縛しました(ワイヤが張れました)。' : num + '番: 荷締機のハンドルを回しています(' + c.lashTurns + '/' + LASH_TURNS + ')。');
+      c.lashTurns = (c.lashTurns || 0) + 1; c.lashStroke = performance.now();   // ガチャを1往復
+      setStatus(c.lashTurns >= LASH_TURNS ? num + '番を固縛しました(固縛完了)。' : num + '番: 荷締め機を回しています(' + c.lashTurns + '/' + LASH_TURNS + ')。');
     }
     updateChockUi();
   });
   function updateLashUi() {
     if (!btnLash) return;
     var num = state.targetSlot, c = lashCar(num), req = state.lashRequired();
-    btnLash.style.display = (num && !(cfg.slots[num] && cfg.slots[num].noChock)) ? '' : 'none';
-    btnLash.disabled = !c;
-    btnLash.textContent = !c ? '固縛(車を積んでから)' : (c.lashTurns >= LASH_TURNS ? '固縛を外す(固縛済み)' : '固縛: ハンドルを回す(' + (c.lashTurns || 0) + '/' + LASH_TURNS + ')' + (req ? '' : ' ※任意'));
+    btnLash.style.display = num ? '' : 'none';
+    btnLash.disabled = !c || !c.locked;
+    if (c && !c.locked) c.lashTurns = 0;   // タップを外したら、ワイヤーも外れる
+    btnLash.textContent = !c ? '荷締め機(車を積んでから)' : (!c.locked ? '荷締め機(先に車をタップ)' : (c.lashTurns >= LASH_TURNS ? '固縛を外す(固縛完了)' : '荷締め機を回す(' + (c.lashTurns || 0) + '/' + LASH_TURNS + ')' + (req ? '' : ' ※任意')));
   }
   setInterval(updateLashUi, 400);
   function updateChockUi() {

@@ -1015,27 +1015,26 @@
     ctx.drawImage(im, LIMIT_SW[0] - 13, LIMIT_SW[1] - 16);
   }
   // 固縛(D43): 車のタイヤの前後にフックを掛け、床の荷締機のハンドルを回してワイヤを張る。回数(car.lashTurns)が増えるほど張る。車の座標(前タイヤの接地点が原点・後ろが+x・床の傾きで回す)で描く
-  var LASH_TURNS_DRAW = 6;
+  var LASH_TURNS_DRAW = 6, LASH_SC = 0.62;   // 荷締機(ガチャ)の絵は、実物大の 0.62 倍で小さくスマートに描く
   function drawLashing(num, c, pos, rotDeg) {
     var car = c.live; if (!car || IS6B || !images.td_hook || !images.td_winch_body || !images.td_winch_handle) return;
-    var gs = window.GAME_STATE, turns = car.lashTurns || 0;
-    if (!turns && !(gs && gs.targetSlot === num)) return;
-    var r = car.wheelRPx || 28, wb = car.wbPx || c.w * 0.6, tight = Math.min(1, turns / LASH_TURNS_DRAW);
-    var target = turns * 120, now = performance.now(), dt = Math.min(0.1, (now - (car.lashT || now)) / 1000);
-    car.lashT = now; car.lashAng = (car.lashAng || 0) + (target - (car.lashAng || 0)) * Math.min(1, dt * 7);
+    var gs = window.GAME_STATE, turns = car.lashTurns || 0, hooked = !!car.locked || turns > 0;
+    if (!hooked && !(gs && gs.targetSlot === num)) return;
+    var r = car.wheelRPx || 28, wb = car.wbPx || c.w * 0.6, tight = Math.min(1, turns / LASH_TURNS_DRAW), now = performance.now();
+    // ガチャ(ラチェット)のハンドル: 回しては戻す。ワイヤーが出ている向きの反対側から、上へ約90度振って、元へ戻る(1回の操作で1往復)
+    var ss = car.lashStroke ? (now - car.lashStroke) / 450 : 1, swing = ss < 1 ? Math.sin(Math.PI * Math.max(0, ss)) : 0;
     ctx.save(); ctx.translate(pos[0], pos[1]); ctx.rotate(rotDeg * Math.PI / 180);
     [-1, 1].forEach(function (side) {   // -1=前のタイヤ・+1=後ろのタイヤ
-      var tx = side < 0 ? -r * 0.8 : wb + r * 0.8, ty = -r * 0.62, wx = side < 0 ? -r - 42 : wb + r + 42, wy = -13;
-      var hpx = tx + side * 7.6, hpy = ty + 16.5, wox = wx, woy = wy + 5.6;
-      if (turns) {
-        ctx.save(); ctx.strokeStyle = '#25282b'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(hpx, hpy); ctx.quadraticCurveTo((hpx + wox) / 2, (hpy + woy) / 2 + (1 - tight) * 16, wox, woy); ctx.stroke();
-        ctx.strokeStyle = 'rgba(190,195,200,0.5)'; ctx.lineWidth = 1; ctx.stroke();
-        ctx.restore();
-        ctx.save(); ctx.translate(tx, ty); if (side > 0) ctx.scale(-1, 1); ctx.drawImage(images.td_hook, -2.6, -9); ctx.restore();
-      }
-      ctx.drawImage(images.td_winch_body, wx - 15, wy - 10);
-      ctx.save(); ctx.translate(wx, wy); ctx.rotate(((side < 0 ? 1 : -1) * car.lashAng) * Math.PI / 180); ctx.drawImage(images.td_winch_handle, -4, -4.5); ctx.restore();
+      var tx = side < 0 ? -r * 0.8 : wb + r * 0.8, ty = -r * 0.62, wx = side < 0 ? -r - 34 : wb + r + 34, wy = -10;
+      var hpx = tx + side * 7.6, hpy = ty + 16.5, wox = wx, woy = wy + 5.6 * LASH_SC;
+      ctx.save(); ctx.strokeStyle = '#25282b'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(hpx, hpy); ctx.quadraticCurveTo((hpx + wox) / 2, (hpy + woy) / 2 + (1 - tight) * 16, wox, woy); ctx.stroke();
+      ctx.strokeStyle = 'rgba(190,195,200,0.5)'; ctx.lineWidth = 0.9; ctx.stroke();
+      ctx.restore();
+      ctx.save(); ctx.translate(tx, ty); if (side > 0) ctx.scale(-1, 1); ctx.drawImage(images.td_hook, -2.6, -9); ctx.restore();
+      ctx.save(); ctx.translate(wx, wy); ctx.scale(LASH_SC, LASH_SC); ctx.drawImage(images.td_winch_body, -15, -10);
+      // ハンドルの向き: 前の荷締機はワイヤーが後ろ(+x)へ出るので、手前(-x、180度)から上へ。後ろの荷締機は逆(0度から上へ)
+      ctx.rotate((side < 0 ? Math.PI + swing * Math.PI / 2 : -swing * Math.PI / 2)); ctx.drawImage(images.td_winch_handle, -4, -4.5); ctx.restore();
     });
     ctx.restore();
   }
@@ -2027,21 +2026,21 @@
     if (window.UI_HIDDEN) return;   // UI非表示の時は、輪止め・固定などの文字を描かない
     var st = window.GAME_STATE;
     if (!st) return;
-    // 操作中でOKの車に緑の「OK」、固定した車には小さな「固定」を出す
+    // 積んだ車の状態の表示(D43 後の仕様。ユーザー指示 2026-10-15): 固縛未完(まだタップしていない・赤)→ ワイヤー引っ掛け(タップした・橙)→ 固縛完了(荷締機のハンドルを回した・緑)
     Object.keys(st.occupied).forEach(function (num) {
       var occ = st.occupied[num], c = occ.live;
       if (!c) return;
-      var locked = !!c.locked, active = c === st.car && !locked;
-      if (!locked && !active) return;
+      var done = (c.lashTurns || 0) >= LASH_TURNS_DRAW, locked = !!c.locked;
+      var label = done ? '固縛完了' : (locked ? 'ワイヤー引っ掛け' : '固縛未完');
+      var col = done ? 'rgba(30,150,80,0.96)' : (locked ? 'rgba(214,140,20,0.96)' : 'rgba(205,60,55,0.96)');
       placeOnSlot(cfg.slots[num], occ.dx || 0, function () {
-        var w = locked ? 64 : 92, h = locked ? 30 : 46, y = locked ? -80 : -95;
-        var col = locked ? 'rgba(90,100,115,0.95)' : 'rgba(30,160,90,0.95)';
+        var fs = locked && !done ? 17 : 20, w = label.length * fs + 26, h = 30, y = -82;
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(-w / 2, y, w, h, 12); else ctx.rect(-w / 2, y, w, h);
         ctx.fillStyle = col; ctx.fill();
-        ctx.lineWidth = 3; ctx.strokeStyle = '#eafff2'; ctx.stroke();
-        ctx.font = 'bold ' + (locked ? 20 : 34) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#ffffff'; ctx.fillText(locked ? '固定' : 'OK', 0, y + h / 2 + 1);
+        ctx.lineWidth = 3; ctx.strokeStyle = '#fff8ee'; ctx.stroke();
+        ctx.font = 'bold ' + fs + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ffffff'; ctx.fillText(label, 0, y + h / 2 + 1);
         ctx.beginPath(); ctx.moveTo(-8, y + h); ctx.lineTo(8, y + h); ctx.lineTo(0, y + h + 10); ctx.closePath();
         ctx.fillStyle = col; ctx.fill();
       });
