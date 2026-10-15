@@ -982,6 +982,52 @@
     b.addEventListener('click', function () { selectSlot(b.dataset.slot); });
   });
 
+  // ---- 各フロア付近をタップした時の小さな操作盤(左下。ユーザー指示 2026-10-15): 下の輪止めパネルまでスクロールしなくても、輪止め・落し蓋・荷締め機を操作できる ----
+  // ボタンは、下のパネルの同じボタンを押すのと同じ(ここでは、押す・表示を写すだけ)
+  var slotPop = document.getElementById('slotPop');
+  var spMap = { spChock: 'btnChockSet', spFront: 'btnChockFront', spRear: 'btnChockRear', spLid: 'btnLid', spLash: 'btnLash' };
+  function syncSlotPop() {
+    if (!slotPop || slotPop.style.display === 'none') return;
+    var num = state.targetSlot;
+    if (!num) { slotPop.style.display = 'none'; return; }
+    document.getElementById('spTitle').textContent = num + '番' + (num === '7' ? '(宙段)' : '');
+    Object.keys(spMap).forEach(function (k) {
+      var s = document.getElementById(spMap[k]), d = document.getElementById(k);
+      if (!s || !d) return;
+      d.style.display = s.style.display === 'none' ? 'none' : '';
+      d.disabled = s.disabled;
+      if (k === 'spChock' || k === 'spLid' || k === 'spLash') d.textContent = k === 'spLash' && s.disabled ? '荷締め機' : s.textContent.replace(/\(先に車をタップ\)/, '(先にタップ)');
+      d.classList.toggle('on', s.classList.contains('on'));
+    });
+    document.getElementById('spInfo').textContent = (document.getElementById('chockLabel') || {}).textContent || '';
+  }
+  function openSlotPop(num) {
+    if (!slotPop || !cfg.slots[num]) return;
+    if (state.targetSlot !== num) selectSlot(num);
+    slotPop.style.display = '';
+    syncSlotPop();
+  }
+  state.openSlotPop = openSlotPop;
+  if (slotPop) {
+    Object.keys(spMap).forEach(function (k) { document.getElementById(k).addEventListener('click', function () { var s = document.getElementById(spMap[k]); if (s && !s.disabled) s.click(); setTimeout(syncSlotPop, 30); }); });
+    document.getElementById('spClose').addEventListener('click', function () { slotPop.style.display = 'none'; if (state.targetSlot) selectSlot(state.targetSlot); });
+    setInterval(syncSlotPop, 250);
+  }
+  // タップした位置(ステージ座標)に近いスロット(フロアの上の、車が載る範囲)。無ければ null
+  function slotAtPoint(x, y) {
+    var fm = window.FLOOR_MECH, best = null, bestD = Infinity;
+    Object.keys(cfg.slots).forEach(function (num) {
+      var s = cfg.slots[num], c = s.floor || s.carrier, p = c && fm ? fm.onFloor(c, s.tireX, s.deckY) : [s.tireX, s.deckY];
+      if (num === '7' && !(fm && fm.MECH.hang > 0.05)) return;   // 宙段が格納の間は、フロアと一緒に隠れている
+      var x0 = p[0] - 30, x1 = p[0] + 470, dy = y - p[1];
+      if (x < x0 || x > x1 || dy < -150 || dy > 30) return;
+      var d = Math.abs(x - (p[0] + 120)) + Math.abs(dy + 40);
+      if (d < bestD) { bestD = d; best = num; }
+    });
+    return best;
+  }
+  state.slotAtPoint = slotAtPoint;
+
   // ---- 矢印で動かす車を選ぶ・固定する ----
   // 入場した車は自動で操作対象になる。OKが出た車をもう一度タップするとその位置で固定され、次の車を呼べる。
   // 固定した車も、タップすると操作対象になり、矢印でバックなどで動かせる(動かすとOKが外れる)。
@@ -1752,7 +1798,9 @@
     // 車をタップ: 操作対象にする / OKの車なら固定する(固定した車はタップで操作対象に戻る)。
     // フロアや車をタップしても、操作盤は出ない(スロットの選択は輪止めパネルのボタンで)
     var tapped = carAt(x, y);
-    if (tapped) tapCar(tapped);
+    if (tapped) { tapCar(tapped); if (tapped.seated && tapped.slot) openSlotPop(String(tapped.slot)); return; }
+    var sn = slotAtPoint(x, y);   // 車以外(フロアの付近)をタップ: そのスロットの操作盤を、左下に出す
+    if (sn) openSlotPop(sn);
   });
   // 次のサイクルへ: 積んだ車・輪止め・落し蓋・選択を片付けて、新しい車を引き直す(ミス数は持ち越す)
   // 荷物の変更(配車担当への連絡・時間切れ): トレーラーを積み始めの状態に戻して、新しい荷物を引く

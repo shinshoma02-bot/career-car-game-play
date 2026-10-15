@@ -2,7 +2,7 @@
 // 「UI非表示」を押すと、HUD・操作盤・状態の文字・輪止めや固定などの絵の上の文字を消す。
 // 隠した後は、画面のどこをタップしても「UI表示」ボタンが出る。それを押すと元に戻る。
 (function () {
-  var HIDE_IDS = ['modeBar', 'gameStatus', 'cycleBanner', 'status', 'toolbar', 'opsPanel', 'controls'];
+  var HIDE_IDS = ['modeBar', 'gameStatus', 'cycleBanner', 'status', 'toolbar', 'opsPanel', 'controls', 'slotPop'];
 
   var css = document.createElement('style');
   css.textContent =
