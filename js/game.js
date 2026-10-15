@@ -46,7 +46,7 @@
   var SPIN_SIGN = -1; // 前進(進行量+)方向のホイール回転符号
   var CHOCK_OVERRIDE_SPEED_PX_S = 3.05 * cfg.pxPerMeter; // これ以上の勢いで当たると輪止めを乗り越える(高い輪止め=乗り越えにくい)
   var OVERRIDE_SPEED_KEEP = 0.55; // 乗り越えた瞬間、衝撃で失われず残る速度の割合
-  var CAB_DECEL = 420, CAB_X = 372, CAB_DECK_X = 491;   // 1番を乗り越えた車が、床の先端を越えて滑る時の減速(px/秒²)と、キャビンの後ろ面のx(ステージ座標)
+  var CAB_DECEL = 420, CAB_X = 420, CAB_DECK_X = 491;   // 1番を乗り越えた車が、床の先端を越えて滑る時の減速(px/秒²)と、キャビンの後ろ面のx(ステージ座標)
   var OVERSHOOT_CAP_PX = 130; // 乗り越えて進める限界(その先は壁扱いでこれ以上進めない)
 
   var missCountEl = document.getElementById('missCount');

@@ -712,7 +712,7 @@
     if (IS6B) return;
     if (!tractorWheelImgs) {
       tractorWheelImgs = [];
-      [['assets/semi-6/wheel_front.png', 256.5, 528.5], ['assets/semi-6/wheel_drive.png', 735.5, 528.5]].forEach(function (d) {
+      [['assets/semi-6/wheel_front.png', 304.5, 528.5], ['assets/semi-6/wheel_drive.png', 735.5, 528.5]].forEach(function (d) {
         var im = new Image(); im.src = d[0] + '?v=1'; tractorWheelImgs.push({ im: im, x: d[1], y: d[2] });
       });
     }
@@ -1116,15 +1116,15 @@
 
   // 5番のスロープのピンの、赤いレバー(中央の柱の後ろの面。D45。マニュアルの図とユーザーの説明どおり)。普段は斜め上40度。5番が4番の高さに掛かっている間にタップすると、
   // レバーが上がって(82度)ピンが外れ、5番を下げられる。5番が4番の高さより下がると、レバーは自動で普段の向きに戻る(ピンが出る)。タップできる間は、まわりをゆっくり光らせる
-  var LEVER_AT = [1003, 457];
   function drawStopperHook(fm) {
     var up = !fm.MECH.stopper, im = images[up ? 'sl_lever_up' : 'sl_lever'];
-    if (!im) return;
+    if (!im || !fm.leverPose) return;
+    var L = fm.leverPose();   // 5番フロアの前端に付いて、5番と一緒に動く(ユーザー指示 2026-10-15)
     if (fm.stopperVisible && fm.stopperVisible()) {
-      var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260);
-      ctx.save(); ctx.fillStyle = 'rgba(255,90,70,' + (0.16 + 0.2 * pulse) + ')'; ctx.beginPath(); ctx.arc(LEVER_AT[0] + 8, LEVER_AT[1] - 10, 16 + 3 * pulse, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260), tp = fm.stopperPos();
+      ctx.save(); ctx.fillStyle = 'rgba(255,90,70,' + (0.16 + 0.2 * pulse) + ')'; ctx.beginPath(); ctx.arc(tp[0], tp[1], 16 + 3 * pulse, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
-    ctx.drawImage(im, LEVER_AT[0] - 7, LEVER_AT[1] - 19);
+    ctx.save(); ctx.translate(L.pin[0], L.pin[1]); ctx.rotate(L.rot); ctx.drawImage(im, -7, -19); ctx.restore();
   }
 
   function drawPulley(p) {
