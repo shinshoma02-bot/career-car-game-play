@@ -1016,17 +1016,17 @@
     ctx.drawImage(im, LIMIT_SW[0] - 13, LIMIT_SW[1] - 16);
   }
   // 固縛(D43): 車のタイヤの前後にフックを掛け、床の荷締機のハンドルを回してワイヤを張る。回数(car.lashTurns)が増えるほど張る。車の座標(前タイヤの接地点が原点・後ろが+x・床の傾きで回す)で描く
-  var LASH_TURNS_DRAW = 6, LASH_SC = 0.62;   // 荷締機(ガチャ)の絵は、実物大の 0.62 倍で小さくスマートに描く
+  var LASH_TURNS_DRAW = 6, LASH_SC = 0.75;   // 荷締機(ガチャ)の絵は、実物大の 0.62 倍で小さくスマートに描く
   // 荷締め機は各スロットに1つずつ(ユーザー指示 2026-10-15。実車の写真の赤丸の位置)。dir=ワイヤーが出ている向き(+1=後ろ・-1=前)、f=後ろ向きの時の位置(前タイヤから後ろへ、軸距に対する割合)
   //  上段: 1番=後ろ向き・2番=後ろ向き・3番=前向き / 下段: 4番=前向き・5番=後ろ向き・6番=前向き / 宙段(7番)=前向き(宙段フロアの上に付く。宙段が格納の間は、フロアと一緒に隠れる)
-  var LASH_SPEC = { '1': { dir: 1, f: 0.87 }, '2': { dir: 1, f: 0.93 }, '3': { dir: -1 }, '4': { dir: -1 }, '5': { dir: 1, f: 0.12 }, '6': { dir: -1 }, '7': { dir: -1 } };
+  var LASH_SPEC = { '1': { dir: 1, f: 0.87, dx: 20, dy: 0 }, '2': { dir: 1, f: 0.93, dx: 45, dy: 3 }, '3': { dir: -1, dx: 0, dy: 12 }, '4': { dir: -1, dx: -35, dy: 3 }, '5': { dir: 1, f: 0.12, dx: -30, dy: 3 }, '6': { dir: -1, dx: 20, dy: 3 }, '7': { dir: -1, dx: 50, dy: 0 } };   // dx=後ろへ(+)/前へ(-)の調整(px)・dy=下へ下げる量(床のフレームの上に載せる。2026-10-15 ユーザー指示)
   // 1つの荷締め機(と、車がいればフックとワイヤー)を、前タイヤの接地点を原点・後ろが +x の座標で描く。car=null なら、荷締め機だけ(標準の車の寸法)
   function drawLashUnit(num, car, swingCar) {
     var sp = LASH_SPEC[num]; if (!sp) return;
     var r = car ? (car.wheelRPx || 28) : 30, wb = car ? (car.wbPx || 290) : 296, dir = sp.dir;
     var turns = car ? (car.lashTurns || 0) : 0, hooked = !!car && (!!car.locked || turns > 0), tight = Math.min(1, turns / LASH_TURNS_DRAW);
     var ss = car && car.lashStroke ? (performance.now() - car.lashStroke) / 450 : 1, swing = ss < 1 ? Math.sin(Math.PI * Math.max(0, ss)) : 0;
-    var wx = dir > 0 ? wb * sp.f : r + 30, wy = -10, woy = wy + 5.6 * LASH_SC;
+    var wx = (dir > 0 ? wb * sp.f : r + 30) + (sp.dx || 0), wy = -10 + (sp.dy || 0), woy = wy + 5.6 * LASH_SC;
     if (hooked) {
       var tx = dir > 0 ? wb - r * 0.8 : r * 0.8, ty = -r * 0.62, hpx = tx + (dir > 0 ? -7.6 : 7.6), hpy = ty + 16.5;
       ctx.save(); ctx.strokeStyle = '#25282b'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
