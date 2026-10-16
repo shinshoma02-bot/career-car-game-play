@@ -692,6 +692,14 @@
   function isKei(e) { return (e.width || 0) <= 1.5; }
   function pickCars(n) {
     var pool = lib.slice(), out = [];
+    // 確認用(URLの # の後): cars=suv-6,minivan-7 … その車を先頭に入れる / newcars=1 … 追加した車(R23の19種)から優先して選ぶ(2026-10-16)
+    var hm = /[#&]cars=([^&]+)/.exec(location.hash || '');
+    if (hm) hm[1].split(',').forEach(function (id) { var k = pool.findIndex(function (e) { return e.id === id; }); if (k >= 0 && out.length < n) out.push(pool.splice(k, 1)[0]); });
+    if (/[#&]newcars=1/.test(location.hash || '')) {
+      var NEW = /^(suv-(6|7|8|9|10|11|12)|minivan-(6|7|8|9)|sedan-(6|7|8)|wagon-6|sports-7|compact-(6|7)|hatch-6)$/;
+      var fresh = pool.filter(function (e) { return NEW.test(e.id); });
+      while (out.length < n && fresh.length) { var f = fresh.splice(Math.floor(Math.random() * fresh.length), 1)[0]; out.push(pool.splice(pool.indexOf(f), 1)[0]); }
+    }
     while (out.length < n && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     // 軽四が多すぎたら、余った分を軽四以外の車(まだ選ばれていない車)に入れ替える
     var spare = pool.filter(function (e) { return !isKei(e); });
