@@ -774,6 +774,7 @@
     }
     return null;
   }
+  var roofHitSlot = null;   // 上のフロアを下げて、下段(4〜6番)の車の屋根に当たった時の、その番号(holdStep が、ぶつかった演出とミスに使う)
   function dynamicPoseProblem(ids, offs) {
     if (MECH.hang > 0.05) {   // 上げてある中段フロア(と載せた車)に、2・3番のフロアが下がってぶつからない
       var hv = hangVsUpper(MECH.hang, offs, ids);
@@ -811,7 +812,7 @@
     if (slideT() > 0.02 && slideHitsCar2(offs) && !slideHitsCar2(curOffs())) return 'スライド板が2番の車に当たる(スライド板を格納してください)';
     if (cars.length) {
       var wc = worstOverlap(offs);
-      if (wc.v > FRAME_GAP_PX && wc.v > worstOverlap(curOffs()).v + 0.01) return wc.n + '番の車に当たる';
+      if (wc.v > FRAME_GAP_PX && wc.v > worstOverlap(curOffs()).v + 0.01) { roofHitSlot = String(wc.n); return wc.n + '番の車に当たる'; }
     }
     return null;
   }
@@ -945,10 +946,14 @@
       var lever = (2055 - 1762) / (1762 - 1520);
       cand.F3r = Math.min(ENDS.F3r.r[1], Math.max(ENDS.F3r.r[0], ENDS.F3r.off - lever * d));
     }
+    roofHitSlot = null;
     var prob = cand[h.end] === ENDS[h.end].off
       ? (PINS[h.end] !== null && h.dir > 0 && ENDS[h.end].off <= PINS[h.end] + 0.5 ? 'セットピンでこれ以上下がらない'
         : (h.dir < 0 && ENDS[h.end].off <= er[0] + 0.6 ? 'リミットスイッチが働いて、これ以上上がりません' : '可動範囲いっぱい'))
       : poseProblem(h.ids, cand);
+    var roofHit = prob ? roofHitSlot : null;
+    if (prob && roofHit) { if (h.roofFired !== roofHit) { h.roofFired = roofHit; if (window.FLOOR_MECH_HIT) window.FLOOR_MECH_HIT({ key: 'lowroof-' + roofHit, slot: roofHit, msg: roofHit + '番の車の屋根にフロアがぶつかった' }); } }   // 上のフロアが下段の車の屋根に当たった: ぶつかった演出とミス(1回の操作で1回)
+    else if (!prob) h.roofFired = null;
     if (prob) { if (h.warned !== prob) { onWarn(prob); h.warned = prob; } }
     else { ENDS[h.end].off = cand[h.end]; if (h.end === 'MID') ENDS.F3r.off = cand.F3r; h.warned = false; autoPinTarget(h.end); if (h.end === 'MID') autoPinTarget('F3r'); }
     holdRafId = requestAnimationFrame(holdStep);

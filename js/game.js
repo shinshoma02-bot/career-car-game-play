@@ -448,6 +448,22 @@
   // 後ろのタイヤが、トレーラーの後端(道板との境)の位置に来る経路の長さ。後ろのタイヤは、先頭(progress)より wbPx 後ろ
   function tailRearTireArc(car) { return arcAtX(car, tailX1()) + (car.wbPx || 0); }
   var TIRE_PASS_MARGIN_PX = 30;   // 6番のタイヤ基準点からこれ以上通り過ぎたら「通過」とみなす(6番に止まる車は輪止めの手前で止まる)
+  // 台車の格納したタイヤ(円)と、車の輪郭(上端 prof・下端は地面から約12%)との当たり。円の形のまま、すき間なしで見る(2026-10-16 ユーザー指示「タイヤのギリギリを当たり判定に」)。
+  // stopX: 車がこれより左(前)へ行くと、どこかが円に食い込む x(前タイヤの位置)。touching: 今、食い込んでいる
+  function tireGeom(car) {
+    var o = cfg.outrigger, w = o.wheel, r = w.r * (o.tireStowScale || 1), n = car.prof && car.prof.length;
+    if (!n) { var e = solidExt(car); return { stopX: w.cx + r + e.a, touching: car.x - e.a < w.cx + r && car.x + e.b > w.cx - r }; }
+    var stop = -1e9, touching = false, bot = car.y - 0.12 * car.h;
+    for (var i = 0; i < n; i++) {
+      if (car.prof[i] < 0.05) continue;
+      var top = car.y - car.prof[i] * car.h, dx = (i + 0.5) / n * car.w - car.leftTireX, hw;
+      if (w.cy >= top && w.cy <= bot) hw = r;
+      else { var d = Math.min(Math.abs(top - w.cy), Math.abs(bot - w.cy)); if (d >= r) continue; hw = Math.sqrt(r * r - d * d); }
+      stop = Math.max(stop, w.cx + hw - dx);
+      var xx = car.x + dx; if (xx > w.cx - hw && xx < w.cx + hw) touching = true;
+    }
+    return { stopX: stop, touching: touching };
+  }
   // 台車のタイヤを格納したまま、幅の広い車(幅1.48m超)が6番の先へ通る: 格納したタイヤの側面を車体の横が擦りながら進む(止めない。軽自動車は擦らない)。
   // 擦っている間は、タイヤの位置から火花・ほこりが出て、車の下回りが少し傷む。ミスは1回だけ(ノーマル・ハード)
   function scrapeTire(car, dt) {
@@ -455,8 +471,8 @@
     if (!fm || !o || !o.wheel || !s6.maxWidthNoTireM || fm.MECH.tireOut || car.seated || car.groundRun) return;
     var cw = car.entry.width || 0;   // 擦るのは、軽(〜1.48m)より広く、格納したタイヤの内側に入れる幅(5ナンバー〜1.755m)まで。それより広い車は、バンパーがぶつかって入れない(routeProblems の tirepass)
     if (cw <= s6.maxWidthNoTireM || cw > (s6.maxWidthStowedM || 1.755) || Math.abs(car.velocity) < 25) { car.scraping = false; return; }
-    var ec = solidExt(car), wx = o.wheel.cx, r = o.wheel.r * (o.tireStowScale || 1);
-    if (car.x + ec.b < wx - r || car.x - ec.a > wx + r) { car.scraping = false; return; }
+    var wx = o.wheel.cx, r = o.wheel.r * (o.tireStowScale || 1);
+    if (!tireGeom(car).touching) { car.scraping = false; return; }
     if (!car.scraping) {
       car.scraping = true;
       setStatus('台車のタイヤを格納したまま通っているので、タイヤの側面を擦っています(幅がぎりぎりで、実際は禁止の操作)。');
@@ -468,7 +484,7 @@
     if (Math.random() < 0.3) parts.push({ k: 'dust', x: wx + (Math.random() - 0.5) * r, y: o.wheel.cy + 10, vx: (Math.random() - 0.5) * 50, vy: -20 - Math.random() * 30, t0: now, life: 500, size: 5, rot: 0, vr: 0 });
     if (parts.length > 220) parts.splice(0, parts.length - 220);
   }
-  state.scrapeTire = scrapeTire;   // (確認用)
+  state.scrapeTire = scrapeTire; state.tireGeom = tireGeom;   // (確認用)
   // タイヤを格納しようとした時、車幅が1.755mを超える車がタイヤの位置に載っていたら(6番)、タイヤは車の側面にぶつかって格納できない。その車を返す(なければ null)
   function tireStowBlocker() {
     var s6 = cfg.slots['6'], o = cfg.outrigger, found = null;
@@ -529,9 +545,9 @@
       // 台車のタイヤを格納すると、内側の幅は5ナンバー車がやっと入る程度(1.755m)。それより広い車は、バンパーがタイヤに当たって入れない(その位置で止まる)。
       // 5ナンバー以下は通れる(1.48m超は側面を擦る=scrapeTire。実際は禁止の操作)。2026-10-16 ユーザー指示
       if (s6.maxWidthStowedM && !fm.MECH.tireOut && (car.entry.width || 0) > s6.maxWidthStowedM && cfg.outrigger && cfg.outrigger.wheel && !car.groundRun) {
-        var tw = cfg.outrigger.wheel, tr = tw.r * (cfg.outrigger.tireStowScale || 1), tx = tw.cx + tr, ex = solidExt(car);
-        if (car.x - ex.a <= tx + 2 && car.x + ex.b >= tw.cx - tr) {
-          out.push({ key: 'tirepass', phys: true, stopAt: car.progress - (car.x - ex.a - tx), msg: '台車のタイヤを格納したままでは、幅の広い車は入れません(タイヤの内側は5ナンバー車がやっと入る幅)。ジャッキでタイヤを浮かせて突出させてください。' });
+        var tw = cfg.outrigger.wheel, tr = tw.r * (cfg.outrigger.tireStowScale || 1), tg = tireGeom(car), ex = solidExt(car);
+        if (car.x <= tg.stopX + 1 && car.x + ex.b >= tw.cx - tr) {
+          out.push({ key: 'tirepass', phys: true, stopAt: car.progress + (car.x - tg.stopX), msg: '台車のタイヤを格納したままでは、幅の広い車は入れません(タイヤの内側は5ナンバー車がやっと入る幅)。ジャッキでタイヤを浮かせて突出させてください。' });
         }
       }
       // 5番フロアが平らでない(持ち上がっている途中など)のに、5番フロアの後端から先へ進もうとした(実際の5番フロアの縁で止まる)
@@ -1645,9 +1661,9 @@
   // 中段フロアが車にぶつかった(floor_mech.jsから)。イージーは手前で止まって注意だけ。ノーマル・ハードは減点+揺れ+グシャッ
   window.FLOOR_MECH_HIT = function (c) {
     var occ = state.occupied[c.slot], car = (occ && occ.live) || state.car;
-    var hk = /^hang/.test(c.key || '') ? 'hang' : 'generic';
+    var hk = /^hang/.test(c.key || '') ? 'hang' : (/^lowroof/.test(c.key || '') ? 'lowroof' : 'generic');
     if (state.hints) { if (car) impact(car, hk, 40, { recoil: false }); return; }
-    recordMiss(c.msg, 'major');
+    if (!(state.freeMode && hk === 'lowroof')) recordMiss(c.msg, 'major');   // シミュレーション(自由に操作)の、上のフロアが車の屋根に当たった時は、減点なしで演出だけ
     if (car) impact(car, hk, 110, { recoil: false });
     setStatus(c.msg + '!(ミス: ' + state.misses + ')');
   };
