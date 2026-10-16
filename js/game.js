@@ -70,7 +70,7 @@
   var HIT_AT = {
     ramp: { kind: 'front', u: 0, v: 0.32 }, slide: { kind: 'front', u: 0, v: 0.3 }, bridgehit: { kind: 'front', u: 0, v: 0.18 }, bridge: { kind: 'front', u: 0, v: 0.15 },
     f5flat: { kind: 'front', u: 0.06, v: 0.12 }, lowroof: { kind: 'roof', u: 0.38, v: 1 }, hang: { kind: 'roof', u: 0.3, v: 1 }, lowfloor: { kind: 'roof', u: 0.28, v: 0.95 },
-    tirepass: { kind: 'side', u: 0.5, v: 0.28 }, wall: { kind: 'front', u: 0, v: 0.42 }, wallRear: { kind: 'rear', u: 1, v: 0.4 }, flap: { kind: 'roof', u: 0.12, v: 0.8 }, derail: { kind: 'side', u: 0.2, v: 0.1 }, tirestop: { kind: 'side', u: 0.2, v: 0.08 }, cab: { kind: 'front', u: 0, v: 0.55 }, generic: { kind: 'front', u: 0, v: 0.4 }
+    tirepass: { kind: 'front', u: 0, v: 0.3 }, wall: { kind: 'front', u: 0, v: 0.42 }, wallRear: { kind: 'rear', u: 1, v: 0.4 }, flap: { kind: 'roof', u: 0.12, v: 0.8 }, derail: { kind: 'side', u: 0.2, v: 0.1 }, tirestop: { kind: 'side', u: 0.2, v: 0.08 }, cab: { kind: 'front', u: 0, v: 0.55 }, generic: { kind: 'front', u: 0, v: 0.4 }
   };
   function impact(car, key, speed, opt) {
     if (!car) return;
@@ -452,13 +452,14 @@
   // 擦っている間は、タイヤの位置から火花・ほこりが出て、車の下回りが少し傷む。ミスは1回だけ(ノーマル・ハード)
   function scrapeTire(car, dt) {
     var fm = window.FLOOR_MECH, s6 = cfg.slots['6'], o = cfg.outrigger;
-    if (!fm || !o || !o.wheel || !s6.maxWidthNoTireM || fm.MECH.tireOut || car.seated || car.groundRun || !car.arc || car.arc['6'] === undefined) return;
-    if ((car.entry.width || 0) <= s6.maxWidthNoTireM || car.progress <= car.arc['6'] + TIRE_PASS_MARGIN_PX || Math.abs(car.velocity) < 25) { car.scraping = false; return; }
+    if (!fm || !o || !o.wheel || !s6.maxWidthNoTireM || fm.MECH.tireOut || car.seated || car.groundRun) return;
+    var cw = car.entry.width || 0;   // 擦るのは、軽(〜1.48m)より広く、格納したタイヤの内側に入れる幅(5ナンバー〜1.755m)まで。それより広い車は、バンパーがぶつかって入れない(routeProblems の tirepass)
+    if (cw <= s6.maxWidthNoTireM || cw > (s6.maxWidthStowedM || 1.755) || Math.abs(car.velocity) < 25) { car.scraping = false; return; }
     var ec = solidExt(car), wx = o.wheel.cx, r = o.wheel.r * (o.tireStowScale || 1);
     if (car.x + ec.b < wx - r || car.x - ec.a > wx + r) { car.scraping = false; return; }
     if (!car.scraping) {
       car.scraping = true;
-      setStatus('台車のタイヤを格納したままなので、タイヤの側面を擦りながら通っています。');
+      setStatus('台車のタイヤを格納したまま通っているので、タイヤの側面を擦っています(幅がぎりぎりで、実際は禁止の操作)。');
       if (!state.freeMode && !state.hints && !car.scrapeMiss) { car.scrapeMiss = true; recordMiss('台車のタイヤに車の横が擦れた', 'minor'); }
     }
     car.damage = (car.damage || 0) + 0.03 * Math.abs(car.velocity) / 500 * dt;   // 1台が通り過ぎて約0.03(大破にはならない)
@@ -468,6 +469,30 @@
     if (parts.length > 220) parts.splice(0, parts.length - 220);
   }
   state.scrapeTire = scrapeTire;   // (確認用)
+  // タイヤを格納しようとした時、車幅が1.755mを超える車がタイヤの位置に載っていたら(6番)、タイヤは車の側面にぶつかって格納できない。その車を返す(なければ null)
+  function tireStowBlocker() {
+    var s6 = cfg.slots['6'], o = cfg.outrigger, found = null;
+    if (!s6 || !s6.maxWidthStowedM || !o || !o.wheel) return null;
+    Object.keys(state.occupied).forEach(function (k) {
+      var occ = state.occupied[k], c = occ && occ.live;
+      if (!c || !c.entry || (c.entry.width || 0) <= s6.maxWidthStowedM || occ.floor) return;
+      var e = solidExt(occ), sp = occ.localX;
+      if (sp - e.a <= o.wheel.cx + o.wheel.r && sp + e.b >= o.wheel.cx - o.wheel.r) found = c;
+    });
+    return found;
+  }
+  // 側面がぶつかる(イージーは、ぶつけずに止めて知らせるだけ。シミュレーション・ノーマル・ハードはぶつかる)
+  function tireStowHit(car) {
+    var o = cfg.outrigger, msg = '幅の広い車が載っているので、タイヤを格納できません(車の側面にぶつかります)。先に車を降ろすか、タイヤを出したままにしてください。';
+    if (!state.hints) {
+      var occ = state.occupied[car.slot], lx = occ ? occ.localX - car.leftTireX : car.x - car.leftTireX;
+      impact(car, 'tirepass', 150, { at: { kind: 'side', u: Math.max(0.1, Math.min(0.9, (o.wheel.cx - lx) / car.w)), v: 0.25 }, recoil: false });
+      if (!state.freeMode) recordMiss('タイヤの格納で、幅の広い車の側面にぶつけた', 'major');
+    }
+    setStatus(msg);
+    return msg;
+  }
+  state.tireStowBlocker = tireStowBlocker; state.tireStowHit = tireStowHit;
   function routeProblems(car) {
     if (T6) return window.FLOOR_MECH.routeProblems6b(car);
     var fm = window.FLOOR_MECH, out = [], id = car.route.id;
@@ -501,7 +526,14 @@
       }
       // 台車のスライド車軸を伸ばしていないと、6番の横を通れるのは軽自動車(幅1.48m以下)だけ。それ以外(5ナンバー・3ナンバー)は、6番に止まる(積む)分には従来どおりだが、6番を通り過ぎて5・4・7番へは行けない(2026-10-07 ユーザー指示)
       var s6 = cfg.slots['6'];
-      // (旧)tirepass: 車の前が台車タイヤに当たったように止めていた → 止めずに、格納したタイヤの側面を車体の横が擦りながら通る描画に(scrapeTire。2026-10-16 ユーザー指示)
+      // 台車のタイヤを格納すると、内側の幅は5ナンバー車がやっと入る程度(1.755m)。それより広い車は、バンパーがタイヤに当たって入れない(その位置で止まる)。
+      // 5ナンバー以下は通れる(1.48m超は側面を擦る=scrapeTire。実際は禁止の操作)。2026-10-16 ユーザー指示
+      if (s6.maxWidthStowedM && !fm.MECH.tireOut && (car.entry.width || 0) > s6.maxWidthStowedM && cfg.outrigger && cfg.outrigger.wheel && !car.groundRun) {
+        var tw = cfg.outrigger.wheel, tr = tw.r * (cfg.outrigger.tireStowScale || 1), tx = tw.cx + tr, ex = solidExt(car);
+        if (car.x - ex.a <= tx + 2 && car.x + ex.b >= tw.cx - tr) {
+          out.push({ key: 'tirepass', phys: true, stopAt: car.progress - (car.x - ex.a - tx), msg: '台車のタイヤを格納したままでは、幅の広い車は入れません(タイヤの内側は5ナンバー車がやっと入る幅)。ジャッキでタイヤを浮かせて突出させてください。' });
+        }
+      }
       // 5番フロアが平らでない(持ち上がっている途中など)のに、5番フロアの後端から先へ進もうとした(実際の5番フロアの縁で止まる)
       if (id === 'L' && !fm.atTravel('F5') && car.f5EdgeArc !== undefined && car.progress >= car.f5EdgeArc - 1) out.push({ key: 'f5flat', phys: true, stopAt: car.f5EdgeArc, msg: '5番フロアが平らになっていません。5番フロアを平らに戻すか、スロープにして4番扇動板を出してください。' });
     }

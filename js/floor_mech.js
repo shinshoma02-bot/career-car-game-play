@@ -1010,6 +1010,7 @@
     if (!tireOffGround()) { onWarn('ジャッキでタイヤを浮かせてから動かしてください'); return; }
     if (dir === 'out' && MECH.tireOut) { onWarn('スライド車軸はすでに伸びています'); return; }
     if (dir === 'in' && !MECH.tireOut) { onWarn('タイヤはすでに格納されています'); return; }
+    if (dir === 'in') { var gs = window.GAME_STATE, bc = gs && gs.tireStowBlocker && gs.tireStowBlocker(); if (bc) { onWarn(gs.tireStowHit(bc)); return; } }   // 幅の広い車(1.755m超)が6番にいると、タイヤは車の側面にぶつかって格納できない
     MECH.tireOut = dir === 'out';
     onInfo(MECH.tireOut ? 'スライド車軸を伸ばした' : 'タイヤを格納した');
   }
