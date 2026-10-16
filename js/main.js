@@ -205,7 +205,7 @@
     loadImage(floorSrc('F2')).then(function (img) { images.F2 = NA ? img : cleanF2(img); }),
     loadImage(floorSrc('F3')).then(function (img) { images.F3 = img; }),
     loadImage(floorSrc('F5')).then(function (img) { images.F5 = img; })
-  ].concat(IS6B ? [] : ['bracket', 'lever', 'lever_up', 'hook'].map(function (k) { return loadImage('assets/semi-6/parts/slope_latch_' + k + '.png?v=1').then(function (img) { images['sl_' + k] = img; }, function () { }); }),
+  ].concat(IS6B ? [] : ['pin', 'bar', 'bar_up'].map(function (k) { return loadImage('assets/semi-6/parts/slope_latch_' + k + '.png?v=2').then(function (img) { images['sl_' + k] = img; }, function () { }); }),
     IS6B ? [] : ['limit_switch', 'limit_switch_on'].map(function (k) { return loadImage('assets/common/switches/' + k + '.png?v=1').then(function (img) { images['sw_' + k] = img; }, function () { }); }),
     IS6B ? [] : ['hook', 'winch_body', 'winch_handle'].map(function (k) { return loadImage('assets/common/tiedown/' + k + '.png?v=1').then(function (img) { images['td_' + k] = img; }, function () { }); }),
     NA && NA.parts ? Object.keys(NA.parts).map(function (k) { return loadImage(newSrc(NA.parts[k])).then(function (img) { images[k] = img; }); }) : [],
@@ -747,20 +747,12 @@
   // 全フロアを重ね直す(フロア画像は該当箇所以外ほぼ透明なので、余分な重ね描きをしても
   // 見た目への影響はない)。
   function drawCarOcclusion() {
-    if (images.sl_bracket) ctx.drawImage(images.sl_bracket, 996, 444);   // 5番のスロープのピンの金具(中央の柱の後ろの面。動かない。D45)
+    if (images.sl_pin) ctx.drawImage(images.sl_pin, 998, 452);   // 5番のスロープの固定ピン(中央の柱の後ろの面。動かない。D50)
     ['F1', 'F2', 'F3', 'F5'].forEach(function (id) {
       if (images[id]) drawTransformedFloor(id, images[id]);
     });
-    drawSlopeHook();
     drawHangFloor();
   }
-  // 5番の前端の引っかけ金具(5番と一緒に動く)。pivot [12,3] を5番の前端の点に合わせ、5番の角度で回す(D45)
-  function drawSlopeHook() {
-    var fm = window.FLOOR_MECH; if (!images.sl_hook || !fm || !fm.f5FrontPt) return;
-    var p = fm.f5FrontPt(), ang = fm.poseOf('F5').ang * Math.PI / 180;
-    ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(ang); ctx.drawImage(images.sl_hook, -12, -3); ctx.restore();
-  }
-
   // フロアの現在の傾き(ang)・上下量(dh)に合わせて画像を変形して描く
   // 中段フロア(5番と6番の間の持ち上がるフロア): 素材の前端pivot(3,10)を今の前端の位置に合わせ、前端→後端の角度に回して描く
   // 中段フロアの新素材(実車合わせ: 前の柱は1本物、後ろは長い柱+中から伸びる支柱、前の柱と平行に持ち上げシリンダー)が読めているか
@@ -1117,14 +1109,14 @@
   // 5番のスロープのピンの、赤いレバー(中央の柱の後ろの面。D45。マニュアルの図とユーザーの説明どおり)。普段は斜め上40度。5番が4番の高さに掛かっている間にタップすると、
   // レバーが上がって(82度)ピンが外れ、5番を下げられる。5番が4番の高さより下がると、レバーは自動で普段の向きに戻る(ピンが出る)。タップできる間は、まわりをゆっくり光らせる
   function drawStopperHook(fm) {
-    var up = !fm.MECH.stopper, im = images[up ? 'sl_lever_up' : 'sl_lever'];
+    var up = !fm.MECH.stopper, im = images[up ? 'sl_bar_up' : 'sl_bar'];
     if (!im || !fm.leverPose) return;
     var L = fm.leverPose();   // 5番フロアの前端に付いて、5番と一緒に動く(ユーザー指示 2026-10-15)
     if (fm.stopperVisible && fm.stopperVisible()) {
       var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260), tp = fm.stopperPos();
       ctx.save(); ctx.fillStyle = 'rgba(255,90,70,' + (0.16 + 0.2 * pulse) + ')'; ctx.beginPath(); ctx.arc(tp[0], tp[1], 16 + 3 * pulse, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
-    ctx.save(); ctx.translate(L.pin[0], L.pin[1]); ctx.rotate(L.rot); ctx.drawImage(im, -7, -19); ctx.restore();
+    ctx.save(); ctx.translate(L.pin[0], L.pin[1]); ctx.rotate(L.rot); ctx.drawImage(im, -10, -26); ctx.restore();
   }
 
   function drawPulley(p) {
@@ -1978,7 +1970,8 @@
     var place = placeOnSlot;
     Object.keys(cfg.slots).forEach(function (num) {
       var slot = cfg.slots[num], sel = st.targetSlot === num, lim = st.chockLimits(num);
-      if (pass === 'holes' && slot.stopKind === 'none') {
+      // D51: 5番を上げると床が穴の列から離れ、黒い線が床の下に浮いて見える。平らな時だけ描く
+      if (pass === 'holes' && slot.stopKind === 'none' && !(num === '5' && fm && fm.atTravel && !fm.atTravel('F5'))) {
         for (var i = lim.min; i <= lim.max; i++) {
           place(slot, i * lim.stepCm / 100 * cfg.pxPerMeter, function () {
             ctx.fillStyle = 'rgba(20,20,20,0.85)';

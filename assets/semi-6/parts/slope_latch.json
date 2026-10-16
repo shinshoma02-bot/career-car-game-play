@@ -74,5 +74,62 @@
   ],
   "file": "parts/slope_latch_hook.png",
   "what": "5番フロアの前端の引っかけ金具。pivot を5番の前端の点(frontPt)に合わせ、5番の角度で回して描く。5番を4番の高さ(hookOff)まで上げると catchLocal がピンに重なる"
+ },
+ "v2": {
+  "note": "第3版(2026-10-15 実車写真)。柱には pin だけ。5番の側面に赤い玉付きの棒と、下のばね。5番がストッパー(4番の高さ)まで上がると、ばねで棒が勝手に下がって爪が掛かる。玉を上げると外れる。bracket・lever・lever_up・hook は使わない",
+  "pin": {
+   "size": [
+    10,
+    10
+   ],
+   "pinLocal": [
+    5,
+    5
+   ],
+   "file": "parts/slope_latch_pin.png",
+   "at": [
+    998.0,
+    452.0
+   ],
+   "what": "柱のピン。左上を at に置く(動かない)。5番より奥(5番の前に描く)"
+  },
+  "bar": {
+   "size": [
+    66,
+    40
+   ],
+   "origin": [
+    10,
+    26
+   ],
+   "pivotLocal": [
+    -4.0,
+    1.5
+   ],
+   "upDeg": 0,
+   "file": "parts/slope_latch_bar.png",
+   "what": "掛かる側(普段)。5番の前端の点に原点を合わせ、5番の角度で回し、drawImage(img, -origin[0], -origin[1])。5番の後に描く"
+  },
+  "bar_up": {
+   "size": [
+    66,
+    40
+   ],
+   "origin": [
+    10,
+    26
+   ],
+   "pivotLocal": [
+    -4.0,
+    1.5
+   ],
+   "upDeg": 14,
+   "file": "parts/slope_latch_bar_up.png",
+   "what": "取っ手を上げた(外す)。描き方は bar と同じ"
+  },
+  "tapLocal": [
+   38.0,
+   -1.0
+  ]
  }
 }

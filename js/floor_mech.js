@@ -538,14 +538,15 @@
   // 金具の位置(画面座標): 5番フロアの前端の下面。5番フロアの今の姿勢に付いていく
   // 赤いレバーは、5番フロアの前端に取り付ける(ユーザー指示 2026-10-15。以前は柱に固定)。素材の位置(D45): 5番が4番の高さ(前端 (1005,451)・6.73度)に掛かった時、レバーの軸=(1003,457)。
   // その差を、5番の座標(5番の角度で回す)で持ち、5番の今の前端と角度に付いていく。レバーの絵は、その時の向き(世界の角度)で作ってあるので、5番の角度の差(今の角度 − 6.73度)だけ回す
-  var LV_LOCAL = [-1.28, 6.19], LV_DEG0 = 6.73;
+  // D50 第3版: 赤い玉付きの棒は5番の前端に付き、5番の角度で回る。タップする所=赤い玉(5番の座標 TAP_LOCAL)
+  var TAP_LOCAL = [38, -1];
   function leverPose() {
-    var p = f5FrontPt(), a = poseOf('F5').ang * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
-    return { pin: [p[0] + LV_LOCAL[0] * c - LV_LOCAL[1] * s, p[1] + LV_LOCAL[0] * s + LV_LOCAL[1] * c], rot: a - LV_DEG0 * Math.PI / 180 };
+    var p = f5FrontPt(), a = poseOf('F5').ang * Math.PI / 180;
+    return { pin: p, rot: a };
   }
-  function stopperPos() {   // タップする所: 赤いレバーの先
+  function stopperPos() {
     var L = leverPose(), c = Math.cos(L.rot), s = Math.sin(L.rot);
-    return [L.pin[0] + 8 * c + 10 * s, L.pin[1] + 8 * s - 10 * c];
+    return [L.pin[0] + TAP_LOCAL[0] * c - TAP_LOCAL[1] * s, L.pin[1] + TAP_LOCAL[0] * s + TAP_LOCAL[1] * c];
   }
   function f5FrontPt() { return onFloor('F5', FLOORS.F5.front.pt[0], FLOORS.F5.front.pt[1]); }
   function toggleStopper() {

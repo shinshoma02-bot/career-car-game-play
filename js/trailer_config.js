@@ -2,11 +2,11 @@ window.TRAILER_CONFIG = {
   "id": "semi-6",
   "name": "セミトレーラー(6台積み)",
   "stage": { "w": 2520, "h": 724 },
-  "yard": { "bg": "assets/common/yard/yard_bg.png", "ground": "assets/common/yard/yard_ground.png", "frameBack": "assets/semi-6/frame_back_clear.png", "tractor": "assets/semi-6/tractor_clear.png", "v": 3 },
+  "yard": { "bg": "assets/common/yard/yard_bg.png", "ground": "assets/common/yard/yard_ground.png", "frameBack": "assets/semi-6/frame_back_clear.png", "tractor": "assets/semi-6/tractor_clear.png", "v": 5 },
   "pxPerMeter": 114,
 
   "newArt": {
-    "v": 124,
+    "v": 125,
     "note": "グラフィック制作チャットの新素材(assets/semi-6/...)。floors=フロア(ステージ全面サイズ)",
     "switchScale": 0.27, "switchDir": "assets/common/switches/",
     "switchParts": ["sw_pendant2", "sw_pendant6", "sw_box2", "lamp_panel_lock", "btn_cap_ue_big", "btn_cap_ue_big_pressed", "btn_cap_shita_big", "btn_cap_shita_big_pressed", "btn_sq", "btn_sq_pressed", "btn_cap6_nobi_big", "btn_cap6_chiji_big", "btn_cap6_migi_oshi_big", "btn_cap6_migi_hiki_big", "btn_cap6_hidari_oshi_big", "btn_cap6_hidari_hiki_big", "btn_cap6_nobi_big_pressed", "btn_cap6_chiji_big_pressed", "btn_cap6_migi_oshi_big_pressed", "btn_cap6_migi_hiki_big_pressed", "btn_cap6_hidari_oshi_big_pressed", "btn_cap6_hidari_hiki_big_pressed", "hint_glow", "lamp_green", "lamp_green_off", "lamp_red", "lamp_red_off"],

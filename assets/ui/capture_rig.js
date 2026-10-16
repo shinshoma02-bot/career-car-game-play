@@ -20,8 +20,8 @@ function png(r, g, b, a) {
   for (const col of ['bk', 'wh']) {
     const p = await b.newPage({ viewport: { width: 2520, height: 724 } });
     const errs = []; p.on('pageerror', e => errs.push(e.message));
-    await p.route(/yard_bg\.(png|webp)/, r => r.fulfill({ body: BG[col], contentType: 'image/png' }));
-    await p.route(/yard_ground\.(png|webp)/, r => r.fulfill({ body: CLEAR, contentType: 'image/png' }));
+    await p.route(/yard_bg[^/?]*\.(png|webp)/, r => r.fulfill({ body: BG[col], contentType: 'image/png' }));
+    await p.route(/yard_ground[^/?]*\.(png|webp)/, r => r.fulfill({ body: CLEAR, contentType: 'image/png' }));
     await p.goto('http://localhost:8080/index.html#mode=sim&yard=day', { waitUntil: 'load' });
     await p.waitForTimeout(5000);
     await p.evaluate(() => { window.UI_HIDDEN = true; });
