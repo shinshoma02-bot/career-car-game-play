@@ -534,6 +534,12 @@
   function f5Slope() { return MECH.hook && ENDS.F5f.off === HOOK_OFF; }
   // 5番ストッパー(5番フロアの前を4番の高さに掛けておく引っかけ金具)を、画面に出す時: 5番がスロープで金具に掛かっている間(外すため)と、外してある間(掛け直すため)。
   // 平らで金具が掛かっている普段の状態は、しまってあるので出さない(2026-10-08 ユーザー指示: ボタンをやめて、画面上で操作する)
+  // 棒が上がって見える時: 手でレバーを上げて外した間、または、5番を上げていく途中で爪がピンを下から押している間(ピンを乗り越えると、ばねで下がって掛かる。手動の時と同じ。2026-10-16 ユーザー指示)
+  function barUp() {
+    if (!MECH.stopper) return true;
+    var top = -HOOK_OFF;   // lift が正で上がる。top(4番の高さ)から top+3 を超えると、ばねで下がって掛かる(applyF5)
+    return !MECH.hook && MECH.lift > top - 8 && MECH.lift <= top + 3;
+  }
   function stopperVisible() { return !!(MECH.hook || !MECH.stopper); }
   // 金具の位置(画面座標): 5番フロアの前端の下面。5番フロアの今の姿勢に付いていく
   // 赤いレバーは、5番フロアの前端に取り付ける(ユーザー指示 2026-10-15。以前は柱に固定)。素材の位置(D45): 5番が4番の高さ(前端 (1005,451)・6.73度)に掛かった時、レバーの軸=(1003,457)。
@@ -1079,7 +1085,7 @@
     poseOf: poseOf, tf: tf, onFloor: onFloor, curOffs: curOffs,
     holeNo: holeNo, holeRange: holeRange, pinTarget: pinTarget, snapToHole: snapToHole,
     stepPinTarget: stepPinTarget, togglePin: togglePin,
-    toggleStopper: toggleStopper, stopperVisible: stopperVisible, stopperPos: stopperPos, f5FrontPt: f5FrontPt, leverPose: leverPose, toggleBridge: toggleBridge, f5Slope: f5Slope,
+    toggleStopper: toggleStopper, stopperVisible: stopperVisible, barUp: barUp, stopperPos: stopperPos, f5FrontPt: f5FrontPt, leverPose: leverPose, toggleBridge: toggleBridge, f5Slope: f5Slope,
     toggleRamp: toggleRamp, rampUpdate: rampUpdate, rampReady: rampReady, rampT: function () { rampUpdate(); return RAMP.t; },
     toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, carTiresOn: carTiresOn, bridgeSeg: bridgeSeg, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, bridgeHitsBody: bridgeHitsBody, bridgeSurfaceY: bridgeSurfaceY, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
     holdStart: holdStart, holdStop: holdStop,

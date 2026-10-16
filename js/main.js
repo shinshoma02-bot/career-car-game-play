@@ -1114,7 +1114,7 @@
   // 5番のスロープのピンの、赤いレバー(中央の柱の後ろの面。D45。マニュアルの図とユーザーの説明どおり)。普段は斜め上40度。5番が4番の高さに掛かっている間にタップすると、
   // レバーが上がって(82度)ピンが外れ、5番を下げられる。5番が4番の高さより下がると、レバーは自動で普段の向きに戻る(ピンが出る)。タップできる間は、まわりをゆっくり光らせる
   function drawStopperHook(fm) {
-    var up = !fm.MECH.stopper, im = images[up ? 'sl_bar_up' : 'sl_bar'];
+    var up = fm.barUp ? fm.barUp() : !fm.MECH.stopper, im = images[up ? 'sl_bar_up' : 'sl_bar'];
     if (!im || !fm.f5FrontPt) return;
     // D50(実車写真): 5番の側面の、赤い玉の付いた棒と下のばね。原点=5番の前端の点、5番の角度で回す(素材の origin [10,26])
     if (fm.stopperVisible && fm.stopperVisible()) {

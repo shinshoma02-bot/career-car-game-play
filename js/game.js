@@ -448,6 +448,26 @@
   // 後ろのタイヤが、トレーラーの後端(道板との境)の位置に来る経路の長さ。後ろのタイヤは、先頭(progress)より wbPx 後ろ
   function tailRearTireArc(car) { return arcAtX(car, tailX1()) + (car.wbPx || 0); }
   var TIRE_PASS_MARGIN_PX = 30;   // 6番のタイヤ基準点からこれ以上通り過ぎたら「通過」とみなす(6番に止まる車は輪止めの手前で止まる)
+  // 台車のタイヤを格納したまま、幅の広い車(幅1.48m超)が6番の先へ通る: 格納したタイヤの側面を車体の横が擦りながら進む(止めない。軽自動車は擦らない)。
+  // 擦っている間は、タイヤの位置から火花・ほこりが出て、車の下回りが少し傷む。ミスは1回だけ(ノーマル・ハード)
+  function scrapeTire(car, dt) {
+    var fm = window.FLOOR_MECH, s6 = cfg.slots['6'], o = cfg.outrigger;
+    if (!fm || !o || !o.wheel || !s6.maxWidthNoTireM || fm.MECH.tireOut || car.seated || car.groundRun || !car.arc || car.arc['6'] === undefined) return;
+    if ((car.entry.width || 0) <= s6.maxWidthNoTireM || car.progress <= car.arc['6'] + TIRE_PASS_MARGIN_PX || Math.abs(car.velocity) < 25) { car.scraping = false; return; }
+    var ec = solidExt(car), wx = o.wheel.cx, r = o.wheel.r * (o.tireStowScale || 1);
+    if (car.x + ec.b < wx - r || car.x - ec.a > wx + r) { car.scraping = false; return; }
+    if (!car.scraping) {
+      car.scraping = true;
+      setStatus('台車のタイヤを格納したままなので、タイヤの側面を擦りながら通っています。');
+      if (!state.freeMode && !state.hints && !car.scrapeMiss) { car.scrapeMiss = true; recordMiss('台車のタイヤに車の横が擦れた', 'minor'); }
+    }
+    car.damage = (car.damage || 0) + 0.03 * Math.abs(car.velocity) / 500 * dt;   // 1台が通り過ぎて約0.03(大破にはならない)
+    var parts = state.fx.parts || (state.fx.parts = []), now = performance.now(), sgn = car.velocity > 0 ? 1 : -1;
+    if (Math.random() < 0.7) parts.push({ k: 'spark', x: wx + (Math.random() - 0.5) * r * 0.8, y: o.wheel.cy + (Math.random() - 0.5) * 30, vx: -sgn * (40 + Math.random() * 120), vy: -(30 + Math.random() * 90), t0: now, life: 260 + Math.random() * 160, size: 2, rot: 0, vr: 0 });
+    if (Math.random() < 0.3) parts.push({ k: 'dust', x: wx + (Math.random() - 0.5) * r, y: o.wheel.cy + 10, vx: (Math.random() - 0.5) * 50, vy: -20 - Math.random() * 30, t0: now, life: 500, size: 5, rot: 0, vr: 0 });
+    if (parts.length > 220) parts.splice(0, parts.length - 220);
+  }
+  state.scrapeTire = scrapeTire;   // (確認用)
   function routeProblems(car) {
     if (T6) return window.FLOOR_MECH.routeProblems6b(car);
     var fm = window.FLOOR_MECH, out = [], id = car.route.id;
@@ -481,9 +501,7 @@
       }
       // 台車のスライド車軸を伸ばしていないと、6番の横を通れるのは軽自動車(幅1.48m以下)だけ。それ以外(5ナンバー・3ナンバー)は、6番に止まる(積む)分には従来どおりだが、6番を通り過ぎて5・4・7番へは行けない(2026-10-07 ユーザー指示)
       var s6 = cfg.slots['6'];
-      if (s6.maxWidthNoTireM && !fm.MECH.tireOut && (car.entry.width || 0) > s6.maxWidthNoTireM && car.arc && car.arc['6'] !== undefined && car.progress > car.arc['6'] + TIRE_PASS_MARGIN_PX) {
-        out.push({ key: 'tirepass', phys: true, msg: '台車のスライド車軸を伸ばしていないので、6番の横は軽自動車しか通れません。ジャッキでタイヤを浮かせて突出させてください。' });
-      }
+      // (旧)tirepass: 車の前が台車タイヤに当たったように止めていた → 止めずに、格納したタイヤの側面を車体の横が擦りながら通る描画に(scrapeTire。2026-10-16 ユーザー指示)
       // 5番フロアが平らでない(持ち上がっている途中など)のに、5番フロアの後端から先へ進もうとした(実際の5番フロアの縁で止まる)
       if (id === 'L' && !fm.atTravel('F5') && car.f5EdgeArc !== undefined && car.progress >= car.f5EdgeArc - 1) out.push({ key: 'f5flat', phys: true, stopAt: car.f5EdgeArc, msg: '5番フロアが平らになっていません。5番フロアを平らに戻すか、スロープにして4番扇動板を出してください。' });
     }
@@ -1373,6 +1391,7 @@
       if (!state.hints && !state.freeMode && p.phys && !blocked) blocked = p;
     });
     Object.keys(car.missedKeys).forEach(function (k) { if (!present[k]) delete car.missedKeys[k]; });
+    scrapeTire(car, dt);
     if (blocked && blocked.stopAt !== undefined && car.progress > blocked.stopAt) {   // 実物の縁(4番扇動板・5番フロアの端)を少し行き過ぎていたら、縁の位置まで戻す
       car.progress = blocked.stopAt; var pq = car.pathTool.at(car.progress); car.x = pq.x; car.y = pq.y;
     }
