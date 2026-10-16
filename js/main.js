@@ -747,12 +747,17 @@
   // 全フロアを重ね直す(フロア画像は該当箇所以外ほぼ透明なので、余分な重ね描きをしても
   // 見た目への影響はない)。
   function drawCarOcclusion() {
-    if (images.sl_pin) ctx.drawImage(images.sl_pin, 998, 452);   // 5番のスロープの固定ピン(中央の柱の後ろの面。動かない。D50)
+    if (images.sl_pin) ctx.drawImage(images.sl_pin, 998, 452);   // 5番のスロープのピン(中央の柱の後ろの面。動かない。D50: 柱にはピンだけ)
     ['F1', 'F2', 'F3', 'F5'].forEach(function (id) {
       if (images[id]) drawTransformedFloor(id, images[id]);
     });
+    drawSlopeHook();
     drawHangFloor();
   }
+  // 5番の前端の引っかけ金具(5番と一緒に動く)。pivot [12,3] を5番の前端の点に合わせ、5番の角度で回す(D45)
+  function drawSlopeHook() { }   // D50: 引っかけ金具は、5番の側面の棒(drawStopperHook)の先の爪になった
+
+
   // フロアの現在の傾き(ang)・上下量(dh)に合わせて画像を変形して描く
   // 中段フロア(5番と6番の間の持ち上がるフロア): 素材の前端pivot(3,10)を今の前端の位置に合わせ、前端→後端の角度に回して描く
   // 中段フロアの新素材(実車合わせ: 前の柱は1本物、後ろは長い柱+中から伸びる支柱、前の柱と平行に持ち上げシリンダー)が読めているか
@@ -1110,13 +1115,14 @@
   // レバーが上がって(82度)ピンが外れ、5番を下げられる。5番が4番の高さより下がると、レバーは自動で普段の向きに戻る(ピンが出る)。タップできる間は、まわりをゆっくり光らせる
   function drawStopperHook(fm) {
     var up = !fm.MECH.stopper, im = images[up ? 'sl_bar_up' : 'sl_bar'];
-    if (!im || !fm.leverPose) return;
-    var L = fm.leverPose();   // 5番フロアの前端に付いて、5番と一緒に動く(ユーザー指示 2026-10-15)
+    if (!im || !fm.f5FrontPt) return;
+    // D50(実車写真): 5番の側面の、赤い玉の付いた棒と下のばね。原点=5番の前端の点、5番の角度で回す(素材の origin [10,26])
     if (fm.stopperVisible && fm.stopperVisible()) {
       var pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260), tp = fm.stopperPos();
       ctx.save(); ctx.fillStyle = 'rgba(255,90,70,' + (0.16 + 0.2 * pulse) + ')'; ctx.beginPath(); ctx.arc(tp[0], tp[1], 16 + 3 * pulse, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
-    ctx.save(); ctx.translate(L.pin[0], L.pin[1]); ctx.rotate(L.rot); ctx.drawImage(im, -10, -26); ctx.restore();
+    var p = fm.f5FrontPt(), ang = fm.poseOf('F5').ang * Math.PI / 180;
+    ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(ang); ctx.drawImage(im, -10, -26); ctx.restore();
   }
 
   function drawPulley(p) {
@@ -1970,8 +1976,7 @@
     var place = placeOnSlot;
     Object.keys(cfg.slots).forEach(function (num) {
       var slot = cfg.slots[num], sel = st.targetSlot === num, lim = st.chockLimits(num);
-      // D51: 5番を上げると床が穴の列から離れ、黒い線が床の下に浮いて見える。平らな時だけ描く
-      if (pass === 'holes' && slot.stopKind === 'none' && !(num === '5' && fm && fm.atTravel && !fm.atTravel('F5'))) {
+      if (pass === 'holes' && slot.stopKind === 'none' && !(slot.carrier === 'F5' && fm && fm.atTravel && !fm.atTravel('F5'))) {   // 5番の穴は、5番が平らな時だけ(上げると床の下に浮いて黒い線に見えた。D51)
         for (var i = lim.min; i <= lim.max; i++) {
           place(slot, i * lim.stepCm / 100 * cfg.pxPerMeter, function () {
             ctx.fillStyle = 'rgba(20,20,20,0.85)';
