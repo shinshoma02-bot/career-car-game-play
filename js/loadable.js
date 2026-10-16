@@ -31,6 +31,7 @@
   var F1_DOWN = 30;   // 1番フロアを標準の高さから下げられる最大(px。走行位置までは約35〜75px下がるが、控えめに)
   // 1番フロアを標準の高さ(BASE)から上げる量(px。負=下げられる量)。下の4番の車の屋根(lowerEnv)に、1番フロアの下面が当たらない最小の量を、実際の形で調べる(二分探索)
   var f1Cache = {};
+  function artTag() { var F = fm.FLOORS; return F.F1.art && F.F2.art && F.F3.art ? '|A' : '|L'; }
   // 1番フロアは、前(F1f)は最高の穴までしか上がらない(=ほとんど上がらない)、後ろ(F1r)は大きく上がる(ケツ上がり)。上げる量 s(px。上げる=正)の時のフロアの高さ
   function f1Offs(s) {
     var E = fm.ENDS, hiF = fm.offOfHole('F1f', E.F1f.holeMax), hiR = fm.offOfHole('F1r', E.F1r.holeMax), o = baseOffs();
@@ -41,7 +42,7 @@
   // 2026-10-09: 1番フロアが実際に上がれる限界(最高の穴)までしか調べない。届かない(背の高い車を4番に積む)時は Infinity=積めない。
   // 以前は、従来の式(車の最大の高さ−標準)をそのまま使い、上げられる限界を見ていなかったので、背の高い車が4番に入った(1番フロアを貫通した)
   function f1Need(d) {
-    var key = carKey({ entry: d.e }, d.flip);
+    var key = carKey({ entry: d.e }, d.flip) + artTag();
     if (f1Cache[key] !== undefined) return f1Cache[key];
     var E = fm.ENDS, L = lowerEnv(d, '4', 0);
     function ok(s) { return fm.envFits([L], ['F1'], f1Offs(s)); }
@@ -170,7 +171,7 @@
   }
   function higher(a, b) { return a === null || b === null ? null : Math.min(a, b); }   // 高い方(off が小さい方)。どちらかが null なら null
   var cache = {};
-  function cached(key, fn) { return cache[key] || (cache[key] = fn()); }
+  function cached(key, fn) { key += artTag(); return cache[key] || (cache[key] = fn()); }
   function carKey(it, flip) { return it.entry.id + (flip ? 'r' : ''); }
   // 中段フロアと7番の車(c7)に対する F2f・F3r の下限の表(固定ピンの穴 ph ごと)
   function hangFrontier(it, d7, ph) {

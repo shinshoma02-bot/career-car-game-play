@@ -1898,6 +1898,11 @@
     newDeck();
   };
 
+  // フロアの絵の読み込み後に、まだ何も積んでいなければ、デッキを引き直す(起動直後のデッキは、絵の読み込み前の近似で「積める」と判定されるため。2026-10-16 7台通しの調査)
+  state.redealIfFresh = function () {
+    if (state.car || Object.keys(state.occupied).length || /mode=tutorial/.test(location.hash || '')) return;
+    newDeck();
+  };
   updateChockUi();
   newDeck();
 })();

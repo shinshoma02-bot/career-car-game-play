@@ -213,6 +213,7 @@
   Promise.all(loadList).then(function () {
     try { sessionStorage.removeItem('reloadedOnce'); } catch (e) { }
     if (window.FLOOR_MECH && window.FLOOR_MECH.setFloorArt && !IS6B) ['F1', 'F2', 'F3'].forEach(function (id) { if (images[id]) window.FLOOR_MECH.setFloorArt(id, images[id]); });   // 上段フロアの下面を絵の形に合わせる
+    if (window.GAME_STATE && window.GAME_STATE.redealIfFresh) window.GAME_STATE.redealIfFresh();   // 絵が付いた後の高さ計算で、デッキを選び直す
     statusEl.textContent = '読み込み完了: ' + cfg.name + ' (' + cfg.stage.w + 'x' + cfg.stage.h + 'px, ' + cfg.pxPerMeter + 'px/m)';
     if (window.TRAILER_ANIM) window.TRAILER_ANIM.enter();   // 左からトレーラーが入ってくる
     requestAnimationFrame(loop);
