@@ -40,7 +40,7 @@ window.TRAILER_CONFIG = {
   },
 
   "slots": {
-    "1": { "tireX": 549.2, "deckY": 294.2, "rot": -1.8, "floor": "F1", "hit": [485, 87, 454.5, 203], "stopKind": "none", "chockRequired": true, "defaultChock": true, "chockRange": { "front": 0, "rear": 180, "divisions": 30, "step": 6 }, "note": "基準の輪止め(tireX)は1番フロアの先端(floors.defs.F1.x0=456)から、タイヤの中心を93px(約0.8m)後ろに置く(2026-10-16: トラクタを48px後ろへ寄せた(D47)ので、先端から24pxの位置だと、車の前がキャビンの後ろの面(CAB_X=420)に着いてしまった。前の張り出しが一番長い車でも、キャビンまで約15cm空く位置)。前(キャビン側)へは動かせない。後ろ(手前)へ120cm(2026-10-06 ユーザー指示)" },
+    "1": { "tireX": 515.2, "deckY": 294.2, "rot": -1.8, "floor": "F1", "hit": [485, 87, 454.5, 203], "stopKind": "none", "chockRequired": true, "defaultChock": true, "chockRange": { "front": 0, "rear": 180, "divisions": 30, "step": 6 }, "note": "基準の輪止め(tireX)は1番フロアの先端(floors.defs.F1.x0=456。タイヤの中心はそこから24px(約0.2m)後ろ)に置く。前(キャビン側)へは動かせない。後ろ(手前)へ120cm(2026-10-06 ユーザー指示)" },
     "2": { "tireX": 1061, "deckY": 316, "rot": 0,    "floor": "F2", "hit": [957.2, 87, 522.2, 225], "stopKind": "hole", "chockRange": { "rear": 120, "divisions": 20, "step": 6 } },
     "3": { "tireX": 1650, "deckY": 312, "rot": 0,    "floor": "F3", "hit": [1560, 72, 591, 239], "stopKind": "hole", "chockRange": { "rear": 102, "divisions": 17, "step": 6 } },
     "4": { "tireX": 566,  "deckY": 457, "rot": 0,    "floor": null, "hit": [526, 304, 528.9, 138], "stopKind": "stopper", "chockRange": { "rear": 120, "divisions": 20, "step": 6, "fromBase": true } },
