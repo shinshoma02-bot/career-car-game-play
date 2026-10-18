@@ -713,7 +713,7 @@
     if (IS6B) return;
     if (!tractorWheelImgs) {
       tractorWheelImgs = [];
-      [['assets/semi-6/wheel_front.png', 304.5, 528.5], ['assets/semi-6/wheel_drive.png', 735.5, 528.5]].forEach(function (d) {
+      [['assets/semi-6/wheel_front.png', 269.5, 528.5], ['assets/semi-6/wheel_drive.png', 735.5, 528.5]].forEach(function (d) {
         var im = new Image(); im.src = d[0] + '?v=1'; tractorWheelImgs.push({ im: im, x: d[1], y: d[2] });
       });
     }
