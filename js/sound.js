@@ -77,7 +77,7 @@
     }
     L.last = performance.now();
     L.gain.gain.setTargetAtTime(vol, now, 0.05);
-    if (freq && L.osc) L.osc.frequency.setTargetAtTime(freq, now, 0.06);
+    if (freq && L.setFreq) L.setFreq(freq, now);
   }
   setInterval(function () {
     var now = performance.now();
@@ -101,7 +101,39 @@
       var ng = a.createGain(); ng.gain.value = noiseGain;
       s.connect(nf); nf.connect(ng); ng.connect(g); s.start();
     }
-    return { osc: o, gain: g, last: 0, stop: function () { o.stop(); if (s) s.stop(); } };
+    return { osc: o, gain: g, last: 0, setFreq: function (f, now) { o.frequency.setTargetAtTime(f, now, 0.06); }, stop: function () { o.stop(); if (s) s.stop(); } };
+  }
+  // 油圧シリンダーの「ウィーーン」: 滑らかな高めのうなり(ポンプ)+低いモーターの唸り+かすかな空気の音。始まりで少し音程が上がる
+  function makeWhine(a) {
+    var g = a.createGain(); g.gain.value = 0.0001;
+    var lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1600;
+    var o1 = a.createOscillator(); o1.type = 'sine'; o1.frequency.value = 300;
+    var o2 = a.createOscillator(); o2.type = 'triangle'; o2.frequency.value = 600;
+    var g2 = a.createGain(); g2.gain.value = 0.35;
+    var o3 = a.createOscillator(); o3.type = 'sine'; o3.frequency.value = 62;   // モーターの低い唸り
+    var g3 = a.createGain(); g3.gain.value = 0.7;
+    var lfo = a.createOscillator(); lfo.frequency.value = 6; var lg = a.createGain(); lg.gain.value = 9;   // ごくわずかなゆらぎ
+    lfo.connect(lg); lg.connect(o1.frequency);
+    o1.connect(lp); o2.connect(g2); g2.connect(lp); o3.connect(g3); g3.connect(lp); lp.connect(g); g.connect(master);
+    var ns = a.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true;
+    var nf = a.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 2400; nf.Q.value = 1.2; var ng = a.createGain(); ng.gain.value = 0.05;
+    ns.connect(nf); nf.connect(ng); ng.connect(g);
+    var t0 = a.currentTime; o1.frequency.setValueAtTime(240, t0); o1.frequency.exponentialRampToValueAtTime(330, t0 + 0.35); o2.frequency.setValueAtTime(480, t0); o2.frequency.exponentialRampToValueAtTime(660, t0 + 0.35);
+    o1.start(); o2.start(); o3.start(); lfo.start(); ns.start();
+    return { gain: g, last: 0, stop: function () { o1.stop(); o2.stop(); o3.stop(); lfo.stop(); ns.stop(); } };
+  }
+  // 乗用車の走行音: 低くこもったエンジンの響き+タイヤが路面を転がる音(うるさくしない)
+  function makeRumble(a) {
+    var g = a.createGain(); g.gain.value = 0.0001;
+    var lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 160;
+    var o = a.createOscillator(); o.type = 'triangle'; o.frequency.value = 40;
+    var o2 = a.createOscillator(); o2.type = 'sine'; o2.frequency.value = 80; var g2 = a.createGain(); g2.gain.value = 0.5;
+    o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g);
+    var ns = a.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true;
+    var nf = a.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 380; var ng = a.createGain(); ng.gain.value = 0.9;
+    ns.connect(nf); nf.connect(ng); ng.connect(g); g.connect(master);
+    o.start(); o2.start(); ns.start();
+    return { gain: g, last: 0, setFreq: function (f, now) { o.frequency.setTargetAtTime(f, now, 0.1); o2.frequency.setTargetAtTime(f * 2, now, 0.1); }, stop: function () { o.stop(); o2.stop(); ns.stop(); } };
   }
 
   var lastScrape = 0, lastWarn = 0, lastClick = 0;
@@ -109,13 +141,25 @@
     get enabled() { return on; },
     set enabled(v) { on = !!v; try { localStorage.setItem('sfx', on ? 'on' : 'off'); } catch (e) { } if (on) ready(); else Object.keys(loops).forEach(function (k) { try { loops[k].stop(); } catch (e) { } delete loops[k]; }); updateBtn(); },
     unlock: unlock,
-    // ぶつかった: 重さ sev(0〜1)で、低い「ドン」・金属のきしみ・ガラス
+    // ぶつかった: 重さ sev(0〜1)。①車体の「ドン」(低い胴鳴り)②パネルの「ベコッ」(中音のこもった衝撃)③金属・樹脂が割れる「バキッ」(間隔をずらした短い破裂音を重ねる)
+    //  ④パネルが震える余韻(ずれた高さの金属音)⑤強い時は、ガラスの破片が落ちる「チリチリ」と部品が転がる音
     impact: function (sev, kind) {
       var a = ready(); if (!a) return; var t = a.currentTime; sev = Math.max(0, Math.min(1, sev || 0));
-      tone(a, t, 0.16 + 0.3 * sev, 'sine', 140 - 40 * sev, 42, 0.35 + 0.5 * sev);
-      noise(a, t, 0.1 + 0.2 * sev, 'lowpass', 500 + 400 * sev, 0.7, 0.3 + 0.4 * sev);
-      if (sev > 0.08) { noise(a, t, 0.18 + 0.3 * sev, 'bandpass', 1500 + 600 * sev, 2.5, 0.16 + 0.3 * sev); tone(a, t + 0.01, 0.2 + 0.2 * sev, 'square', 320, 180, 0.04 + 0.12 * sev); }
-      if (sev > 0.4 && kind !== 'side') noise(a, t + 0.03, 0.45, 'highpass', 5200, 1, 0.16 + 0.15 * sev);   // ガラス
+      var R = Math.random;
+      tone(a, t, 0.22 + 0.35 * sev, 'sine', 120 - 35 * sev, 38, 0.3 + 0.45 * sev);   // ドン
+      noise(a, t, 0.1 + 0.18 * sev, 'lowpass', 260 + 200 * sev, 0.8, 0.35 + 0.45 * sev, 90);   // 胴鳴り
+      noise(a, t, 0.05 + 0.06 * sev, 'bandpass', 900 + 500 * sev, 1.2, 0.2 + 0.3 * sev);   // ベコッ
+      if (sev > 0.06) {
+        var n = 2 + Math.round(4 * sev);   // バキッ(短い破裂を、少しずつずらして)
+        for (var i = 0; i < n; i++) noise(a, t + i * (0.012 + 0.02 * R()), 0.03 + 0.05 * R(), 'bandpass', 1200 + 2600 * R(), 3 + 3 * R(), (0.12 + 0.28 * sev) * (1 - i / (n + 1)));
+        var f0 = 380 + 300 * R();   // 余韻: 金属のパネルが震える(割り切れない比の音を重ねる)
+        [1, 1.58, 2.31, 3.12].forEach(function (m, k) { tone(a, t + 0.012, 0.16 + 0.34 * sev - 0.03 * k, 'triangle', f0 * m, f0 * m * 0.97, (0.05 + 0.1 * sev) / (k + 1)); });
+      }
+      if (sev > 0.35) {
+        noise(a, t + 0.02, 0.35, 'highpass', 4800, 0.8, 0.1 + 0.12 * sev);
+        if (kind !== 'side') for (var g = 0; g < 4 + Math.round(6 * sev); g++) tone(a, t + 0.04 + 0.5 * R(), 0.05 + 0.05 * R(), 'sine', 3000 + 5000 * R(), 0, 0.03 + 0.05 * R());   // ガラスの破片
+        for (var d = 0; d < 3; d++) noise(a, t + 0.15 + 0.4 * R(), 0.04, 'lowpass', 700 + 500 * R(), 1, 0.12 * sev);   // 部品が転がって落ちる
+      }
     },
     // 擦れる(キーッ・ザザッ)
     scrape: function () {
@@ -125,11 +169,11 @@
       noise(a, t, 0.13, 'lowpass', 600, 0.7, 0.08);
     },
     // フロア・ジャッキを動かしている間の油圧のうなり(毎フレーム呼ぶ)
-    hyd: function () { loop('hyd', function (a) { return makeLoop(a, 'sawtooth', 58, 420, 0.5); }, 0.1, 56 + Math.random() * 3); },
-    // 車が走っている間のエンジンとタイヤ(毎フレーム呼ぶ。speed=px/秒)
+    hyd: function () { loop('hyd', function (a) { return makeWhine(a); }, 0.075, 0); },
+    // 車が走っている間の、低いエンジンの響きとタイヤの音(毎フレーム呼ぶ。speed=px/秒)。うるさくしない
     drive: function (speed) {
       if (!(speed > 8)) return; var k = Math.min(1, speed / 600);
-      loop('drive', function (a) { return makeLoop(a, 'sawtooth', 60, 500, 0.35); }, 0.035 + 0.1 * k, 52 + 85 * k);
+      loop('drive', function (a) { return makeRumble(a); }, 0.03 + 0.05 * k, 36 + 30 * k);
     },
     // トレーラーが入ってくる: 太いエンジン音が下がっていき、止まる時にエアブレーキの「プシュー」
     truckIn: function (sec) {
