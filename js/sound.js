@@ -26,11 +26,31 @@
     if (!on) return null;
     var a = ctx();
     if (!a) return null;
-    if (a.state === 'suspended') { try { a.resume(); } catch (e) { } }
-    return a.state === 'running' ? a : null;
+    if (a.state !== 'running') { try { a.resume(); } catch (e) { } }
+    return a.state === 'running' ? a : null;   // 有効になる前の音は鳴らさない(iOS は 'interrupted' の時もあるので、毎回 resume を試す)
   }
-  function unlock() { if (on) ready(); }
-  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, unlock, { passive: true }); });
+  // iPhone/iPad対策(2026-10-18 スマホで鳴らなかった): ①iOS は、タップを離した時(touchend/click)でないと音を有効にできない。②マナーモード(消音スイッチ)だと、Web Audio は消される。
+  //   「再生」扱いの音(audio要素・navigator.audioSession)にすると、消音スイッチの影響を受けずに鳴る。
+  var silentEl = null;
+  function unlock() {
+    if (!on) return;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { }
+    var a = ctx();
+    if (!a) return;
+    if (a.state !== 'running') { try { a.resume(); } catch (e) { } }
+    try {   // 無音の短い音を鳴らして、音声を有効にする(iOS)
+      var b = a.createBuffer(1, 1, 22050), s = a.createBufferSource(); s.buffer = b; s.connect(a.destination); s.start(0);
+    } catch (e) { }
+    if (!silentEl) {   // 無音の audio 要素を再生し続けて、消音スイッチを越える
+      try {
+        silentEl = document.createElement('audio'); silentEl.loop = true; silentEl.setAttribute('playsinline', ''); silentEl.preload = 'auto';
+        silentEl.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+        var pr = silentEl.play(); if (pr && pr.catch) pr.catch(function () { silentEl = null; });
+      } catch (e) { silentEl = null; }
+    }
+  }
+  ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlock, { passive: true }); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && AC && AC.state !== 'running') { try { AC.resume(); } catch (e) { } } });
 
   // 雑音(ノイズ)を、フィルタと音量の包みを通して鳴らす
   function noise(a, t, dur, type, f, q, gain, fEnd) {
