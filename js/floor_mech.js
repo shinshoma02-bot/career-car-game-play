@@ -514,8 +514,8 @@
     if (hits.length) {
       hits.forEach(function (c) { if (!hangHitKeys[c.key]) { hangHitKeys[c.key] = true; if (window.FLOOR_MECH_HIT) window.FLOOR_MECH_HIT(c); } });
     } else if (!p) hangHitKeys = {};
-    if (p) { if (h.warned !== p) { onWarn(p); h.warned = p; } }
-    else { MECH.hang = nu; syncHangEnd(); autoPinTarget('F7'); h.warned = false; }
+    if (p) { if (h.warned !== p) { onWarn(p); h.warned = p; if (window.SFX) window.SFX.clank(); } }
+    else { if (window.SFX) window.SFX.hyd(); MECH.hang = nu; syncHangEnd(); autoPinTarget('F7'); h.warned = false; }
     hangRaf = requestAnimationFrame(hangStep);
   }
   // 中段フロアのスロープ状態(前が上がり、後ろは接地のまま): 車が下段の床から乗り込める
@@ -919,8 +919,8 @@
       // 2番前シリンダーの余力で5番フロアを昇降
       var nl = Math.min(LIFT_MAX, Math.round((MECH.lift + h.dir * RATE * (h.dir > 0 ? DOWN_MULT : 1) * dt) * 10) / 10);
       var p5 = nl === MECH.lift ? '可動範囲いっぱい' : liftProblem(nl);
-      if (p5) { if (h.warned !== p5) { onWarn(p5); h.warned = p5; } }
-      else { MECH.lift = Math.max(0, nl); applyF5(); h.warned = false; }
+      if (p5) { if (h.warned !== p5) { onWarn(p5); h.warned = p5; if (window.SFX) window.SFX.clank(); } }
+      else { if (window.SFX) window.SFX.hyd(); MECH.lift = Math.max(0, nl); applyF5(); h.warned = false; }
       holdRafId = requestAnimationFrame(holdStep);
       return;
     }
@@ -954,8 +954,8 @@
     var roofHit = prob ? roofHitSlot : null;
     if (prob && roofHit) { if (h.roofFired !== roofHit) { h.roofFired = roofHit; if (window.FLOOR_MECH_HIT) window.FLOOR_MECH_HIT({ key: 'lowroof-' + roofHit, slot: roofHit, msg: roofHit + '番の車の屋根にフロアがぶつかった' }); } }   // 上のフロアが下段の車の屋根に当たった: ぶつかった演出とミス(1回の操作で1回)
     else if (!prob) h.roofFired = null;
-    if (prob) { if (h.warned !== prob) { onWarn(prob); h.warned = prob; } }
-    else { ENDS[h.end].off = cand[h.end]; if (h.end === 'MID') ENDS.F3r.off = cand.F3r; h.warned = false; autoPinTarget(h.end); if (h.end === 'MID') autoPinTarget('F3r'); }
+    if (prob) { if (h.warned !== prob) { onWarn(prob); h.warned = prob; if (window.SFX) window.SFX.clank(); } }
+    else { if (window.SFX) window.SFX.hyd(); ENDS[h.end].off = cand[h.end]; if (h.end === 'MID') ENDS.F3r.off = cand.F3r; h.warned = false; autoPinTarget(h.end); if (h.end === 'MID') autoPinTarget('F3r'); }
     holdRafId = requestAnimationFrame(holdStep);
   }
 
@@ -998,6 +998,7 @@
     if (h.last === null) h.last = ts;
     var dt = Math.min(0.05, (ts - h.last) / 1000); h.last = ts;
     var v = MECH.jack + h.dir * 22 * dt;
+    if (window.SFX && Math.abs(MECH.jack - Math.max(0, Math.min(JACK_MAX, Math.round(v * 10) / 10))) > 0.01) window.SFX.hyd();
     MECH.jack = Math.max(0, Math.min(JACK_MAX, Math.round(v * 10) / 10));
     if (jackHolding) jackRafId = requestAnimationFrame(jackStep);
   }

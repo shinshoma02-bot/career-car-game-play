@@ -86,6 +86,7 @@
     car.crash = { t0: performance.now(), dur: dur, kind: at.kind, u: at.u, v: at.v, peak: Math.min(0.85, Math.max(peak + old * 0.5, dm * 0.62)), resid: Math.min(0.78, Math.max(resid, old, dm > 0.35 ? dm * 0.55 : 0)), sev: sev, seed: Math.random() * 1000 };
     if (car.damage >= 1) setTimeout(function () { wreck(car, '車が原型をとどめないほど壊れました。'); }, 700);
     triggerShake(0.4 + 11 * sev, 250 + 900 * sev);
+    if (window.SFX) window.SFX.impact(sev, at.kind);   // 効果音
     // 跳ね返り(走っている車): 軽いほど弾む
     if (car === state.car && !car.seated && opt.recoil !== false && (at.kind === 'front' || at.kind === 'side')) car.velocity = -Math.min(90, v * (0.05 + 0.25 * (1 - sev)));
     // 粒(火花・破片・ガラス・ほこり): 場所はステージ座標(車の左端から u、地面から v)
@@ -117,6 +118,7 @@
     var v = Math.abs(speed), sev = Math.max(0, Math.min(1, (v - 300) / 290));   // 乗り越えられる最低の勢い(約350px/秒)から最高速度まで
     car.ride = { t0: performance.now(), dur: 900 + 700 * sev, sev: sev, kind: kind === 'hole' ? 'hole' : 'chock' };
     triggerShake(2 + 5 * sev, 350 + 350 * sev);
+    if (window.SFX) window.SFX.bump();
     var parts = state.fx.parts || (state.fx.parts = []), now = performance.now();
     for (var i = 0; i < 4 + Math.round(8 * sev); i++) parts.push({ k: 'dust', x: car.x + (Math.random() - 0.5) * 24, y: car.y - 3, vx: (Math.random() - 0.3) * 80, vy: -20 - Math.random() * 40, t0: now, life: 500 + Math.random() * 500, size: 5 + 6 * sev, rot: 0, vr: 0 });
     car.damage = (car.damage || 0) + 0.02 + 0.08 * sev;   // 下回りに少し響く
@@ -478,6 +480,7 @@
       setStatus('台車のタイヤを格納したまま通っているので、タイヤの側面を擦っています(幅がぎりぎりで、実際は禁止の操作)。');
       if (!state.freeMode && !state.hints && !car.scrapeMiss) { car.scrapeMiss = true; recordMiss('台車のタイヤに車の横が擦れた', 'minor'); }
     }
+    if (window.SFX) window.SFX.scrape();
     car.damage = (car.damage || 0) + 0.03 * Math.abs(car.velocity) / 500 * dt;   // 1台が通り過ぎて約0.03(大破にはならない)
     var parts = state.fx.parts || (state.fx.parts = []), now = performance.now(), sgn = car.velocity > 0 ? 1 : -1;
     if (Math.random() < 0.7) parts.push({ k: 'spark', x: wx + (Math.random() - 0.5) * r * 0.8, y: o.wheel.cy + (Math.random() - 0.5) * 30, vx: -sgn * (40 + Math.random() * 120), vy: -(30 + Math.random() * 90), t0: now, life: 260 + Math.random() * 160, size: 2, rot: 0, vr: 0 });
@@ -1458,6 +1461,7 @@
     }
     if (car.blockedMsg) { car.blockedMsg = null; setStatus('矢印ボタンで車を進めてください。'); }
     updateVelocity(car, pressedDir, dt);
+    if (window.SFX) window.SFX.drive(Math.abs(car.velocity));   // 走っている間のエンジン・タイヤの音
     if (blocked && car.velocity > 0) car.velocity = 0;
 
     var before = car.progress;
@@ -1641,6 +1645,7 @@
       img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX,
       floor: slot.floor || slot.carrier || null, localX: tgt.x, localY: tgt.y + dip, rotDeg: rotDeg, dx: tgt.x - slot.tireX, live: car
     };
+    if (window.SFX) { window.SFX.dock(); window.SFX.ok(); }
     if (window.GAME_MODE && window.GAME_MODE.onDock) window.GAME_MODE.onDock(num);
     setStatus(num + '番 OK!' + (stopNow.kind === 'hole' ? 'タイヤが落としに落ちました。' : STOP_NAME[stopNow.kind] + 'に当たりました。') + 'もう一度車をタップするとその位置で固定されます。');
     if (car.deckItem) car.deckItem.status = 'loaded';

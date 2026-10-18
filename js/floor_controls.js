@@ -7,6 +7,7 @@
   var lastMsg = null, lastMsgTimer = null;
 
   window.FLOOR_MECH_NOTIFY = function (msg, kind) {
+    if (window.SFX) { if (kind === 'warn') window.SFX.warn(); else window.SFX.click(); }   // 効果音: できない=低いブザー、操作=カチッ
     lastMsg = msg;
     statusEl.textContent = msg;
     statusEl.style.color = kind === 'warn' ? '#ff8080' : '#9c9';

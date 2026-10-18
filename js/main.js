@@ -451,7 +451,7 @@
   // 道板を出したまま・道板の上に車がいる時は事故: 道板は地面に引っかかって置き去りになり、車は道板から落ちる。
   var AN_OUT_X = -(cfg.stage.w + 420), AN_IN_X = cfg.stage.w + 420;   // 出発は左(進行方向)へ、入場は右から左へ(2026-10-09 ユーザー指示)
   var AN = { off: IS6B ? 0 : AN_IN_X, kind: null, t0: 0, dur: 0, unsafe: false, cb: null, joltDone: false };
-  function startOut() { AN.kind = 'out'; AN.t0 = performance.now(); AN.dur = AN.unsafe ? 4.2 : 2.9; AN.joltDone = false; AN.rampFall = null; }
+  function startOut() { AN.kind = 'out'; AN.t0 = performance.now(); AN.dur = AN.unsafe ? 4.2 : 2.9; AN.joltDone = false; AN.rampFall = null; if (window.SFX) window.SFX.truckOut(AN.dur); }
   function animStep() {
     if (!AN.kind) return;
     var t = (performance.now() - AN.t0) / 1000, gs = window.GAME_STATE;
@@ -515,6 +515,7 @@
       if (IS6B) { if (cb) cb(); return; }
       VIEW.fitAll();
       AN.off = AN_IN_X; AN.kind = 'in'; AN.t0 = performance.now(); AN.dur = 2.4; AN.unsafe = false; AN.cb = cb || null;
+      if (window.SFX) window.SFX.truckIn(2.4);
     },
     offset: function () { return AN.off; }   // (確認用)
   };
