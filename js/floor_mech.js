@@ -779,6 +779,14 @@
     if (MECH.hang > 0.05) {   // 上げてある中段フロア(と載せた車)に、2・3番のフロアが下がってぶつからない
       var hv = hangVsUpper(MECH.hang, offs, ids);
       if (hv) return hv;
+    } else {
+      // 中段フロアが格納(下がりきり)でも、7番に車が載っていれば、その車の屋根に、2・3番のフロアの下面が当たる(ユーザー指示 2026-10-18「3番フロアを下げたら7番の車のルーフに貫通した」)。
+      // 重なりが増える動きだけ止める(すでに重なっている状態からでも、上げる動きはできる)
+      var gs7 = window.GAME_STATE, o7 = gs7 && gs7.occupied && gs7.occupied['7'];
+      if (o7) {
+        var nx = hangVsUpperX(MECH.hang, offs, ids, o7);
+        if (nx.why && !hangVsUpperX(MECH.hang, curOffs(), ids, o7).why) { if (nx.car) roofHitSlot = '7'; return nx.why; }
+      }
     }
     // 下段(4〜6番)の車の屋根に、上のフロアの下面が当たらないか。車の屋根の実際の形(ボンネット・トランクは低い)で判定する。
     // 実車は、フロアの枠の内側に約5cmの隙間があるので、屋根が描画の床の下面より FRAME_GAP_PX(5cm)上に入り込むまでは当たらない
