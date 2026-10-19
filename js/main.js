@@ -135,7 +135,11 @@
     { id: 'yard', name: 'ヤード', w: 4 },
     { id: 'port', name: '港の岸壁', w: 2, lamps: [[380, 184], [1140, 184], [1880, 184]], lampR: 160 },
     { id: 'auction', name: '中古車オークション会場', w: 2, lamps: [[443, 367], [1183, 367], [1923, 367], [2443, 367]] },
-    { id: 'factory', name: '自動車工場の構内', w: 2, lamps: [[443, 367], [1183, 367], [1923, 367], [2443, 367]] }
+    { id: 'factory', name: '自動車工場の構内', w: 2, lamps: [[443, 367], [1183, 367], [1923, 367], [2443, 367]] },
+    // D54(2026-10-19 グラフィック納品。ComfyUIで生成)。地面の絵が無いので、今のヤードの地面を使う。重み0=ランダムには出さない(URLに #place=coast / hillside / rail を付けた時だけ。ユーザーの採用待ち)
+    { id: 'coast', name: '海と岸壁', w: 0, ground: 'yard' },
+    { id: 'hillside', name: '丘の裾野', w: 0, ground: 'yard' },
+    { id: 'rail', name: '貨物駅', w: 0, ground: 'yard' }
   ];
   var PLACE_PICK = (function () {
     var m = /[?&#]place=(\w+)/.exec(location.hash + location.search), want = m && m[1], i, tot = 0, r;
@@ -146,7 +150,7 @@
   })();
   window.YARD_PLACE = PLACE_PICK;
   var yardImgs = { bg: null, ground: null, back: null, tractor: null }, YARD = cfg.yard ? Object.assign({}, cfg.yard) : null;
-  if (YARD && PLACE_PICK.id !== 'yard') { YARD.bg = 'assets/common/yard/yard_bg_' + PLACE_PICK.id + '.png'; YARD.ground = 'assets/common/yard/yard_ground_' + PLACE_PICK.id + '.png'; }
+  if (YARD && PLACE_PICK.id !== 'yard') { YARD.bg = 'assets/common/yard/yard_bg_' + PLACE_PICK.id + '.png'; YARD.ground = PLACE_PICK.ground ? cfg.yard.ground : 'assets/common/yard/yard_ground_' + PLACE_PICK.id + '.png'; }
   if (YARD) {
     ['bg', 'ground', 'frameBack', 'tractor'].forEach(function (k) {
       if (!YARD[k]) return;
@@ -213,6 +217,7 @@
   Promise.all(loadList).then(function () {
     try { sessionStorage.removeItem('reloadedOnce'); } catch (e) { }
     if (window.FLOOR_MECH && window.FLOOR_MECH.setFloorArt && !IS6B) ['F1', 'F2', 'F3'].forEach(function (id) { if (images[id]) window.FLOOR_MECH.setFloorArt(id, images[id]); });   // 上段フロアの下面を絵の形に合わせる
+    if (window.SFX && window.SFX.bgm) window.SFX.bgm('play');   // プレイ中のBGM(最初のタップで鳴り出す。A1)
     if (window.GAME_STATE && window.GAME_STATE.redealIfFresh) window.GAME_STATE.redealIfFresh();   // 絵が付いた後の高さ計算で、デッキを選び直す
     statusEl.textContent = '読み込み完了: ' + cfg.name + ' (' + cfg.stage.w + 'x' + cfg.stage.h + 'px, ' + cfg.pxPerMeter + 'px/m)';
     if (window.TRAILER_ANIM) window.TRAILER_ANIM.enter();   // 左からトレーラーが入ってくる

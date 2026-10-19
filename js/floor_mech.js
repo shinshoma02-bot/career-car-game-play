@@ -570,6 +570,7 @@
     var now = performance.now(), dt = RAMP.last === null ? 0 : Math.min(2, (now - RAMP.last) / 1000); // 描画が止まっていた間の経過も反映する
     RAMP.last = now;
     var target = MECH.ramp ? 1 : 0, step = dt / RAMP_SEC;
+    if (RAMP.t !== target && window.SFX) window.SFX.rampMove();   // 道板が動いている間のガラガラ(音。A2)
     RAMP.t = RAMP.t < target ? Math.min(target, RAMP.t + step) : Math.max(target, RAMP.t - step);
   }
   function rampReady() { rampUpdate(); return MECH.ramp && RAMP.t >= 1; } // 描画が止まっていても時間経過で進める
@@ -582,6 +583,7 @@
     }
     rampUpdate(); // 切り替え前の位置まで進めてから、新しい向きで動かし始める
     MECH.ramp = !MECH.ramp;
+    if (window.SFX) window.SFX.ramp();   // 動き始めの「ゴトッ」(音。A2)
     onInfo(MECH.ramp ? '道板を出した' : '道板をしまった');
   }
 
@@ -594,6 +596,7 @@
       var now = performance.now(), dt = a.last === null ? 0 : Math.min(2, (now - a.last) / 1000);
       a.last = now;
       var target = MECH[key] ? 1 : 0, step = dt / sec;
+      if (a.t !== target && window.SFX) window.SFX.rampMove();   // 扇動板・スライド板が動いている間のガラガラ(音。A2)
       a.t = a.t < target ? Math.min(target, a.t + step) : Math.max(target, a.t - step);
       return a.t;
     }
@@ -628,6 +631,7 @@
     }
     bridgeT(); // 切り替え前の位置まで進めてから、新しい向きで動かし始める
     MECH.bridge = !MECH.bridge;
+    if (window.SFX) window.SFX.ramp();
     onInfo(MECH.bridge ? '4番扇動板を搬出した' : '4番扇動板を格納した');
   }
 
@@ -685,10 +689,10 @@
       if (carTiresOn(FLOORS.F1.x1 - 10, FLOORS.F1.x1 + SLIDE.len)) {
         onWarn('車のタイヤがスライド板の上にあるので、しまえません'); return;
       }
-      MECH.slide = false; onInfo('スライド板を格納した(1番フロアの下へ)');
+      MECH.slide = false; if (window.SFX) window.SFX.ramp(); onInfo('スライド板を格納した(1番フロアの下へ)');
     } else {
       if (slideHitsCar2(curOffs(), 1)) { onWarn('2番の車に当たるので、スライド板を出せません'); return; }
-      MECH.slide = true; onInfo('スライド板を搬出した');
+      MECH.slide = true; if (window.SFX) window.SFX.ramp(); onInfo('スライド板を搬出した');
     }
   }
 
@@ -717,13 +721,13 @@
       // 閉じる: 4番扇動板の真下に4番の車の屋根が入り込んでいる間は閉じられない
       if (flapHitsCar2()) return;
       if (lowerCarOverFlap()) { onWarn('4番の車の屋根に当たるので2番扇動板を閉じられません'); return; }
-      flapT(); MECH.f2Flap = false; onInfo('2番扇動板を閉じた');
+      flapT(); MECH.f2Flap = false; if (window.SFX) window.SFX.ramp(); onInfo('2番扇動板を閉じた');
     } else {
       if (flapHitsCar2()) return;
       if (carTiresOn(FLOORS.F2.x0 - 6, FLOORS.F2.x0 + F2_FLAP_LEN)) {
         onWarn('車のタイヤが2番扇動板の上にあるので開けられません'); return;
       }
-      flapT(); MECH.f2Flap = true; onInfo('2番扇動板を開いた');
+      flapT(); MECH.f2Flap = true; if (window.SFX) window.SFX.ramp(); onInfo('2番扇動板を開いた');
     }
   }
 
@@ -867,6 +871,7 @@
     if (v && k === 'pto' && powerRequired() && !POWER.engine) { onWarn('エンジンが止まっているので、PTOは入りません'); return false; }
     if (v && k === 'main' && powerRequired() && !POWER.pto) { onWarn('PTOを入れてから、昇降メインスイッチを入れてください'); return false; }
     POWER[k] = v;
+    if (v && window.SFX && (k === 'engine' || k === 'pto')) window.SFX.engineStart();   // エンジン・PTO を入れた音(A1)
     if (k === 'engine' && !v) { POWER.pto = false; POWER.main = false; }   // エンジンが止まると PTO も切れ、昇降メインも落ちる
     if (k === 'pto' && !v) POWER.main = false;                              // PTO を切ると、昇降メインも OFF に戻す
     if (!v) { try { holdStop(); } catch (e) { } try { if (typeof jackHoldStop === 'function') jackHoldStop(); } catch (e) { } }

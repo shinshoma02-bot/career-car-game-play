@@ -187,8 +187,8 @@
     lines.forEach(function (l) { var p = document.createElement('p'); p.textContent = l; $('resultBody').appendChild(p); });
     $('resultScore').textContent = 'スコア ' + score();
     // 結果は、トレーラーが走り去ってから出す(演出が無い環境では、すぐ)
-    if (window.TRAILER_ANIM && window.TRAILER_ANIM.depart) window.TRAILER_ANIM.depart(!!unsafeAnim, function () { $('resultOverlay').style.display = 'flex'; });
-    else $('resultOverlay').style.display = 'flex';
+    if (window.TRAILER_ANIM && window.TRAILER_ANIM.depart) window.TRAILER_ANIM.depart(!!unsafeAnim, function () { $('resultOverlay').style.display = 'flex'; if (window.SFX) window.SFX.bgm('result'); });
+    else { $('resultOverlay').style.display = 'flex'; if (window.SFX) window.SFX.bgm('result'); }   // 結果画面のBGM(A1)
   }
 
   window.GAME_MODE = {

@@ -939,6 +939,7 @@
     if (!c.locked) { setStatus(num + '番: 先に車をタップして、ワイヤーを引っ掛けてください。'); return; }
     if (c.lashTurns >= LASH_TURNS) { c.lashTurns = 0; setStatus(num + '番の固縛を外しました。'); }
     else {
+      if (window.SFX) window.SFX.ratchet();   // 荷締め機のカチカチ(音。A1)
       c.lashTurns = (c.lashTurns || 0) + 1; c.lashStroke = performance.now();   // ガチャを1往復
       setStatus(c.lashTurns >= LASH_TURNS ? num + '番を固縛しました(固縛完了)。' : num + '番: 荷締め機を回しています(' + c.lashTurns + '/' + LASH_TURNS + ')。');
     }
