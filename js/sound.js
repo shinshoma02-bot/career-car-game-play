@@ -517,7 +517,7 @@
     S.carBrake = function () { playSample('carBrake', 0.6, 1); };   // パーキングブレーキを操作する音   // 連結・解除のエア抜け(今は呼び出し無し。入場・退場の「プシュー」と同じ音で代用)
     S.ramp = function () { if (!playSample('ramp', 0.7, 0.95 + 0.1 * Math.random())) synth.ramp(); };
     // 道板・扇動板を動かしている間の「ガラガラ」(出す時もしまう時も。動いている間、毎フレーム呼ぶ。呼ばれなくなると消える)
-    S.rampMove = function () { if (samples.rampMove) loop('rampMove', makeSampleLoop('rampMove'), 0.4, 0); else { var now = performance.now(); if (now - (S._lastRamp || 0) > 350) { S._lastRamp = now; synth.ramp(); } } };
+    S.rampMove = function () { if (samples.rampMove) loop('rampMove', makeSampleLoop('rampMove'), 0.15, 0); else { var now = performance.now(); if (now - (S._lastRamp || 0) > 350) { S._lastRamp = now; synth.ramp(); } } };
     S.bgmState = function () { return { scene: bgmScene, active: bgmActive, layers: bgmLayers.length, files: Object.keys(bgmBuf) }; };   // 確認用
     S.volState = function () { return { vol: vol, se: sfxOut && sfxOut.gain.value, bgm: musicOut && musicOut.gain.value, on: on }; };   // 確認用
     // 今の車の種類(車種のまとまり)。car_library.js の id の頭で決める。車が無い時は、中くらいの音
