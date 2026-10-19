@@ -10,8 +10,13 @@
 //   ramp()/ratchet()/airBrake()/engineStart() … 道板・板の動き / ワイヤー荷締め機の「カチカチ」/ エアブレーキ / エンジン始動(2026-10-18 追加。呼ぶ場所は SOUND_MEMO.md の A番号)
 // ブラウザは、画面を触るまで音を出せないので、最初のタップで有効にする。画面上の「音:ON/OFF」で切り替え(記憶する)。
 (function () {
-  var AC = null, master = null, noiseBuf = null, on = true;
+  var AC = null, master = null, sfxOut = null, musicOut = null, noiseBuf = null, on = true;
+  var vol = { bgm: 100, se: 100 };   // 音量(0〜100%)。BGM と SE を別々に調節する。画面の「音設定」で変える
   try { on = localStorage.getItem('sfx') !== 'off'; } catch (e) { }
+  try {
+    var vb = parseInt(localStorage.getItem('volBgm'), 10), vs = parseInt(localStorage.getItem('volSe'), 10);
+    if (vb >= 0 && vb <= 100) vol.bgm = vb; if (vs >= 0 && vs <= 100) vol.se = vs;
+  } catch (e) { }
 
   function ctx() {
     if (AC) return AC;
@@ -19,6 +24,9 @@
     if (!C) return null;
     try { AC = new C(); } catch (e) { return null; }
     master = AC.createGain(); master.gain.value = 0.5; master.connect(AC.destination);
+    sfxOut = AC.createGain(); sfxOut.connect(master);      // SE(効果音)の出口
+    musicOut = AC.createGain(); musicOut.connect(master);  // BGM(音楽)の出口
+    applyVol();
     var n = AC.sampleRate * 2, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
     for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     noiseBuf = b;
@@ -62,13 +70,13 @@
     var fl = a.createBiquadFilter(); fl.type = type; fl.frequency.setValueAtTime(f, t); fl.Q.value = q || 0.7;
     if (fEnd) fl.frequency.exponentialRampToValueAtTime(Math.max(20, fEnd), t + dur);
     var g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), t + Math.min(0.01, dur / 3)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    s.connect(fl); fl.connect(g); g.connect(master); s.start(t, Math.random()); s.stop(t + dur + 0.02);
+    s.connect(fl); fl.connect(g); g.connect(sfxOut); s.start(t, Math.random()); s.stop(t + dur + 0.02);
   }
   function tone(a, t, dur, type, f, fEnd, gain) {
     var o = a.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t);
     if (fEnd) o.frequency.exponentialRampToValueAtTime(Math.max(20, fEnd), t + dur);
     var g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+    o.connect(g); g.connect(sfxOut); o.start(t); o.stop(t + dur + 0.02);
   }
 
   // 鳴らし続ける音(油圧・エンジン): 毎フレーム呼ばれている間だけ鳴る。呼ばれなくなると、少しして消える
@@ -97,7 +105,7 @@
     var o = a.createOscillator(); o.type = type; o.frequency.value = f;
     var lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = lpf;
     var g = a.createGain(); g.gain.value = 0.0001;
-    o.connect(lp); lp.connect(g); g.connect(master); o.start();
+    o.connect(lp); lp.connect(g); g.connect(sfxOut); o.start();
     var s = null;
     if (noiseGain) {
       s = a.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
@@ -118,7 +126,7 @@
     var g3 = a.createGain(); g3.gain.value = 0.7;
     var lfo = a.createOscillator(); lfo.frequency.value = 6; var lg = a.createGain(); lg.gain.value = 9;   // ごくわずかなゆらぎ
     lfo.connect(lg); lg.connect(o1.frequency);
-    o1.connect(lp); o2.connect(g2); g2.connect(lp); o3.connect(g3); g3.connect(lp); lp.connect(g); g.connect(master);
+    o1.connect(lp); o2.connect(g2); g2.connect(lp); o3.connect(g3); g3.connect(lp); lp.connect(g); g.connect(sfxOut);
     var ns = a.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true;
     var nf = a.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 2400; nf.Q.value = 1.2; var ng = a.createGain(); ng.gain.value = 0.05;
     ns.connect(nf); nf.connect(ng); ng.connect(g);
@@ -135,7 +143,7 @@
     o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g);
     var ns = a.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true;
     var nf = a.createBiquadFilter(); nf.type = 'lowpass'; nf.frequency.value = 380; var ng = a.createGain(); ng.gain.value = 0.9;
-    ns.connect(nf); nf.connect(ng); ng.connect(g); g.connect(master);
+    ns.connect(nf); nf.connect(ng); ng.connect(g); g.connect(sfxOut);
     o.start(); o2.start(); ns.start();
     return { gain: g, last: 0, setFreq: function (f, now) { o.frequency.setTargetAtTime(f, now, 0.1); o2.frequency.setTargetAtTime(f * 2, now, 0.1); }, stop: function () { o.stop(); o2.stop(); ns.stop(); } };
   }
@@ -233,7 +241,7 @@
     if (bgmScene === 'off') return;
     var a = ready();
     if (!a) return;   // 音がまだ有効でない時は、有効になった後の次の bgm() 呼び出しで鳴り出す(bgmScene は覚えておく)
-    if (!bgmBus) { bgmBus = a.createGain(); bgmBus.gain.value = 0.0001; bgmBus.connect(master); }
+    if (!bgmBus) { bgmBus = a.createGain(); bgmBus.gain.value = 0.0001; bgmBus.connect(musicOut); }
     var sc = bgmScene, synthGo = function () {
       if (bgmScene !== sc || !on) return;
       bgmBus.gain.cancelScheduledValues(AC.currentTime); bgmBus.gain.setTargetAtTime(0.22 * SCENES[sc].vol, AC.currentTime, 0.4);
@@ -280,7 +288,7 @@
     var s = a.createBufferSource(); s.buffer = b; s.playbackRate.value = rate || 1;
     var g = a.createGain(), t = a.currentTime; g.gain.value = vol == null ? 1 : vol;
     if (lp) { var fl = a.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = lp; s.connect(fl); fl.connect(g); } else s.connect(g);
-    g.connect(master);
+    g.connect(sfxOut);
     var off = Math.min(offset || 0, Math.max(0, b.duration - 0.05));
     s.start(t, off);
     if (maxSec) { g.gain.setValueAtTime(g.gain.value, t + Math.max(0, maxSec - 0.25)); g.gain.linearRampToValueAtTime(0.0001, t + maxSec); s.stop(t + maxSec + 0.02); }
@@ -290,7 +298,7 @@
   function makeSampleLoop(name, freq0, freq1) {
     return function (a) {
       var s = a.createBufferSource(); s.buffer = samples[name]; s.loop = true;
-      var g = a.createGain(); g.gain.value = 0.0001; s.connect(g); g.connect(master); s.start(0, Math.random() * Math.max(0.1, s.buffer.duration - 0.2));
+      var g = a.createGain(); g.gain.value = 0.0001; s.connect(g); g.connect(sfxOut); s.start(0, Math.random() * Math.max(0.1, s.buffer.duration - 0.2));
       return { gain: g, last: 0, setFreq: freq1 ? function (f, now) { s.playbackRate.setTargetAtTime(0.85 + 0.55 * Math.max(0, Math.min(1, (f - freq0) / (freq1 - freq0))), now, 0.15); } : null, stop: function () { s.stop(); } };
     };
   }
@@ -419,19 +427,72 @@
     // 道板・扇動板を動かしている間の「ガラガラ」(出す時もしまう時も。動いている間、毎フレーム呼ぶ。呼ばれなくなると消える)
     S.rampMove = function () { if (samples.rampMove) loop('rampMove', makeSampleLoop('rampMove'), 0.4, 0); else { var now = performance.now(); if (now - (S._lastRamp || 0) > 350) { S._lastRamp = now; synth.ramp(); } } };
     S.bgmState = function () { return { scene: bgmScene, active: bgmActive, layers: bgmLayers.length, files: Object.keys(bgmBuf) }; };   // 確認用
+    S.volState = function () { return { vol: vol, se: sfxOut && sfxOut.gain.value, bgm: musicOut && musicOut.gain.value, on: on }; };   // 確認用
     S.loadedSamples = function () { return Object.keys(samples); };   // 確認用: 読み込めたファイル
     S.ratchet = function () { var now = performance.now(); if (now - (S._lastRat || 0) < 60) return; S._lastRat = now; if (!playSample('ratchet', 0.55, 0.95 + 0.1 * Math.random(), 0, 0.5)) synth.ratchet(); };
   })();
 
-  // 画面上の「音:ON/OFF」(モードバーの右端)
-  var btn = null;
-  function updateBtn() { if (btn) btn.textContent = on ? '音:ON' : '音:OFF'; }
+  // 音量を、いま出ている音に反映する(BGM は musicOut、SE は sfxOut)
+  function applyVol() {
+    var t = AC ? AC.currentTime : 0;
+    if (sfxOut) sfxOut.gain.setTargetAtTime(vol.se / 100, t, 0.02);
+    if (musicOut) musicOut.gain.setTargetAtTime(vol.bgm / 100, t, 0.02);
+  }
+  function saveVol(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) { } }
+
+  // 画面上の「音設定」ボタン(モードバーの右端)。押すと、BGM・SE の音量とON/OFFのポップアップが出る
+  var btn = null, panel = null, rngBgm = null, rngSe = null, outBgm = null, outSe = null, togBtn = null;
+  var STYLE = '#sfxPanel{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}' +
+    '#sfxPanel[hidden]{display:none}' +
+    '#sfxPanel .sp-box{width:min(340px,100%);background:#16202c;color:#dfe8f2;border:2px solid #4b6078;border-radius:10px;padding:18px 18px 16px;font-size:15px;box-sizing:border-box}' +
+    '#sfxPanel h2{margin:0 0 14px;font-size:17px;text-align:center;font-weight:bold}' +
+    '#sfxPanel .sp-row{margin:12px 0}' +
+    '#sfxPanel .sp-label{display:flex;justify-content:space-between;margin-bottom:6px}' +
+    '#sfxPanel .sp-label b{color:#7dfcd0;font-weight:bold}' +
+    '#sfxPanel input[type=range]{width:100%;height:32px;margin:0;accent-color:#7dfcd0}' +
+    '#sfxPanel .sp-btn{display:block;width:100%;min-height:42px;margin-top:10px;font-size:15px;border-radius:8px;border:2px solid #4b6078;background:#243446;color:#dfe8f2;cursor:pointer}' +
+    '#sfxPanel .sp-btn.on{background:#1f5a48;border-color:#7dfcd0;color:#fff}';
+  function updateBtn() {
+    if (btn) btn.textContent = on ? '音設定' : '音:OFF';
+    if (togBtn) { togBtn.textContent = on ? '音:ON(タップでOFF)' : '音:OFF(タップでON)'; togBtn.className = on ? 'sp-btn on' : 'sp-btn'; }
+  }
+  function openPanel() {
+    if (!panel) return;
+    rngBgm.value = vol.bgm; rngSe.value = vol.se; outBgm.textContent = vol.bgm + '%'; outSe.textContent = vol.se + '%';
+    updateBtn(); panel.hidden = false;
+  }
+  function closePanel() { if (panel) panel.hidden = true; }
+  function buildPanel() {
+    var st = document.createElement('style'); st.textContent = STYLE; document.head.appendChild(st);
+    panel = document.createElement('div'); panel.id = 'sfxPanel'; panel.hidden = true;
+    panel.innerHTML = '<div class="sp-box" role="dialog" aria-label="音の設定">' +
+      '<h2>音の設定</h2>' +
+      '<div class="sp-row"><div class="sp-label"><span>BGM（音楽）</span><b id="spBgmOut"></b></div><input type="range" id="spBgm" min="0" max="100" step="1"></div>' +
+      '<div class="sp-row"><div class="sp-label"><span>SE（効果音）</span><b id="spSeOut"></b></div><input type="range" id="spSe" min="0" max="100" step="1"></div>' +
+      '<button type="button" class="sp-btn" id="spTog"></button>' +
+      '<button type="button" class="sp-btn" id="spClose">閉じる</button>' +
+      '</div>';
+    document.body.appendChild(panel);
+    rngBgm = document.getElementById('spBgm'); rngSe = document.getElementById('spSe');
+    outBgm = document.getElementById('spBgmOut'); outSe = document.getElementById('spSeOut');
+    togBtn = document.getElementById('spTog');
+    // 画面の操作(ゲームのタップ)を、ポップアップの中で止める。音の有効化だけは通す
+    panel.addEventListener('pointerdown', function (e) { unlock(); e.stopPropagation(); });
+    panel.addEventListener('click', function (e) { e.stopPropagation(); if (e.target === panel) closePanel(); });
+    rngBgm.addEventListener('input', function () { vol.bgm = +rngBgm.value; outBgm.textContent = vol.bgm + '%'; applyVol(); });
+    rngBgm.addEventListener('change', function () { saveVol('volBgm', vol.bgm); });
+    rngSe.addEventListener('input', function () { vol.se = +rngSe.value; outSe.textContent = vol.se + '%'; applyVol(); });
+    rngSe.addEventListener('change', function () { saveVol('volSe', vol.se); window.SFX.click(); });   // 離した時に、今の音量で1回鳴らす
+    togBtn.addEventListener('click', function () { window.SFX.enabled = !on; });
+    document.getElementById('spClose').addEventListener('click', closePanel);
+  }
   function addBtn() {
     var bar = document.getElementById('modeBar');
     if (!bar || btn) return;
+    buildPanel();
     btn = document.createElement('button');
-    btn.id = 'btnSfx'; btn.type = 'button'; btn.title = '効果音のON/OFF';
-    btn.addEventListener('click', function (e) { e.stopPropagation(); window.SFX.enabled = !on; if (on) window.SFX.click(); });
+    btn.id = 'btnSfx'; btn.type = 'button'; btn.title = '音の設定(BGM・効果音の音量)';
+    btn.addEventListener('click', function (e) { e.stopPropagation(); unlock(); openPanel(); });
     updateBtn();
     bar.appendChild(btn);
   }
