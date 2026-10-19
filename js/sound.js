@@ -506,7 +506,8 @@
     S.clank = function () { if (!playSample('clank', 0.8, 0.95 + 0.1 * Math.random())) synth.clank(); };
     S.dock = function () { if (!playSample('chock', 0.8, 1)) synth.dock(); };
     S.ok = function () { if (!playSample('ok', 0.6, 1)) synth.ok(); };
-    S.warn = function () { var now = performance.now(); if (now - lastWarn < 400) return; lastWarn = now; if (!playSample('warn', 0.6, 1)) synth.warn(); };   // できない(低いブザー)
+    // できない(低いブザー)。ファイルは他の操作音より約10dB大きかったので、クリックと同じくらいに下げ、0.45秒で切る(2026-10-19)
+    S.warn = function () { var now = performance.now(); if (now - lastWarn < 400) return; lastWarn = now; if (!playSample('warn', 0.18, 1, 0, 0.45)) synth.warn(); };
     S.bump = function () { if (!playSample('bump', 0.7, 1)) synth.bump(); };   // 輪止め・穴を乗り越えた「ガタン」
     S.engineStart = function () { if (!playSample('ptoStart', 0.6, 1)) synth.engineStart(); };   // エンジン・PTO を入れた(油圧ポンプが立ち上がる)
     S.airBrake = function () { if (!playSample('parkHiss', 0.6, 1, 0, 1.2)) synth.airBrake(); };

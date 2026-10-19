@@ -7,7 +7,7 @@
   var lastMsg = null, lastMsgTimer = null;
 
   window.FLOOR_MECH_NOTIFY = function (msg, kind) {
-    if (window.SFX) { if (kind === 'warn') window.SFX.warn(); else if (/^(PTO|エンジン|昇降メイン)/.test(msg || '') && window.SFX.switchPress) window.SFX.switchPress(); else window.SFX.click(); }   // 動力のスイッチ(PTO・エンジン・昇降メイン)は switchPress(A8)   // 効果音: できない=低いブザー、操作=カチッ
+    if (window.SFX) { if (kind === 'warn') window.SFX.warn(); else window.SFX.click(); }   // 効果音: できない=低いブザー、操作=カチッ
     lastMsg = msg;
     statusEl.textContent = msg;
     statusEl.style.color = kind === 'warn' ? '#ff8080' : '#9c9';
@@ -212,7 +212,7 @@
     card.className = 'swCard';
     var lab = document.createElement('div'); lab.className = 'swLabel'; lab.textContent = item.label; card.appendChild(lab);
     var b = box(44, 105, PEND2); b.appendChild(img('sw_pendant2', 0, 0, 44, 105, [0, 0], PEND2));
-    function startHold(dir) { if (window.SFX && window.SFX.switchPress) window.SFX.switchPress(); if (item.jack) fm.jackHoldStart(dir); else fm.holdStart(item.end, dir); }   // 昇降スイッチを押した音(A8)
+    function startHold(dir) { if (item.jack) fm.jackHoldStart(dir); else fm.holdStart(item.end, dir); }
     function stopHold() { if (item.jack) fm.jackHoldStop(); else fm.holdStop(); }
     // 上=▲(-1。フロアは上がる)/ 下=▼(+1)。ジャッキは 下=脚を伸ばす(+1)・上=縮める(-1)
     var up = img('btn_cap_ue_big', 22, 26, 18, 18, [9, 9], PEND2), down = img('btn_cap_shita_big', 22, 44, 18, 18, [9, 9], PEND2);
