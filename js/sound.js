@@ -433,7 +433,7 @@
         playSample('truckArrive', 0.6, 1, 0, sec + 0.2);
         playSample('chassisRattle', 0.5, 1, 0, sec + 0.2);   // 轍道(段差)を越えて、台車がガッシャン(金属が重なる)
         playSample('chassisBoom', 0.3, 0.9, 0, sec + 0.2);   // 下の低い響きを重ねて、重さを出す
-        setTimeout(function () { playSample('parkHiss', 0.6); }, Math.max(0, sec - 0.1) * 1000);
+        setTimeout(function () { playSample('parkHiss', 0.8, 1, 0, 1.6); }, Math.max(0, sec - 0.1) * 1000);   // 短く切って、プシューを聞こえやすく(ファイルは3秒)
       }
       truckRunning = true;
       if (samples.engTruck) holdLoop('truckIdle', makeSampleLoop('engTruck', 0, 0, 1400), 0.18);
@@ -451,6 +451,7 @@
       if (!truckRunning && samples.truckStart) { playSample('truckStart', 0.6, 1, 0, 1.6); delay = 1.2; }
       truckRunning = false;
       setTimeout(function () {
+        playSample('parkHiss', 0.8, 1.1, 0, 1.2);   // 出る直前に、パーキングのエアを抜く「プシュー」(入場と同じ音を、短く高めに)
         if (!playSample('truckOut', 0.6, 1, 0, sec - delay)) synth.truckOut(sec);
       }, delay * 1000);
     };
