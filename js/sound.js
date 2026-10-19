@@ -51,6 +51,7 @@
         var pr = silentEl.play(); if (pr && pr.catch) pr.catch(function () { silentEl = null; });
       } catch (e) { silentEl = null; }
     }
+    bgmEnsure();
   }
   ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlock, { passive: true }); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden && AC && AC.state !== 'running') { try { AC.resume(); } catch (e) { } } });
@@ -186,23 +187,77 @@
     if (bgmNext < a.currentTime) bgmNext = a.currentTime + 0.05;
     while (bgmNext < a.currentTime + 0.4) { bgmSchedule(a, bgmNext, sc, bgmStep); bgmNext += stepLen; bgmStep = (bgmStep + 1) & 31; }
   }
+  // ---- ファイルのBGM(ElevenLabs Music)。読めない時は、上の合成BGMにする ----
+  var BGM_FILES = { title: ['assets/bgm/bgm_title_title_depot_v1_el.mp3', 0.5], play: ['assets/bgm/bgm_play_normal_play_night_v1_el.mp3', 0.4] };   // [ファイル, 音量]
+  var bgmBuf = {}, bgmLoad = {}, bgmLayers = [], bgmLoopTimer = null, bgmActive = false, bgmWanted = false;
+  var BGM_XF = 2.5;   // ループのつなぎ目を、2.5秒かけて重ねる(終わりと始まりをクロスフェード)
+  function bgmLoadFile(scene, ok, ng) {
+    if (bgmBuf[scene]) return ok();
+    if (bgmLoad[scene]) return bgmLoad[scene].push([ok, ng]);
+    bgmLoad[scene] = [[ok, ng]];
+    var fin = function (good) { var q = bgmLoad[scene]; delete bgmLoad[scene]; q.forEach(function (c) { c[good ? 0 : 1](); }); };
+    try {
+      fetch(BGM_FILES[scene][0]).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (ab) {
+        var done = function (buf) { bgmBuf[scene] = buf; fin(true); };
+        var pr = AC.decodeAudioData(ab, done, function () { fin(false); }); if (pr && pr.catch) pr.catch(function () { fin(false); });
+      }).catch(function () { fin(false); });
+    } catch (e) { fin(false); }
+  }
+  function bgmLayerStop(L, sec) {
+    try { var t = AC.currentTime; L.g.gain.cancelScheduledValues(t); L.g.gain.setValueAtTime(Math.max(0.0001, L.g.gain.value), t); L.g.gain.linearRampToValueAtTime(0.0001, t + sec); L.s.stop(t + sec + 0.05); } catch (e) { }
+  }
+  function bgmFileStop(sec) {
+    if (bgmLoopTimer) { clearTimeout(bgmLoopTimer); bgmLoopTimer = null; }
+    bgmLayers.forEach(function (L) { bgmLayerStop(L, sec == null ? 0.6 : sec); }); bgmLayers = [];
+  }
+  function bgmFileStart(scene, first) {
+    var a = AC, buf = bgmBuf[scene]; if (!a || !buf || bgmScene !== scene || !on) return;
+    var t = a.currentTime, s = a.createBufferSource(); s.buffer = buf;
+    var g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(1, t + (first ? 1.5 : BGM_XF));
+    var end = t + buf.duration;
+    g.gain.setValueAtTime(1, end - BGM_XF); g.gain.linearRampToValueAtTime(0.0001, end);
+    s.connect(g); g.connect(bgmBus); s.start(t); s.stop(end + 0.05);
+    var L = { s: s, g: g }; bgmLayers.push(L);
+    s.onended = function () { bgmLayers = bgmLayers.filter(function (x) { return x !== L; }); };
+    bgmLoopTimer = setTimeout(function () { bgmFileStart(scene, false); }, Math.max(1000, (buf.duration - BGM_XF) * 1000));
+  }
+  function bgmStopAll() {
+    bgmFileStop(0.4); if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; } bgmActive = false;
+    if (bgmBus && AC) { bgmBus.gain.cancelScheduledValues(AC.currentTime); bgmBus.gain.setTargetAtTime(0.0001, AC.currentTime, 0.2); }
+  }
   function bgmSet(scene) {
     if (scene === bgmScene) return;
     bgmScene = SCENES[scene] ? scene : 'off';
     bgmStep = 0;
+    bgmStopAll();
+    if (bgmScene === 'off') return;
     var a = ready();
     if (!a) return;   // 音がまだ有効でない時は、有効になった後の次の bgm() 呼び出しで鳴り出す(bgmScene は覚えておく)
     if (!bgmBus) { bgmBus = a.createGain(); bgmBus.gain.value = 0.0001; bgmBus.connect(master); }
-    var target = bgmScene === 'off' ? 0.0001 : 0.22 * SCENES[bgmScene].vol;
-    bgmBus.gain.cancelScheduledValues(a.currentTime); bgmBus.gain.setTargetAtTime(target, a.currentTime, 0.4);
-    if (bgmScene !== 'off' && !bgmTimer) bgmTimer = setInterval(bgmTick, 120);
-    if (bgmScene === 'off' && bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
-    bgmNext = 0;
+    var sc = bgmScene, synthGo = function () {
+      if (bgmScene !== sc || !on) return;
+      bgmBus.gain.cancelScheduledValues(AC.currentTime); bgmBus.gain.setTargetAtTime(0.22 * SCENES[sc].vol, AC.currentTime, 0.4);
+      bgmNext = 0; if (!bgmTimer) bgmTimer = setInterval(bgmTick, 120);
+    };
+    bgmActive = true;
+    if (BGM_FILES[sc]) {
+      bgmLoadFile(sc, function () {
+        if (bgmScene !== sc || !on) return;
+        bgmBus.gain.cancelScheduledValues(AC.currentTime); bgmBus.gain.setTargetAtTime(BGM_FILES[sc][1], AC.currentTime, 0.2);
+        bgmFileStart(sc, true);
+      }, synthGo);   // 読めなかったら、合成BGM
+    } else synthGo();
+  }
+  // 音がオフ→オンに戻った時・画面を触って音が有効になった時に、BGMを(まだなら)鳴らし直す
+  function bgmEnsure() {
+    if (!on || bgmActive) return;
+    if (bgmScene !== 'off') { var s0 = bgmScene; bgmScene = 'off'; bgmSet(s0); }
+    else if (!bgmWanted) window.SFX.bgm(/title/i.test(location.pathname) ? 'title' : 'play', true);   // 呼び出しが無くても、画面ごとに自動で(title.html=タイトル曲 / それ以外=ゲーム曲)
   }
 
   // ---- ElevenLabs で作った効果音ファイル(assets/sfx/)。読み込めた音だけ、ファイルで鳴らす。読めない時は、従来の合成音のまま ----
   var SAMPLE_FILES = {
-    crashLight: 'sfx_impact_crash_light', crashHeavy: 'sfx_impact_crash_heavy', scrape: 'sfx_impact_scrape_metal',
+    crashLight: 'sfx_impact_crash_light', crashHeavy: 'sfx_impact_crash_heavy', scrape: 'sfx_impact_scrape_zuri_a', rampMove: 'sfx_floor_ramp_rattle_b',
     hyd: 'sfx_floor_hydraulic_cylinder', clank: 'sfx_floor_floor_stop_clank', drive: 'sfx_drive_car_engine_idle_soft',
     truckIn: 'sfx_trailer_truck_arrive_airbrake', truckOut: 'sfx_trailer_truck_depart', ramp: 'sfx_floor_ramp_clank',
     ratchet: 'sfx_lashing_wire_ratchet', chock: 'sfx_floor_chock_set', click: 'sfx_ui_ui_click', ok: 'sfx_ui_ok_chime'
@@ -220,11 +275,12 @@
     });
   }
   // ファイルの音を1回鳴らす。鳴らせたら true(ファイルがまだ・無い時は false → 呼び出し側が合成音にする)
-  function playSample(name, vol, rate, offset, maxSec) {
+  function playSample(name, vol, rate, offset, maxSec, lp) {
     var a = ready(), b = samples[name]; if (!a || !b) return false;
     var s = a.createBufferSource(); s.buffer = b; s.playbackRate.value = rate || 1;
     var g = a.createGain(), t = a.currentTime; g.gain.value = vol == null ? 1 : vol;
-    s.connect(g); g.connect(master);
+    if (lp) { var fl = a.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = lp; s.connect(fl); fl.connect(g); } else s.connect(g);
+    g.connect(master);
     var off = Math.min(offset || 0, Math.max(0, b.duration - 0.05));
     s.start(t, off);
     if (maxSec) { g.gain.setValueAtTime(g.gain.value, t + Math.max(0, maxSec - 0.25)); g.gain.linearRampToValueAtTime(0.0001, t + maxSec); s.stop(t + maxSec + 0.02); }
@@ -242,7 +298,7 @@
   var lastScrape = 0, lastWarn = 0, lastClick = 0;
   window.SFX = {
     get enabled() { return on; },
-    set enabled(v) { on = !!v; try { localStorage.setItem('sfx', on ? 'on' : 'off'); } catch (e) { } if (on) ready(); else Object.keys(loops).forEach(function (k) { try { loops[k].stop(); } catch (e) { } delete loops[k]; }); updateBtn(); },
+    set enabled(v) { on = !!v; try { localStorage.setItem('sfx', on ? 'on' : 'off'); } catch (e) { } if (on) { ready(); setTimeout(bgmEnsure, 100); } else { bgmStopAll(); Object.keys(loops).forEach(function (k) { try { loops[k].stop(); } catch (e) { } delete loops[k]; }); } updateBtn(); },
     unlock: unlock,
     // ぶつかった: 重さ sev(0〜1)。①車体の「ドン」(低い胴鳴り)②パネルの「ベコッ」(中音のこもった衝撃)③金属・樹脂が割れる「バキッ」(間隔をずらした短い破裂音を重ねる)
     //  ④パネルが震える余韻(ずれた高さの金属音)⑤強い時は、ガラスの破片が落ちる「チリチリ」と部品が転がる音
@@ -294,8 +350,9 @@
       noise(a, t + 0.35, sec - 0.2, 'lowpass', 220, 0.8, 0.22, 700);
     },
     // BGM の切り替え。scene = 'title' | 'play' | 'result' | 'off'。音がまだ有効でない時に呼んでも、場面は覚えておく
-    bgm: function (scene) {
-      if (scene === bgmScene && (bgmTimer || scene === 'off')) return;
+    bgm: function (scene, auto) {
+      if (!auto) bgmWanted = true;   // 開発側のファイルから呼ばれた場合は、自動の切り替えをやめて、そちらに任せる
+      if (scene === bgmScene && (bgmActive || scene === 'off')) return;
       if (scene === bgmScene) bgmScene = 'off';   // 覚えただけで鳴っていなかった場合は、鳴らし直す
       bgmSet(scene);
     },
@@ -339,7 +396,7 @@
     S.scrape = function () {
       if (!samples.scrape) return synth.scrape();
       var now = performance.now(); if (now - lastScrape < 160) return; lastScrape = now;
-      playSample('scrape', 0.5, 0.9 + 0.3 * Math.random(), 0.2 + 1.4 * Math.random(), 0.35);   // 長い音の途中から、短く切って鳴らす
+      playSample('scrape', 0.7, 0.8 + 0.2 * Math.random(), 0.1 + 1.3 * Math.random(), 0.4, 1600);   // ズリズリ(低め)。長い音の途中から短く切って、高い音はカット
     };
     S.hyd = function () { if (samples.hyd) loop('hyd', makeSampleLoop('hyd'), 0.35, 0); else synth.hyd(); };
     S.drive = function (speed) {
@@ -359,6 +416,9 @@
     S.dock = function () { if (!playSample('chock', 0.8, 1)) synth.dock(); };
     S.ok = function () { if (!playSample('ok', 0.6, 1)) synth.ok(); };
     S.ramp = function () { if (!playSample('ramp', 0.7, 0.95 + 0.1 * Math.random())) synth.ramp(); };
+    // 道板・扇動板を動かしている間の「ガラガラ」(出す時もしまう時も。動いている間、毎フレーム呼ぶ。呼ばれなくなると消える)
+    S.rampMove = function () { if (samples.rampMove) loop('rampMove', makeSampleLoop('rampMove'), 0.4, 0); else { var now = performance.now(); if (now - (S._lastRamp || 0) > 350) { S._lastRamp = now; synth.ramp(); } } };
+    S.bgmState = function () { return { scene: bgmScene, active: bgmActive, layers: bgmLayers.length, files: Object.keys(bgmBuf) }; };   // 確認用
     S.loadedSamples = function () { return Object.keys(samples); };   // 確認用: 読み込めたファイル
     S.ratchet = function () { var now = performance.now(); if (now - (S._lastRat || 0) < 60) return; S._lastRat = now; if (!playSample('ratchet', 0.55, 0.95 + 0.1 * Math.random(), 0, 0.5)) synth.ratchet(); };
   })();
