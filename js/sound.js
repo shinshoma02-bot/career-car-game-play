@@ -503,6 +503,41 @@
   }
   function saveVol(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) { } }
 
+  // ---- 配車担当の声(ElevenLabs。assets/voice/dispatch_manifest.json の「画面の文字 → 音声ファイル」で鳴らす)----
+  // 配車の文字(#dispatchText)が出た時に、対応する声を1回鳴らす。dispatch.js は触らない。声が無い文は、何も鳴らさない
+  var voiceMap = null, voiceBuf = {}, voiceSrc = null, voiceLast = '';
+  function voiceMapLoad(cb) {
+    if (voiceMap) return cb(voiceMap);
+    fetch('assets/voice/dispatch_manifest.json').then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (m) { voiceMap = m; cb(m); }).catch(function () { voiceMap = {}; cb(voiceMap); });
+  }
+  function speakDispatch(text) {
+    if (!on || !AC || AC.state !== 'running') return;
+    voiceMapLoad(function (m) {
+      var file = m[text]; if (!file) return;
+      var play = function (buf) {
+        if (voiceSrc) { try { voiceSrc.stop(); } catch (e) { } }
+        var s = AC.createBufferSource(); s.buffer = buf; s.connect(sfxOut); s.start(); voiceSrc = s;
+      };
+      if (voiceBuf[file]) return play(voiceBuf[file]);
+      var a = AC;
+      fetch(file).then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (ab) {
+        a.decodeAudioData(ab, function (buf) { voiceBuf[file] = buf; play(buf); }, function () { });
+      }).catch(function () { });
+    });
+  }
+  setInterval(function () {
+    var say = document.getElementById('dispatchSay'), el = document.getElementById('dispatchText');
+    if (!say || !el) return;
+    if (say.style.display !== 'flex') {   // 閉じたら、声は止めて、次に同じ文が出た時に鳴るように
+      voiceLast = '';
+      if (voiceSrc) { try { voiceSrc.stop(); } catch (e) { } voiceSrc = null; }
+      return;
+    }
+    var t = el.textContent.replace(/^「/, '').replace(/」$/, '');
+    if (t && t !== voiceLast) { voiceLast = t; speakDispatch(t); }
+  }, 150);
+
   // 画面上の「音設定」ボタン(モードバーの右端)。押すと、BGM・SE の音量とON/OFFのポップアップが出る
   var btn = null, panel = null, rngBgm = null, rngSe = null, outBgm = null, outSe = null, togBtn = null;
   var STYLE = '#sfxPanel{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}' +
