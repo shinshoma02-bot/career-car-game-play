@@ -269,7 +269,11 @@
     crashLight: 'sfx_impact_crash_light', crashHeavy: 'sfx_impact_crash_heavy', scrape: 'sfx_impact_scrape_zuri_a', rampMove: 'sfx_floor_ramp_rattle_b',
     hyd: 'sfx_floor_hydraulic_cylinder', clank: 'sfx_floor_floor_stop_clank', drive: 'sfx_drive_car_engine_idle_soft',
     truckIn: 'sfx_trailer_truck_arrive_airbrake', truckOut: 'sfx_trailer_truck_depart', ramp: 'sfx_floor_ramp_clank',
-    ratchet: 'sfx_lashing_wire_ratchet', chock: 'sfx_floor_chock_set', click: 'sfx_ui_ui_click', ok: 'sfx_ui_ok_chime'
+    ratchet: 'sfx_lashing_wire_ratchet', chock: 'sfx_floor_chock_set', click: 'sfx_ui_ui_click', ok: 'sfx_ui_ok_chime',
+    engKei: 'sfx_car_kei_idle', engSmall: 'sfx_car_small_idle', engMid: 'sfx_car_mid_idle', engBig: 'sfx_car_big_idle',
+    engKeiTruck: 'sfx_truck_kei_truck_idle', engTruck: 'sfx_truck_big_idle',   // 車種別のエンジン(アイドリングのループ)・トレーラーのエンジン
+    truckArrive: 'sfx_trailer_arrive_decel', parkHiss: 'sfx_trailer_air_vent_b', chassisRattle: 'sfx_trailer_metal_heavy_b', chassisBoom: 'sfx_trailer_metal_heavy_a',   // 到着(エンジンは回ったまま・減速)・止まった時のパーキングのエア抜け「プシュー」
+    truckStart: 'sfx_truck_engine_start', truckStop: 'sfx_truck_engine_stop'   // エンジン始動・アイドリングストップ(エンジンを止める)
   };
   var samples = {}, samplesLoading = false;
   function loadSamples() {
@@ -296,10 +300,19 @@
     return true;
   }
   // 鳴らし続ける音(ファイルをループ再生)。loop() に渡す作り方。rate は setFreq で変える
-  function makeSampleLoop(name, freq0, freq1) {
+  // 鳴らし続けるファイル(エンジン)。読み込んだ音の大きさをそろえ(音源ごとの差を直す)、lp を付けると高音を切る。
+  // freq0〜freq1 は、速さ(loop の freq)から再生速度(エンジンの回転)に変える範囲。省略すると、回転は変えない
+  function makeSampleLoop(name, freq0, freq1, lp) {
     return function (a) {
-      var s = a.createBufferSource(); s.buffer = samples[name]; s.loop = true;
-      var g = a.createGain(); g.gain.value = 0.0001; s.connect(g); g.connect(sfxOut); s.start(0, Math.random() * Math.max(0.1, s.buffer.duration - 0.2));
+      var buf = samples[name], d = buf.getChannelData(0), e = 0;
+      for (var i = 0; i < d.length; i += 4) e += d[i] * d[i];
+      var norm = Math.max(0.5, Math.min(3, 0.07 / Math.sqrt(e / (d.length / 4) + 1e-9)));   // 0.07 を基準の大きさにする
+      var s = a.createBufferSource(); s.buffer = buf; s.loop = true;
+      var gn = a.createGain(); gn.gain.value = norm;
+      var g = a.createGain(); g.gain.value = 0.0001;
+      if (lp) { var fl = a.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = lp; s.connect(fl); fl.connect(gn); } else s.connect(gn);
+      gn.connect(g); g.connect(sfxOut);
+      s.start(0, Math.random() * Math.max(0.1, buf.duration - 0.2));
       return { gain: g, last: 0, setFreq: freq1 ? function (f, now) { s.playbackRate.setTargetAtTime(0.85 + 0.55 * Math.max(0, Math.min(1, (f - freq0) / (freq1 - freq0))), now, 0.15); } : null, stop: function () { s.stop(); } };
     };
   }
@@ -408,18 +421,39 @@
       playSample('scrape', 0.7, 0.8 + 0.2 * Math.random(), 0.1 + 1.3 * Math.random(), 0.4, 1600);   // ズリズリ(低め)。長い音の途中から短く切って、高い音はカット
     };
     S.hyd = function () { if (samples.hyd) loop('hyd', makeSampleLoop('hyd'), 0.35, 0); else synth.hyd(); };
-    S.drive = function (speed) {
-      if (!samples.drive) return synth.drive(speed);
-      if (!(speed > 8)) return; var k = Math.min(1, speed / 600);
-      loop('drive', makeSampleLoop('drive', 36, 66), 0.1 + 0.25 * k, 36 + 30 * k);   // うるさくしない(速いほど少し大きく・高く)
-    };
     // トレーラー入り: 最後のエアブレーキが、止まる瞬間に合うよう、ファイルの後ろ側を使う(アニメ 約2.4秒)
+    // トレーラーの状態: エンジンが回っているか(到着でtrue、アイドリングストップでfalse、出る時に始動)
+    var truckRunning = false;
+    // 入ってくる: 減速して止まる。止まった瞬間に、パーキングのエア抜け「プシュー」。エンジンは回ったまま(アイドリング)
     S.truckIn = function (sec) {
-      if (!samples.truckIn) return synth.truckIn(sec);
-      playSample('truckIn', 0.9, 1, Math.max(0, samples.truckIn.duration - sec), sec + 0.3);
+      if (!samples.truckArrive) {   // 新しい音が無い時は、前の到着の音(エアブレーキ入り)
+        if (!samples.truckIn) return synth.truckIn(sec);
+        playSample('truckIn', 0.9, 1, Math.max(0, samples.truckIn.duration - sec), sec + 0.3);
+      } else {
+        playSample('truckArrive', 0.6, 1, 0, sec + 0.2);
+        playSample('chassisRattle', 0.5, 1, 0, sec + 0.2);   // 轍道(段差)を越えて、台車がガッシャン(金属が重なる)
+        playSample('chassisBoom', 0.3, 0.9, 0, sec + 0.2);   // 下の低い響きを重ねて、重さを出す
+        setTimeout(function () { playSample('parkHiss', 0.6); }, Math.max(0, sec - 0.1) * 1000);
+      }
+      truckRunning = true;
+      if (samples.engTruck) holdLoop('truckIdle', makeSampleLoop('engTruck', 0, 0, 1400), 0.18);
     };
-    // 走り去る: 出だしのエア抜けから、アニメの長さまで鳴らして、最後にフェードアウト
-    S.truckOut = function (sec) { if (!playSample('truckOut', 0.9, 1, 0, sec)) synth.truckOut(sec); };
+    // アイドリングストップ: エンジンを止める(止まって荷積み中などに、呼ぶ)。アイドリングの音を止めて、停止の音を鳴らす
+    S.truckStop = function () {
+      if (!truckRunning) return;
+      truckRunning = false; releaseLoop('truckIdle');
+      playSample('truckStop', 0.6);
+    };
+    // 走り去る: エンジンが止まっていたら、始動の音からつなぐ。そのあと、出だしのエア抜けからアニメの長さまで
+    S.truckOut = function (sec) {
+      releaseLoop('truckIdle');
+      var delay = 0;
+      if (!truckRunning && samples.truckStart) { playSample('truckStart', 0.6, 1, 0, 1.6); delay = 1.2; }
+      truckRunning = false;
+      setTimeout(function () {
+        if (!playSample('truckOut', 0.6, 1, 0, sec - delay)) synth.truckOut(sec);
+      }, delay * 1000);
+    };
     S.click = function () { var now = performance.now(); if (now - lastClick < 40) return; if (!playSample('click', 0.6, 1)) synth.click(); else lastClick = now; };
     S.clank = function () { if (!playSample('clank', 0.8, 0.95 + 0.1 * Math.random())) synth.clank(); };
     S.dock = function () { if (!playSample('chock', 0.8, 1)) synth.dock(); };
@@ -429,6 +463,34 @@
     S.rampMove = function () { if (samples.rampMove) loop('rampMove', makeSampleLoop('rampMove'), 0.4, 0); else { var now = performance.now(); if (now - (S._lastRamp || 0) > 350) { S._lastRamp = now; synth.ramp(); } } };
     S.bgmState = function () { return { scene: bgmScene, active: bgmActive, layers: bgmLayers.length, files: Object.keys(bgmBuf) }; };   // 確認用
     S.volState = function () { return { vol: vol, se: sfxOut && sfxOut.gain.value, bgm: musicOut && musicOut.gain.value, on: on }; };   // 確認用
+    // 今の車の種類(車種のまとまり)。car_library.js の id の頭で決める。車が無い時は、中くらいの音
+    function carSound() {
+      var c = window.GAME_STATE && window.GAME_STATE.car; if (!c || !c.libId) return samples.engMid ? 'engMid' : null;
+      var id = c.libId;
+      if (/^truck-/.test(id)) return 'engKeiTruck';                       // 軽トラック
+      if (/^kei/.test(id) || (c.entry && c.entry.legalClass === 'kei')) return 'engKei';   // 軽自動車・箱バン・軽クーペ
+      if (/^(compact|hatch)-/.test(id)) return 'engSmall';                 // コンパクト・ハッチバック
+      if (/^(suv|minivan)-/.test(id)) return 'engBig';                     // SUV・ミニバン
+      return 'engMid';                                                     // セダン・ワゴン・スポーツ
+    }
+    // 走っている車のエンジン(車種ごと)。車種の音が無ければ、汎用のエンジン音。それも無ければ合成音
+    S.drive = function (speed) {
+      var key = carSound();
+      if (!key || !samples[key]) key = samples.drive ? 'drive' : null;   // 車種の音が無ければ、汎用のエンジン音(sfx_drive_car_engine_idle_soft)
+      if (!key) return synth.drive(speed);
+      if (!(speed > 8)) return; var k = Math.min(1, speed / 600);
+      loop('drive_' + key, makeSampleLoop(key, 36, 66, 1800), 0.12 + 0.2 * k, 36 + 30 * k);   // 速いほど少し大きく・回転を上げる。うるさくしない
+    };
+    // 鳴らし続ける音を、呼ばれている間は止めない(呼び出し側が release で止めるまで)
+    function holdLoop(name, make, vol) {
+      var a = ready(); if (!a) return;
+      var L = loops[name]; if (!L) { L = loops[name] = make(a); L.gain.gain.setValueAtTime(0.0001, a.currentTime); }
+      L.last = Infinity; L.gain.gain.setTargetAtTime(vol, a.currentTime, 0.3);
+    }
+    function releaseLoop(name) { if (loops[name]) loops[name].last = 0; }   // 次の見回りで、ゆっくり消える
+
+    S.loopNames = function () { return Object.keys(loops).filter(function (k) { return loops[k].last === Infinity || performance.now() - loops[k].last < 300; }); };   // 確認用: いま鳴っている音
+    S.carSoundNow = carSound;   // 確認用
     S.loadedSamples = function () { return Object.keys(samples); };   // 確認用: 読み込めたファイル
     S.ratchet = function () { var now = performance.now(); if (now - (S._lastRat || 0) < 60) return; S._lastRat = now; if (!playSample('ratchet', 0.55, 0.95 + 0.1 * Math.random(), 0, 0.5)) synth.ratchet(); };
   })();
