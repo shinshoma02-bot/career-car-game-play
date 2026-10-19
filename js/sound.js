@@ -292,6 +292,8 @@
     engKei: 'sfx_car_kei_idle', engSmall: 'sfx_car_small_idle', engMid: 'sfx_car_mid_idle', engBig: 'sfx_car_big_idle',
     engKeiTruck: 'sfx_truck_kei_truck_idle', engTruck: 'sfx_truck_big_idle',   // 車種別のエンジン(アイドリングのループ)・トレーラーのエンジン
     truckArrive: 'sfx_trailer_arrive_decel', parkHiss: 'sfx_trailer_air_vent_b', chassisRattle: 'sfx_trailer_metal_heavy_b', chassisBoom: 'sfx_trailer_metal_heavy_a',   // 到着(エンジンは回ったまま・減速)・止まった時のパーキングのエア抜け「プシュー」
+    warn: 'sfx_ui_warn_buzz', bump: 'sfx_drive_bump_pothole', ptoStart: 'sfx_floor_pto_start',
+    switchPress: 'sfx_ui_switch_press', wireTension: 'sfx_lashing_wire_tension', carDoor: 'sfx_car_car_door', carBrake: 'sfx_drive_brake_lever',   // スイッチ・荷締めワイヤーが張る音・車のドア・パーキングブレーキ(2026-10-19)   // 「できない」ブザー・輪止め/穴の「ガタン」・PTO(油圧ポンプ)の始動(2026-10-19)
     truckStart: 'sfx_truck_engine_start', truckStop: 'sfx_truck_engine_stop'   // エンジン始動・アイドリングストップ(エンジンを止める)
   };
   var samples = {}, samplesLoading = false;
@@ -424,7 +426,7 @@
   // ファイルが読み込めていれば、ファイルで鳴らす。無ければ従来の合成音(synth)
   (function () {
     var S = window.SFX, synth = {};
-    ['impact', 'scrape', 'hyd', 'drive', 'truckIn', 'truckOut', 'click', 'clank', 'dock', 'ok', 'ramp', 'ratchet'].forEach(function (k) { synth[k] = S[k]; });
+    ['impact', 'scrape', 'hyd', 'drive', 'truckIn', 'truckOut', 'click', 'clank', 'dock', 'ok', 'ramp', 'ratchet', 'warn', 'bump', 'engineStart', 'airBrake'].forEach(function (k) { synth[k] = S[k]; });
     // ぶつかった: 軽い/重い2つを重さで選び、重さで音量・高さを少し変える。重い時は軽い方も重ねて厚くする
     S.impact = function (sev, kind) {
       sev = Math.max(0, Math.min(1, sev || 0)); var R = Math.random();
@@ -492,6 +494,14 @@
     S.clank = function () { if (!playSample('clank', 0.8, 0.95 + 0.1 * Math.random())) synth.clank(); };
     S.dock = function () { if (!playSample('chock', 0.8, 1)) synth.dock(); };
     S.ok = function () { if (!playSample('ok', 0.6, 1)) synth.ok(); };
+    S.warn = function () { var now = performance.now(); if (now - lastWarn < 400) return; lastWarn = now; if (!playSample('warn', 0.6, 1)) synth.warn(); };   // できない(低いブザー)
+    S.bump = function () { if (!playSample('bump', 0.7, 1)) synth.bump(); };   // 輪止め・穴を乗り越えた「ガタン」
+    S.engineStart = function () { if (!playSample('ptoStart', 0.6, 1)) synth.engineStart(); };   // エンジン・PTO を入れた(油圧ポンプが立ち上がる)
+    S.airBrake = function () { if (!playSample('parkHiss', 0.6, 1, 0, 1.2)) synth.airBrake(); };
+    S.switchPress = function () { if (!playSample('switchPress', 0.6, 1)) S.click(); };   // スイッチを入れる・切る(ファイルが無い時は、カチッ)
+    S.wireTension = function () { playSample('wireTension', 0.6, 1); };   // 荷締めワイヤーが張る(ワイヤーを締めきった時)
+    S.carDoor = function () { playSample('carDoor', 0.6, 1); };   // 車のドアを閉める音
+    S.carBrake = function () { playSample('carBrake', 0.6, 1); };   // パーキングブレーキを操作する音   // 連結・解除のエア抜け(今は呼び出し無し。入場・退場の「プシュー」と同じ音で代用)
     S.ramp = function () { if (!playSample('ramp', 0.7, 0.95 + 0.1 * Math.random())) synth.ramp(); };
     // 道板・扇動板を動かしている間の「ガラガラ」(出す時もしまう時も。動いている間、毎フレーム呼ぶ。呼ばれなくなると消える)
     S.rampMove = function () { if (samples.rampMove) loop('rampMove', makeSampleLoop('rampMove'), 0.4, 0); else { var now = performance.now(); if (now - (S._lastRamp || 0) > 350) { S._lastRamp = now; synth.ramp(); } } };
