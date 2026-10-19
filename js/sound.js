@@ -32,8 +32,17 @@
     for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     noiseBuf = b;
     setTimeout(loadSamples, 0);
+    if (AC.state !== 'running') { if (document.body) showTapHint(); else document.addEventListener('DOMContentLoaded', showTapHint); }
     return AC;
   }
+  // 音は、画面に触るまで出せない(ブラウザの決まり)。音が出ない間だけ、下に案内を出す
+  function showTapHint() {
+    if (!on || document.getElementById('sfxTapHint')) return;
+    var d = document.createElement('div'); d.id = 'sfxTapHint'; d.textContent = '画面をタップすると音が出ます';
+    d.style.cssText = 'position:fixed;left:50%;bottom:44px;transform:translateX(-50%);z-index:9;background:rgba(0,0,0,.6);color:#fff;font:13px/1.4 sans-serif;padding:6px 12px;border-radius:14px;pointer-events:none';
+    document.body.appendChild(d);
+  }
+  function hideTapHint() { var d = document.getElementById('sfxTapHint'); if (d) d.parentNode.removeChild(d); }
   function ready() {
     if (!on) return null;
     var a = ctx();
@@ -50,6 +59,7 @@
     var a = ctx();
     if (!a) return;
     if (a.state !== 'running') { try { a.resume(); } catch (e) { } }
+    if (a.state === 'running') hideTapHint(); else a.resume().then(function () { if (a.state === 'running') hideTapHint(); }, function () { });
     try {   // 無音の短い音を鳴らして、音声を有効にする(iOS)
       var b = a.createBuffer(1, 1, 22050), s = a.createBufferSource(); s.buffer = b; s.connect(a.destination); s.start(0);
     } catch (e) { }
@@ -63,6 +73,8 @@
     bgmEnsure();
   }
   ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlock, { passive: true }); });
+  // ページを開いた時に、音の仕組みを作っておく(まだ鳴らない。効果音の読み込みを先に始めて、タップ前に案内を出すため)
+  document.addEventListener('DOMContentLoaded', function () { ctx(); });
   document.addEventListener('visibilitychange', function () { if (!document.hidden && AC && AC.state !== 'running') { try { AC.resume(); } catch (e) { } } });
 
   // 雑音(ノイズ)を、フィルタと音量の包みを通して鳴らす
@@ -286,7 +298,7 @@
   // ---- ElevenLabs で作った効果音ファイル(assets/sfx/)。読み込めた音だけ、ファイルで鳴らす。読めない時は、従来の合成音のまま ----
   var SAMPLE_FILES = {
     crashLight: 'sfx_impact_crash_light', crashHeavy: 'sfx_impact_crash_heavy', scrape: 'sfx_impact_scrape_zuri_a', rampMove: 'sfx_floor_ramp_rattle_b',
-    hyd: 'sfx_floor_hydraulic_cylinder', clank: 'sfx_floor_floor_stop_clank', drive: 'sfx_drive_car_engine_idle_soft',
+    hyd: 'sfx_floor_hyd_hiss_b', clank: 'sfx_floor_floor_stop_clank', drive: 'sfx_drive_car_engine_idle_soft',
     truckIn: 'sfx_trailer_truck_arrive_airbrake', truckOut: 'sfx_trailer_truck_depart', ramp: 'sfx_floor_ramp_clank',
     ratchet: 'sfx_lashing_wire_ratchet', chock: 'sfx_floor_chock_set', click: 'sfx_ui_ui_click', ok: 'sfx_ui_ok_chime',
     engKei: 'sfx_car_kei_idle', engSmall: 'sfx_car_small_idle', engMid: 'sfx_car_mid_idle', engBig: 'sfx_car_big_idle',
