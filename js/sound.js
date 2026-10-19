@@ -6,6 +6,8 @@
 //   drive(speed)      … 車が走っている間、毎フレーム呼ぶ(エンジン+タイヤ。speed=px/秒。呼ばれなくなると止まる)
 //   truckIn(sec)/truckOut(sec) … トレーラーが入ってくる(エンジンが下がり、エアブレーキ)/走り去る(エンジンが上がる)
 //   click()/clank()/dock()/bump()/warn()/ok() … 操作・ストッパーに着く・乗り越え・できない・OK
+//   bgm(scene)        … BGM を切り替える('title' | 'play' | 'result' | 'off')。同じ場面を呼び直しても、続きから鳴る
+//   ramp()/ratchet()/airBrake()/engineStart() … 道板・板の動き / ワイヤー荷締め機の「カチカチ」/ エアブレーキ / エンジン始動(2026-10-18 追加。呼ぶ場所は SOUND_MEMO.md の A番号)
 // ブラウザは、画面を触るまで音を出せないので、最初のタップで有効にする。画面上の「音:ON/OFF」で切り替え(記憶する)。
 (function () {
   var AC = null, master = null, noiseBuf = null, on = true;
@@ -20,6 +22,7 @@
     var n = AC.sampleRate * 2, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
     for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     noiseBuf = b;
+    setTimeout(loadSamples, 0);
     return AC;
   }
   function ready() {
@@ -136,6 +139,106 @@
     return { gain: g, last: 0, setFreq: function (f, now) { o.frequency.setTargetAtTime(f, now, 0.1); o2.frequency.setTargetAtTime(f * 2, now, 0.1); }, stop: function () { o.stop(); o2.stop(); ns.stop(); } };
   }
 
+
+  // ---- BGM(Web Audio で合成。少し先の音まで予約していく方式)----
+  // 場面ごとに、コード進行(根音の周波数)・テンポ・音色を変える。効果音の邪魔をしないよう、小さめの音量。
+  var bgmBus = null, bgmScene = 'off', bgmTimer = null, bgmNext = 0, bgmStep = 0, bgmFade = null;
+  var SCENES = {
+    title:  { bpm: 72,  vol: 0.55, roots: [110, 87.31, 130.81, 98], minor: [1, 1, 0, 0] },    // しっとり(Am F C G)
+    play:   { bpm: 96,  vol: 0.4,  roots: [98, 98, 110, 87.31],   minor: [1, 1, 1, 0] },      // 一定のリズムで、考える邪魔をしない
+    result: { bpm: 84,  vol: 0.6,  roots: [130.81, 98, 110, 87.31], minor: [0, 0, 1, 0] }     // 明るく締める
+  };
+  function bgmNote(a, t, f, dur, type, gain, lpf) {
+    var o = a.createOscillator(); o.type = type; o.frequency.value = f;
+    var lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = lpf || 1800;
+    var g = a.createGain(); g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function bgmHat(a, t, gain) {
+    var s = a.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+    var fl = a.createBiquadFilter(); fl.type = 'highpass'; fl.frequency.value = 7000;
+    var g = a.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    s.connect(fl); fl.connect(g); g.connect(bgmBus); s.start(t, Math.random()); s.stop(t + 0.07);
+  }
+  // 1拍分(8分音符 = 1ステップ)を予約。bgmStep: 0〜31(4小節 x 8)
+  function bgmSchedule(a, t, sc, step) {
+    var beat = 60 / sc.bpm, bar = (step >> 3) & 3, i = step & 7;
+    var root = sc.roots[bar], third = sc.minor[bar] ? 1.1892 : 1.2599, fifth = 1.4983;
+    if (i === 0) {   // 小節の頭: 低いベース+やわらかいパッド
+      bgmNote(a, t, root / 2, beat * 3.6, 'triangle', 0.5, 400);
+      bgmNote(a, t, root * 2, beat * 7.5, 'sine', 0.1, 1200);
+      bgmNote(a, t, root * 2 * third, beat * 7.5, 'sine', 0.08, 1200);
+      bgmNote(a, t, root * 2 * fifth, beat * 7.5, 'sine', 0.08, 1200);
+    }
+    if (i === 4) bgmNote(a, t, root / 2 * fifth, beat * 2.6, 'triangle', 0.35, 400);
+    if (bgmScene === 'play' || bgmScene === 'result') {   // 軽いリズム(裏拍のハット)
+      if (i & 1) bgmHat(a, t, bgmScene === 'play' ? 0.05 : 0.035);
+    }
+    var arp = [0, 2, 4, 2, 5, 4, 2, 1], mult = [1, third, fifth, 2, 2 * third, 2 * fifth];   // メロディ代わりのアルペジオ
+    if (bgmScene === 'title' ? (i & 1) === 0 : (bgmScene === 'result' ? i !== 3 : (i % 4 === 2 || i === 7)))
+      bgmNote(a, t, root * 2 * mult[arp[(i + bar) % 8] % mult.length] * (bgmScene === 'title' ? 1 : 2), beat * 0.9, 'triangle', bgmScene === 'play' ? 0.07 : 0.1, 2400);
+  }
+  function bgmTick() {
+    var a = AC; if (!a || bgmScene === 'off' || !on) return;
+    var sc = SCENES[bgmScene]; if (!sc) return;
+    var stepLen = 30 / sc.bpm;
+    if (bgmNext < a.currentTime) bgmNext = a.currentTime + 0.05;
+    while (bgmNext < a.currentTime + 0.4) { bgmSchedule(a, bgmNext, sc, bgmStep); bgmNext += stepLen; bgmStep = (bgmStep + 1) & 31; }
+  }
+  function bgmSet(scene) {
+    if (scene === bgmScene) return;
+    bgmScene = SCENES[scene] ? scene : 'off';
+    bgmStep = 0;
+    var a = ready();
+    if (!a) return;   // 音がまだ有効でない時は、有効になった後の次の bgm() 呼び出しで鳴り出す(bgmScene は覚えておく)
+    if (!bgmBus) { bgmBus = a.createGain(); bgmBus.gain.value = 0.0001; bgmBus.connect(master); }
+    var target = bgmScene === 'off' ? 0.0001 : 0.22 * SCENES[bgmScene].vol;
+    bgmBus.gain.cancelScheduledValues(a.currentTime); bgmBus.gain.setTargetAtTime(target, a.currentTime, 0.4);
+    if (bgmScene !== 'off' && !bgmTimer) bgmTimer = setInterval(bgmTick, 120);
+    if (bgmScene === 'off' && bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
+    bgmNext = 0;
+  }
+
+  // ---- ElevenLabs で作った効果音ファイル(assets/sfx/)。読み込めた音だけ、ファイルで鳴らす。読めない時は、従来の合成音のまま ----
+  var SAMPLE_FILES = {
+    crashLight: 'sfx_impact_crash_light', crashHeavy: 'sfx_impact_crash_heavy', scrape: 'sfx_impact_scrape_metal',
+    hyd: 'sfx_floor_hydraulic_cylinder', clank: 'sfx_floor_floor_stop_clank', drive: 'sfx_drive_car_engine_idle_soft',
+    truckIn: 'sfx_trailer_truck_arrive_airbrake', truckOut: 'sfx_trailer_truck_depart', ramp: 'sfx_floor_ramp_clank',
+    ratchet: 'sfx_lashing_wire_ratchet', chock: 'sfx_floor_chock_set', click: 'sfx_ui_ui_click', ok: 'sfx_ui_ok_chime'
+  };
+  var samples = {}, samplesLoading = false;
+  function loadSamples() {
+    if (samplesLoading || !AC) return; samplesLoading = true;
+    Object.keys(SAMPLE_FILES).forEach(function (k) {
+      try {
+        fetch('assets/sfx/' + SAMPLE_FILES[k] + '.mp3').then(function (r) { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(function (ab) {
+          var done = function (buf) { samples[k] = buf; };
+          var pr = AC.decodeAudioData(ab, done, function () { }); if (pr && pr.catch) pr.catch(function () { });   // 古いSafariはコールバック式
+        }).catch(function () { });
+      } catch (e) { }
+    });
+  }
+  // ファイルの音を1回鳴らす。鳴らせたら true(ファイルがまだ・無い時は false → 呼び出し側が合成音にする)
+  function playSample(name, vol, rate, offset, maxSec) {
+    var a = ready(), b = samples[name]; if (!a || !b) return false;
+    var s = a.createBufferSource(); s.buffer = b; s.playbackRate.value = rate || 1;
+    var g = a.createGain(), t = a.currentTime; g.gain.value = vol == null ? 1 : vol;
+    s.connect(g); g.connect(master);
+    var off = Math.min(offset || 0, Math.max(0, b.duration - 0.05));
+    s.start(t, off);
+    if (maxSec) { g.gain.setValueAtTime(g.gain.value, t + Math.max(0, maxSec - 0.25)); g.gain.linearRampToValueAtTime(0.0001, t + maxSec); s.stop(t + maxSec + 0.02); }
+    return true;
+  }
+  // 鳴らし続ける音(ファイルをループ再生)。loop() に渡す作り方。rate は setFreq で変える
+  function makeSampleLoop(name, freq0, freq1) {
+    return function (a) {
+      var s = a.createBufferSource(); s.buffer = samples[name]; s.loop = true;
+      var g = a.createGain(); g.gain.value = 0.0001; s.connect(g); g.connect(master); s.start(0, Math.random() * Math.max(0.1, s.buffer.duration - 0.2));
+      return { gain: g, last: 0, setFreq: freq1 ? function (f, now) { s.playbackRate.setTargetAtTime(0.85 + 0.55 * Math.max(0, Math.min(1, (f - freq0) / (freq1 - freq0))), now, 0.15); } : null, stop: function () { s.stop(); } };
+    };
+  }
+
   var lastScrape = 0, lastWarn = 0, lastClick = 0;
   window.SFX = {
     get enabled() { return on; },
@@ -190,6 +293,24 @@
       tone(a, t + 0.35, sec - 0.2, 'sawtooth', 48, 150, 0.08);
       noise(a, t + 0.35, sec - 0.2, 'lowpass', 220, 0.8, 0.22, 700);
     },
+    // BGM の切り替え。scene = 'title' | 'play' | 'result' | 'off'。音がまだ有効でない時に呼んでも、場面は覚えておく
+    bgm: function (scene) {
+      if (scene === bgmScene && (bgmTimer || scene === 'off')) return;
+      if (scene === bgmScene) bgmScene = 'off';   // 覚えただけで鳴っていなかった場合は、鳴らし直す
+      bgmSet(scene);
+    },
+    // 道板・扇動板・スライド板が動く「ゴトッ」と金属の擦れ
+    ramp: function () { var a = ready(); if (!a) return; var t = a.currentTime; tone(a, t, 0.18, 'sine', 110, 55, 0.3); noise(a, t, 0.22, 'bandpass', 1400, 1.2, 0.12, 700); tone(a, t + 0.2, 0.1, 'triangle', 300, 220, 0.08); },
+    // ワイヤー荷締め機(ガチャ)の「カチカチ」(1回につき1回)
+    ratchet: function () { var a = ready(); if (!a) return; var t = a.currentTime; tone(a, t, 0.03, 'square', 1800, 1200, 0.07); tone(a, t + 0.045, 0.03, 'square', 1500, 1000, 0.06); noise(a, t, 0.02, 'highpass', 4000, 1, 0.1); },
+    // エアブレーキ(連結・解除)の「プシュッ」
+    airBrake: function () { var a = ready(); if (!a) return; var t = a.currentTime; noise(a, t, 0.5, 'highpass', 3200, 0.8, 0.22, 1400); tone(a, t, 0.08, 'sine', 100, 55, 0.2); },
+    // エンジン始動: セルが回って、かかる
+    engineStart: function () {
+      var a = ready(); if (!a) return; var t = a.currentTime;
+      tone(a, t, 0.7, 'sawtooth', 30, 34, 0.05); noise(a, t, 0.7, 'lowpass', 300, 1, 0.18, 260);
+      tone(a, t + 0.7, 1.0, 'sawtooth', 40, 62, 0.07); noise(a, t + 0.7, 1.0, 'lowpass', 420, 0.8, 0.2, 200);
+    },
     click: function () { var now = performance.now(); if (now - lastClick < 40) return; lastClick = now; var a = ready(); if (!a) return; var t = a.currentTime; tone(a, t, 0.05, 'square', 900, 380, 0.1); noise(a, t, 0.03, 'highpass', 3000, 1, 0.1); },
     clank: function () { var a = ready(); if (!a) return; var t = a.currentTime; tone(a, t, 0.28, 'triangle', 240, 200, 0.18); tone(a, t, 0.22, 'triangle', 377, 320, 0.1); noise(a, t, 0.08, 'bandpass', 3200, 2, 0.15); },
     // 輪止め・タイヤストッパに着いた「コツン」+ OK
@@ -200,6 +321,47 @@
     // 動かせない・できない(低いブザー。間引き)
     warn: function () { var now = performance.now(); if (now - lastWarn < 400) return; lastWarn = now; var a = ready(); if (!a) return; var t = a.currentTime; tone(a, t, 0.14, 'square', 150, 110, 0.07); }
   };
+
+  // ファイルが読み込めていれば、ファイルで鳴らす。無ければ従来の合成音(synth)
+  (function () {
+    var S = window.SFX, synth = {};
+    ['impact', 'scrape', 'hyd', 'drive', 'truckIn', 'truckOut', 'click', 'clank', 'dock', 'ok', 'ramp', 'ratchet'].forEach(function (k) { synth[k] = S[k]; });
+    // ぶつかった: 軽い/重い2つを重さで選び、重さで音量・高さを少し変える。重い時は軽い方も重ねて厚くする
+    S.impact = function (sev, kind) {
+      sev = Math.max(0, Math.min(1, sev || 0)); var R = Math.random();
+      if (samples.crashLight && samples.crashHeavy) {
+        if (sev < 0.4) playSample('crashLight', 0.45 + 0.9 * sev, 0.92 + 0.16 * R);
+        else { playSample('crashHeavy', 0.55 + 0.6 * sev, 1.05 - 0.15 * sev + 0.06 * R); if (sev > 0.75) playSample('crashLight', 0.4, 0.8); }
+        return;
+      }
+      synth.impact(sev, kind);
+    };
+    S.scrape = function () {
+      if (!samples.scrape) return synth.scrape();
+      var now = performance.now(); if (now - lastScrape < 160) return; lastScrape = now;
+      playSample('scrape', 0.5, 0.9 + 0.3 * Math.random(), 0.2 + 1.4 * Math.random(), 0.35);   // 長い音の途中から、短く切って鳴らす
+    };
+    S.hyd = function () { if (samples.hyd) loop('hyd', makeSampleLoop('hyd'), 0.35, 0); else synth.hyd(); };
+    S.drive = function (speed) {
+      if (!samples.drive) return synth.drive(speed);
+      if (!(speed > 8)) return; var k = Math.min(1, speed / 600);
+      loop('drive', makeSampleLoop('drive', 36, 66), 0.1 + 0.25 * k, 36 + 30 * k);   // うるさくしない(速いほど少し大きく・高く)
+    };
+    // トレーラー入り: 最後のエアブレーキが、止まる瞬間に合うよう、ファイルの後ろ側を使う(アニメ 約2.4秒)
+    S.truckIn = function (sec) {
+      if (!samples.truckIn) return synth.truckIn(sec);
+      playSample('truckIn', 0.9, 1, Math.max(0, samples.truckIn.duration - sec), sec + 0.3);
+    };
+    // 走り去る: 出だしのエア抜けから、アニメの長さまで鳴らして、最後にフェードアウト
+    S.truckOut = function (sec) { if (!playSample('truckOut', 0.9, 1, 0, sec)) synth.truckOut(sec); };
+    S.click = function () { var now = performance.now(); if (now - lastClick < 40) return; if (!playSample('click', 0.6, 1)) synth.click(); else lastClick = now; };
+    S.clank = function () { if (!playSample('clank', 0.8, 0.95 + 0.1 * Math.random())) synth.clank(); };
+    S.dock = function () { if (!playSample('chock', 0.8, 1)) synth.dock(); };
+    S.ok = function () { if (!playSample('ok', 0.6, 1)) synth.ok(); };
+    S.ramp = function () { if (!playSample('ramp', 0.7, 0.95 + 0.1 * Math.random())) synth.ramp(); };
+    S.loadedSamples = function () { return Object.keys(samples); };   // 確認用: 読み込めたファイル
+    S.ratchet = function () { var now = performance.now(); if (now - (S._lastRat || 0) < 60) return; S._lastRat = now; if (!playSample('ratchet', 0.55, 0.95 + 0.1 * Math.random(), 0, 0.5)) synth.ratchet(); };
+  })();
 
   // 画面上の「音:ON/OFF」(モードバーの右端)
   var btn = null;
