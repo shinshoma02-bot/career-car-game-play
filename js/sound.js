@@ -156,7 +156,10 @@
   var SCENES = {
     title:  { bpm: 72,  vol: 0.55, roots: [110, 87.31, 130.81, 98], minor: [1, 1, 0, 0] },    // しっとり(Am F C G)
     play:   { bpm: 96,  vol: 0.4,  roots: [98, 98, 110, 87.31],   minor: [1, 1, 1, 0] },      // 一定のリズムで、考える邪魔をしない
-    result: { bpm: 84,  vol: 0.6,  roots: [130.81, 98, 110, 87.31], minor: [0, 0, 1, 0] }     // 明るく締める
+    result: { bpm: 84,  vol: 0.6,  roots: [130.81, 98, 110, 87.31], minor: [0, 0, 1, 0] },    // 明るく締める
+    play_easy: { bpm: 95,  vol: 0.4,  roots: [98, 98, 110, 87.31], minor: [0, 1, 1, 0] },     // ゆったり(イージー・ファイル無しの時の予備)
+    play_hard: { bpm: 128, vol: 0.4,  roots: [98, 110, 87.31, 98], minor: [1, 1, 1, 1] },     // 速く緊張感(ハード・ファイル無しの時の予備)
+    tutorial:  { bpm: 85,  vol: 0.4,  roots: [130.81, 110, 98, 87.31], minor: [0, 1, 0, 0] }   // やさしい(チュートリアル・ファイル無しの時の予備)
   };
   function bgmNote(a, t, f, dur, type, gain, lpf) {
     var o = a.createOscillator(); o.type = type; o.frequency.value = f;
@@ -182,12 +185,12 @@
       bgmNote(a, t, root * 2 * fifth, beat * 7.5, 'sine', 0.08, 1200);
     }
     if (i === 4) bgmNote(a, t, root / 2 * fifth, beat * 2.6, 'triangle', 0.35, 400);
-    if (bgmScene === 'play' || bgmScene === 'result') {   // 軽いリズム(裏拍のハット)
-      if (i & 1) bgmHat(a, t, bgmScene === 'play' ? 0.05 : 0.035);
+    if (/^play/.test(bgmScene) || bgmScene === 'result') {   // 軽いリズム(裏拍のハット)
+      if (i & 1) bgmHat(a, t, /^play/.test(bgmScene) ? 0.05 : 0.035);
     }
     var arp = [0, 2, 4, 2, 5, 4, 2, 1], mult = [1, third, fifth, 2, 2 * third, 2 * fifth];   // メロディ代わりのアルペジオ
     if (bgmScene === 'title' ? (i & 1) === 0 : (bgmScene === 'result' ? i !== 3 : (i % 4 === 2 || i === 7)))
-      bgmNote(a, t, root * 2 * mult[arp[(i + bar) % 8] % mult.length] * (bgmScene === 'title' ? 1 : 2), beat * 0.9, 'triangle', bgmScene === 'play' ? 0.07 : 0.1, 2400);
+      bgmNote(a, t, root * 2 * mult[arp[(i + bar) % 8] % mult.length] * (bgmScene === 'title' ? 1 : 2), beat * 0.9, 'triangle', /^play/.test(bgmScene) ? 0.07 : 0.1, 2400);
   }
   function bgmTick() {
     var a = AC; if (!a || bgmScene === 'off' || !on) return;
@@ -197,7 +200,15 @@
     while (bgmNext < a.currentTime + 0.4) { bgmSchedule(a, bgmNext, sc, bgmStep); bgmNext += stepLen; bgmStep = (bgmStep + 1) & 31; }
   }
   // ---- ファイルのBGM(ElevenLabs Music)。読めない時は、上の合成BGMにする ----
-  var BGM_FILES = { title: ['assets/bgm/bgm_title_title_depot_v1_el.mp3', 0.5], play: ['assets/bgm/bgm_play_normal_play_night_v1_el.mp3', 0.4] };   // [ファイル, 音量]
+  // [ファイル, 音量]。音量は、曲ごとの大きさ(ffmpeg の平均音量)をそろえた値(2026-10-19)
+  var BGM_FILES = {
+    title: ['assets/bgm/bgm_title_title_depot_v1_el.mp3', 0.5],
+    play: ['assets/bgm/bgm_play_normal_play_night_v1_el.mp3', 0.4],
+    play_easy: ['assets/bgm/bgm_play_easy_easy_road_v1_el.mp3', 0.4],
+    play_hard: ['assets/bgm/bgm_play_hard_deadline_push_v1_el.mp3', 0.33],
+    result: ['assets/bgm/bgm_result_delivered_v1_el.mp3', 0.6],
+    tutorial: ['assets/bgm/bgm_tutorial_first_load_v1_el.mp3', 0.45]
+  };
   var bgmBuf = {}, bgmLoad = {}, bgmLayers = [], bgmLoopTimer = null, bgmActive = false, bgmWanted = false;
   var BGM_XF = 2.5;   // ループのつなぎ目を、2.5秒かけて重ねる(終わりと始まりをクロスフェード)
   function bgmLoadFile(scene, ok, ng) {
@@ -256,6 +267,14 @@
         bgmFileStart(sc, true);
       }, synthGo);   // 読めなかったら、合成BGM
     } else synthGo();
+  }
+  // プレイの場面を、URL の # から選び直す: #mode=tutorial → チュートリアル曲、#diff=easy/hard → 難易度の曲(modes.js が書く)
+  function bgmVariant(scene) {
+    if (scene !== 'play') return scene;
+    var h = location.hash || '';
+    if (/mode=tutorial/.test(h)) return 'tutorial';
+    var d = /diff=(easy|hard)/.exec(h);
+    return d ? 'play_' + d[1] : 'play';
   }
   // 音がオフ→オンに戻った時・画面を触って音が有効になった時に、BGMを(まだなら)鳴らし直す
   function bgmEnsure() {
@@ -373,6 +392,7 @@
     },
     // BGM の切り替え。scene = 'title' | 'play' | 'result' | 'off'。音がまだ有効でない時に呼んでも、場面は覚えておく
     bgm: function (scene, auto) {
+      scene = bgmVariant(scene);
       if (!auto) bgmWanted = true;   // 開発側のファイルから呼ばれた場合は、自動の切り替えをやめて、そちらに任せる
       if (scene === bgmScene && (bgmActive || scene === 'off')) return;
       if (scene === bgmScene) bgmScene = 'off';   // 覚えただけで鳴っていなかった場合は、鳴らし直す

@@ -871,11 +871,7 @@
     if (v && k === 'pto' && powerRequired() && !POWER.engine) { onWarn('エンジンが止まっているので、PTOは入りません'); return false; }
     if (v && k === 'main' && powerRequired() && !POWER.pto) { onWarn('PTOを入れてから、昇降メインスイッチを入れてください'); return false; }
     POWER[k] = v;
-    if (window.SFX) {   // エンジンを止める=トレーラーのアイドリングストップ(A3)。入れる時は、始動の音(あれば truckStart。無ければ従来の engineStart)。PTO を入れた音(A1)
-      if (k === 'engine' && !v) window.SFX.truckStop();
-      else if (v && k === 'engine') (window.SFX.truckStart || window.SFX.engineStart)();
-      else if (v && k === 'pto') window.SFX.engineStart();
-    }
+    if (v && window.SFX && (k === 'engine' || k === 'pto')) window.SFX.engineStart();   // エンジン・PTO を入れた音(A1)
     if (k === 'engine' && !v) { POWER.pto = false; POWER.main = false; }   // エンジンが止まると PTO も切れ、昇降メインも落ちる
     if (k === 'pto' && !v) POWER.main = false;                              // PTO を切ると、昇降メインも OFF に戻す
     if (!v) { try { holdStop(); } catch (e) { } try { if (typeof jackHoldStop === 'function') jackHoldStop(); } catch (e) { } }
