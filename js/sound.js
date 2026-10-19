@@ -10,6 +10,7 @@
 //   ramp()/ratchet()/airBrake()/engineStart() … 道板・板の動き / ワイヤー荷締め機の「カチカチ」/ エアブレーキ / エンジン始動(2026-10-18 追加。呼ぶ場所は SOUND_MEMO.md の A番号)
 // ブラウザは、画面を触るまで音を出せないので、最初のタップで有効にする。画面上の「音:ON/OFF」で切り替え(記憶する)。
 (function () {
+  if (window.SFX) return;   // 二重に読み込まれても、1回だけ動く
   var AC = null, master = null, sfxOut = null, musicOut = null, noiseBuf = null, on = true;
   var vol = { bgm: 100, se: 100 };   // 音量(0〜100%)。BGM と SE を別々に調節する。画面の「音設定」で変える
   try { on = localStorage.getItem('sfx') !== 'off'; } catch (e) { }
@@ -444,17 +445,18 @@
   var btn = null, panel = null, rngBgm = null, rngSe = null, outBgm = null, outSe = null, togBtn = null;
   var STYLE = '#sfxPanel{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}' +
     '#sfxPanel[hidden]{display:none}' +
-    '#sfxPanel .sp-box{width:min(340px,100%);background:#16202c;color:#dfe8f2;border:2px solid #4b6078;border-radius:10px;padding:18px 18px 16px;font-size:15px;box-sizing:border-box}' +
+    '#sfxPanel .sfx-box{width:min(340px,100%);background:#16202c;color:#dfe8f2;border:2px solid #4b6078;border-radius:10px;padding:18px 18px 16px;font-size:15px;box-sizing:border-box}' +
     '#sfxPanel h2{margin:0 0 14px;font-size:17px;text-align:center;font-weight:bold}' +
-    '#sfxPanel .sp-row{margin:12px 0}' +
-    '#sfxPanel .sp-label{display:flex;justify-content:space-between;margin-bottom:6px}' +
-    '#sfxPanel .sp-label b{color:#7dfcd0;font-weight:bold}' +
+    '#sfxPanel .sfx-row{margin:12px 0}' +
+    '#sfxPanel .sfx-label{display:flex;justify-content:space-between;margin-bottom:6px}' +
+    '#sfxPanel .sfx-label b{color:#7dfcd0;font-weight:bold}' +
     '#sfxPanel input[type=range]{width:100%;height:32px;margin:0;accent-color:#7dfcd0}' +
-    '#sfxPanel .sp-btn{display:block;width:100%;min-height:42px;margin-top:10px;font-size:15px;border-radius:8px;border:2px solid #4b6078;background:#243446;color:#dfe8f2;cursor:pointer}' +
-    '#sfxPanel .sp-btn.on{background:#1f5a48;border-color:#7dfcd0;color:#fff}';
+    '#sfxPanel .sfx-btn{display:block;width:100%;min-height:42px;margin-top:10px;font-size:15px;border-radius:8px;border:2px solid #4b6078;background:#243446;color:#dfe8f2;cursor:pointer}' +
+    '#sfxPanel .sfx-btn.on{background:#1f5a48;border-color:#7dfcd0;color:#fff}' +
+    '#btnSfx.sfx-fab{position:fixed;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));z-index:50;min-height:36px;padding:0 12px;font-size:13px;border-radius:8px;border:2px solid #4b6078;background:rgba(22,32,44,.85);color:#dfe8f2;cursor:pointer}';
   function updateBtn() {
     if (btn) btn.textContent = on ? '音設定' : '音:OFF';
-    if (togBtn) { togBtn.textContent = on ? '音:ON(タップでOFF)' : '音:OFF(タップでON)'; togBtn.className = on ? 'sp-btn on' : 'sp-btn'; }
+    if (togBtn) { togBtn.textContent = on ? '音:ON(タップでOFF)' : '音:OFF(タップでON)'; togBtn.className = on ? 'sfx-btn on' : 'sfx-btn'; }
   }
   function openPanel() {
     if (!panel) return;
@@ -465,17 +467,17 @@
   function buildPanel() {
     var st = document.createElement('style'); st.textContent = STYLE; document.head.appendChild(st);
     panel = document.createElement('div'); panel.id = 'sfxPanel'; panel.hidden = true;
-    panel.innerHTML = '<div class="sp-box" role="dialog" aria-label="音の設定">' +
+    panel.innerHTML = '<div class="sfx-box" role="dialog" aria-label="音の設定">' +
       '<h2>音の設定</h2>' +
-      '<div class="sp-row"><div class="sp-label"><span>BGM（音楽）</span><b id="spBgmOut"></b></div><input type="range" id="spBgm" min="0" max="100" step="1"></div>' +
-      '<div class="sp-row"><div class="sp-label"><span>SE（効果音）</span><b id="spSeOut"></b></div><input type="range" id="spSe" min="0" max="100" step="1"></div>' +
-      '<button type="button" class="sp-btn" id="spTog"></button>' +
-      '<button type="button" class="sp-btn" id="spClose">閉じる</button>' +
+      '<div class="sfx-row"><div class="sfx-label"><span>BGM（音楽）</span><b id="sfxBgmOut"></b></div><input type="range" id="sfxBgm" min="0" max="100" step="1"></div>' +
+      '<div class="sfx-row"><div class="sfx-label"><span>SE（効果音）</span><b id="sfxSeOut"></b></div><input type="range" id="sfxSe" min="0" max="100" step="1"></div>' +
+      '<button type="button" class="sfx-btn" id="sfxTog"></button>' +
+      '<button type="button" class="sfx-btn" id="sfxClose">閉じる</button>' +
       '</div>';
     document.body.appendChild(panel);
-    rngBgm = document.getElementById('spBgm'); rngSe = document.getElementById('spSe');
-    outBgm = document.getElementById('spBgmOut'); outSe = document.getElementById('spSeOut');
-    togBtn = document.getElementById('spTog');
+    rngBgm = panel.querySelector('#sfxBgm'); rngSe = panel.querySelector('#sfxSe');
+    outBgm = panel.querySelector('#sfxBgmOut'); outSe = panel.querySelector('#sfxSeOut');
+    togBtn = panel.querySelector('#sfxTog');
     // 画面の操作(ゲームのタップ)を、ポップアップの中で止める。音の有効化だけは通す
     panel.addEventListener('pointerdown', function (e) { unlock(); e.stopPropagation(); });
     panel.addEventListener('click', function (e) { e.stopPropagation(); if (e.target === panel) closePanel(); });
@@ -484,14 +486,17 @@
     rngSe.addEventListener('input', function () { vol.se = +rngSe.value; outSe.textContent = vol.se + '%'; applyVol(); });
     rngSe.addEventListener('change', function () { saveVol('volSe', vol.se); window.SFX.click(); });   // 離した時に、今の音量で1回鳴らす
     togBtn.addEventListener('click', function () { window.SFX.enabled = !on; });
-    document.getElementById('spClose').addEventListener('click', closePanel);
+    panel.querySelector('#sfxClose').addEventListener('click', closePanel);
   }
   function addBtn() {
-    var bar = document.getElementById('modeBar');
-    if (!bar || btn) return;
+    if (btn) return;
+    // ゲーム画面は、モードバーの右端に置く。モードバーが無いページ(タイトル)は、右上に浮かせて置く
+    var bar = document.getElementById('modeBar'), floating = !bar;
+    if (floating) { if (!document.body) return; bar = document.body; }
     buildPanel();
     btn = document.createElement('button');
     btn.id = 'btnSfx'; btn.type = 'button'; btn.title = '音の設定(BGM・効果音の音量)';
+    if (floating) btn.className = 'sfx-fab';
     btn.addEventListener('click', function (e) { e.stopPropagation(); unlock(); openPanel(); });
     updateBtn();
     bar.appendChild(btn);
