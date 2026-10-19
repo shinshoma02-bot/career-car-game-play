@@ -425,7 +425,20 @@
     // トレーラーの状態: エンジンが回っているか(到着でtrue、アイドリングストップでfalse、出る時に始動)
     var truckRunning = false;
     // 入ってくる: 減速して止まる。止まった瞬間に、パーキングのエア抜け「プシュー」。エンジンは回ったまま(アイドリング)
-    S.truckIn = function (sec) {
+    // 入場は読み込み直後に始まる。その時、①画面に触るまで音が出せない(スマホ)②効果音のファイルがまだ読み終わっていない。
+    // → 音は保留して、音が有効になり、ファイルが読めたら鳴らす(15秒まで待つ。ファイルは3秒待っても読めなければ、そのまま鳴らす)
+    var pendingIn = null;
+    S.truckIn = function (sec) { pendingIn = { sec: sec, t: performance.now() }; tryPendingIn(); };
+    function tryPendingIn() {
+      if (!pendingIn) return;
+      var age = performance.now() - pendingIn.t;
+      if (age > 15000) { pendingIn = null; return; }   // 15秒以上たったら、場面に合わないので鳴らさない
+      var a = ready();   // 有効でなければ null(ready() は resume も試す)
+      if (!a) { setTimeout(tryPendingIn, 150); return; }
+      if (!(samples.truckArrive && samples.parkHiss) && age < 3000) { setTimeout(tryPendingIn, 150); return; }
+      var p = pendingIn; pendingIn = null; playTruckIn(p.sec);
+    }
+    function playTruckIn(sec) {
       if (!samples.truckArrive) {   // 新しい音が無い時は、前の到着の音(エアブレーキ入り)
         if (!samples.truckIn) return synth.truckIn(sec);
         playSample('truckIn', 0.9, 1, Math.max(0, samples.truckIn.duration - sec), sec + 0.3);
@@ -437,7 +450,7 @@
       }
       truckRunning = true;
       if (samples.engTruck) holdLoop('truckIdle', makeSampleLoop('engTruck', 0, 0, 1400), 0.18);
-    };
+    }
     // アイドリングストップ: エンジンを止める(止まって荷積み中などに、呼ぶ)。アイドリングの音を止めて、停止の音を鳴らす
     S.truckStop = function () {
       if (!truckRunning) return;
