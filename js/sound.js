@@ -503,7 +503,9 @@
       }, delay * 1000);
     };
     S.click = function () { var now = performance.now(); if (now - lastClick < 40) return; if (!playSample('click', 0.6, 1)) synth.click(); else lastClick = now; };
-    S.clank = function () { if (!playSample('clank', 0.8, 0.95 + 0.1 * Math.random())) synth.clank(); };
+    // 止まった時の「ガチッ」(棚・セットピン・フロアに当たった)。同じ着地で何回も鳴らないよう、1.2秒は鳴らさない(2026-10-20)
+    var lastClank = 0;
+    S.clank = function () { var now = performance.now(); if (now - lastClank < 1200) return; lastClank = now; if (!playSample('clank', 0.8, 0.95 + 0.1 * Math.random())) synth.clank(); };
     S.dock = function () { if (!playSample('chock', 0.8, 1)) synth.dock(); };
     S.ok = function () { if (!playSample('ok', 0.6, 1)) synth.ok(); };
     // できない(低いブザー)。ファイルは他の操作音より約10dB大きかったので、クリックと同じくらいに下げ、0.45秒で切る(2026-10-19)
