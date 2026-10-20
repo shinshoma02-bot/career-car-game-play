@@ -940,7 +940,8 @@
     if (c.lashTurns >= LASH_TURNS) { c.lashTurns = 0; setStatus(num + '番の固縛を外しました。'); }
     else {
       if (window.SFX) window.SFX.ratchet();   // 荷締め機のカチカチ(音。A1)
-      c.lashTurns = (c.lashTurns || 0) + 1; c.lashStroke = performance.now();   // ガチャを1往復
+      c.lashTurns = (c.lashTurns || 0) + 1; c.lashStroke = performance.now();
+      if (c.lashTurns >= LASH_TURNS && window.SFX && window.SFX.wireTension) setTimeout(window.SFX.wireTension, 120);   // 締めきった最後の1回の「ギュッ」(A8)   // ガチャを1往復
       setStatus(c.lashTurns >= LASH_TURNS ? num + '番を固縛しました(固縛完了)。' : num + '番: 荷締め機を回しています(' + c.lashTurns + '/' + LASH_TURNS + ')。');
     }
     updateChockUi();
@@ -1646,7 +1647,7 @@
       img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX,
       floor: slot.floor || slot.carrier || null, localX: tgt.x, localY: tgt.y + dip, rotDeg: rotDeg, dx: tgt.x - slot.tireX, live: car
     };
-    if (window.SFX) { window.SFX.dock(); window.SFX.ok(); }
+    if (window.SFX) { window.SFX.dock(); window.SFX.ok(); if (window.SFX.carBrake) window.SFX.carBrake(); if (window.SFX.carDoor) setTimeout(window.SFX.carDoor, 700); }   // 止まった=パーキングブレーキ、少しして車のドア(A8)
     if (window.GAME_MODE && window.GAME_MODE.onDock) window.GAME_MODE.onDock(num);
     setStatus(num + '番 OK!' + (stopNow.kind === 'hole' ? 'タイヤが落としに落ちました。' : STOP_NAME[stopNow.kind] + 'に当たりました。') + 'もう一度車をタップするとその位置で固定されます。');
     if (car.deckItem) car.deckItem.status = 'loaded';
