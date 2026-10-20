@@ -137,20 +137,49 @@
     }
     if (isTut) { if (window.TUTORIAL && window.TUTORIAL.onCycleComplete) window.TUTORIAL.onCycleComplete(); }
     else banner(msg);
-    fm.initPins && fm.initPins();
+    nextCycle(mode === 'sim' && !isTut);   // シミュレーション以外は自動で出発。シミュレーションは出発ボタンを押した時だけ(そのときに呼ばれる)
+  }
+
+  // 次のサイクルへ。トレーラーが左へ走り去り、荷台・機構を全部初期状態に戻して、新しい荷物でまた入ってくる(2026-10-20 ユーザー指示)
+  // 走り去る間(画面の外に出るまで)は操作を止める。演出が無い環境(semi-6b など)は、すぐ初期化する
+  var turning = false;
+  function resetAllForCycle() {
+    if (fm.resetAll) fm.resetAll(); else fm.initPins && fm.initPins();   // 道板・扇動板・落し蓋・スライド板・ジャッキ・タイヤ・ロック・フロア・ピンを初期位置へ
     state.resetTrailer();
     refreshBar();
   }
+  function nextCycle(withDepartAnim) {
+    var A = window.TRAILER_ANIM;
+    if (!A || !A.depart || cfg.id === 'semi-6b') { resetAllForCycle(); return; }
+    turning = true; state.frozen = true;
+    fm.holdStop && fm.holdStop(); fm.jackHoldStop && fm.jackHoldStop();
+    var uns = A.unsafeDeparture && A.unsafeDeparture();   // (シミュレーションで道板を出したまま出発した時は、置き去りの演出だけ。減点なし)
+    A.depart(!!uns, function () {
+      resetAllForCycle();   // 画面の外にいる間に初期化
+      A.enter(function () { state.frozen = false; turning = false; });
+    });
+  }
+  var readyAnnounced = false;
+  function simDepart() {   // シミュレーション: 出発ボタン。サイクルが完了していれば完了として数え、そうでなくても出発できる(やり直し)
+    if (mode !== 'sim' || isTut || ended || turning) return;
+    readyAnnounced = false;
+    if (cycleComplete()) onCycleComplete(); else nextCycle(true);
+  }
 
   function tick() {
-    if (ended || !mode) return;
+    if (ended || !mode || turning) return;
     if (mode === 'time' && elapsed() >= limitSec) {
       if (state.deckImpossible && !state.dispatchDone) { stats.dispatchMissed++; rollbackTurn(); }   // 積めない荷物に気づかないまま時間切れ: そのターンの稼ぎは0点
       finish(false, '時間切れ' + (state.deckImpossible && !state.dispatchDone ? '(積めない荷物に気づけませんでした。そのターンの積込み点は0点)' : '')); return;
     }
     // 積めない荷物に気づかず、制限時間を過ぎた(配車担当から連絡が来る。dispatch.js)
-    if (state.deckImpossible && !state.dispatchDone && state.deck && state.deck.length && turnSec() >= SCORE.dispatchLimitSec && window.DISPATCH) window.DISPATCH.onTimeout();
-    if (cycleComplete()) onCycleComplete();
+    if (mode !== 'sim' && state.deckImpossible && !state.dispatchDone && state.deck && state.deck.length && turnSec() >= SCORE.dispatchLimitSec && window.DISPATCH) window.DISPATCH.onTimeout();
+    if (mode === 'sim' && !isTut) {   // シミュレーションは勝手に出発しない。完了したことだけ知らせ、出発ボタンを押してもらう
+      var ok = cycleComplete();
+      if (ok && !readyAnnounced) { readyAnnounced = true; banner('サイクル完了! 「出発」ボタンで出発します'); }
+      if (!ok) readyAnnounced = false;
+      var bs = $('btnEnd'); if (bs) bs.classList.toggle('ready', ok);
+    } else if (cycleComplete()) onCycleComplete();
     refreshBar();
   }
 
@@ -260,7 +289,7 @@
     limitSec = EXT.start[diff] || EXT.start.normal;
     $('modeOverlay').style.display = 'none';
     $('modeBar').style.display = 'flex';
-    var be = $('btnEnd'); if (be) be.style.display = (m === 'time' && !tut) ? '' : 'none';   // 「荷役を終え出発」はスコアアタックだけ
+    var be = $('btnEnd'); if (be) { be.style.display = ((m === 'time' || m === 'sim') && !tut) ? '' : 'none'; be.textContent = m === 'sim' ? '出発' : '荷役を終え出発'; }   // スコアアタック=「荷役を終え出発」(結果が出る)、シミュレーション=「出発」(次のサイクルへ)
     // 前のゲームで事故(転落・大破)を起こしていたら、その損害分のマイナス点からスタートする(2026-10-09 ユーザー指示)。1回だけ使う
     stats.carry = 0;
     if (m !== 'sim' && !tut) {
@@ -305,7 +334,8 @@
     var b = $('btnEnd'), armed = 0, t = 0;
     if (!b) return;
     b.addEventListener('click', function () {
-      if (!mode || ended || mode !== 'time') return;
+      if (mode === 'sim') { simDepart(); return; }
+      if (!mode || ended || mode !== 'time' || turning) return;
       if (!armed) { armed = 1; b.textContent = '本当に出発?(もう一度)'; clearTimeout(t); t = setTimeout(function () { armed = 0; b.textContent = '荷役を終え出発'; }, 3000); return; }
       armed = 0; clearTimeout(t); b.textContent = '荷役を終え出発';
       finish(false, '荷役を終え出発しました(残り ' + fmtTime(limitSec - elapsed()) + ')');

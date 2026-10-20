@@ -93,14 +93,14 @@
   function contact() {
     var gm = window.GAME_MODE;
     if (!gm || !gm.mode || gm.ended) { hide(ask); return; }
-    if (state.dispatchDone) { hide(ask); return; }
+    if (state.dispatchDone && gm.mode !== 'sim') { hide(ask); return; }
     if (state.deckImpossible) {
       var r = gm.dispatchResult('found');
       state.dispatchDone = true;
       openSay(pick(LINES.found[tierOf(r.frac)]), '早期発見ボーナス ' + signed(r.bonus) + '点(' + Math.round(r.sec) + '秒)', '荷物を変える', function () { state.changeCargo(); });
     } else {
       var w = gm.dispatchResult('false');
-      state.dispatchDone = true;   // 間違えて連絡した荷物には、もう連絡できない(やりとりは終わり)
+      if (gm.mode !== 'sim') state.dispatchDone = true;   // 間違えて連絡した荷物には、もう連絡できない(やりとりは終わり)。シミュレーションは何度でも連絡できる
       openSay(pick(LINES.wrong), '連絡ミス ' + signed(-w.penalty) + '点', '作業に戻る', null);
     }
   }
@@ -123,7 +123,7 @@
   // ボタンは、モード開始後で、荷物が届いていて、そのターンにまだ連絡していない間だけ押せる
   setInterval(function () {
     var gm = window.GAME_MODE;
-    var ok = !!(gm && gm.mode && !gm.ended && state.deck && state.deck.length && !state.dispatchDone);
+    var ok = !!(gm && gm.mode && !gm.ended && state.deck && state.deck.length && (gm.mode === 'sim' || !state.dispatchDone));
     btn.disabled = !ok;
     btn.classList.toggle('na', !ok);
   }, 200);
