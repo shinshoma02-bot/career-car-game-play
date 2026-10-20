@@ -214,10 +214,11 @@
     var b = box(44, 105, PEND2); b.appendChild(img('sw_pendant2', 0, 0, 44, 105, [0, 0], PEND2));
     function startHold(dir) { if (window.SFX && window.SFX.switchPress) window.SFX.switchPress(); if (item.jack) fm.jackHoldStart(dir); else fm.holdStart(item.end, dir); }   // 昇降スイッチを押した音(A8)
     function stopHold() { if (item.jack) fm.jackHoldStop(); else fm.holdStop(); }
-    // 上=▲(-1。フロアは上がる)/ 下=▼(+1)。ジャッキは 下=脚を伸ばす(+1)・上=縮める(-1)
+    // 上=▲(-1。フロアは上がる)/ 下=▼(+1)。ジャッキは 上=ジャッキを上げる(脚が伸びる=+1)・下=縮める(-1)
     var up = img('btn_cap_ue_big', 22, 26, 18, 18, [9, 9], PEND2), down = img('btn_cap_shita_big', 22, 44, 18, 18, [9, 9], PEND2);
-    pressable(up, 'btn_cap_ue_big', function () { startHold(-1); }, stopHold);
-    pressable(down, 'btn_cap_shita_big', function () { startHold(1); }, stopHold);
+    // ジャッキは、▲=ジャッキを上げる(脚が伸びる=+1)・▼=下げる(脚が縮む=-1)(2026-10-20 ユーザー指示。以前は逆だった)
+    pressable(up, 'btn_cap_ue_big', function () { startHold(item.jack ? 1 : -1); }, stopHold);
+    pressable(down, 'btn_cap_shita_big', function () { startHold(item.jack ? -1 : 1); }, stopHold);
     b.appendChild(up); b.appendChild(down);
     card.appendChild(b);
     if (item.end === 'F7') {   // 中段フロア: セットピンは廃止。真ん中のボタンはフレーム側の固定ピン(赤い板)の抜き差し、−/＋はその位置(前→後ろ5段階)

@@ -962,6 +962,9 @@
       var d = cand.MID - midPrev;
       var lever = (2055 - 1762) / (1762 - 1520);
       cand.F3r = Math.min(ENDS.F3r.r[1], Math.max(ENDS.F3r.r[0], ENDS.F3r.off - lever * d));
+      // 3番後ろのセットピンにフロアが載っている間は、3番前を動かしても、フロアは柱のピンの上で回る(柱の位置のフロアの高さ=ピンの高さのまま)。
+      // 上のシーソー(lever)は柱の位置が違うので、前を大きく下げると、後ろが浮いて「ピンに載っていない」扱いになり、セットピンを刺しているのにミスになった(2026-10-20 ユーザー報告)
+      if (F3 && F3_PIN_POST !== null && rested('F3r')) cand.F3r = Math.min(ENDS.F3r.r[1], Math.max(ENDS.F3r.r[0], f3R(F3_PIN_POST, cand.MID)));
     }
     roofHitSlot = null;
     var prob = cand[h.end] === ENDS[h.end].off

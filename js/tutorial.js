@@ -43,7 +43,7 @@
   function cname(n) { var it = carOf(n); if (!it) return '車'; var e = it.entry; return e.name + '(高さ' + (e.len * e.aspect).toFixed(2) + 'm・長さ' + e.len.toFixed(1) + 'm・幅' + (e.width || 0).toFixed(2) + 'm)'; }
   // スライド車軸の伸ばし・格納の状態(台車のタイヤ)
   function jackDown() { return MECH.jack <= 0.1; }
-  function tireDone() { return MECH.tireOut && MECH.lockR && MECH.lockL && jackDown(); }   // 突出して、ロックして、ジャッキを戻した
+  function tireDone() { return MECH.tireOut && jackDown(); }   // 突出して、ジャッキを戻した(伸ばした時は、ロックは掛けなくてよい。2026-10-20 ユーザー指示)
   function tireStowed() { return !MECH.tireOut && MECH.lockR && MECH.lockL && jackDown(); }   // 格納して、ロックして、ジャッキを戻した(走行状態)
   // 中段フロアを使う時のフロア(2番前・3番前・3番後ろ)の高さは、判定(LOADABLE.check の shelf)が出した「中段フロアが当たらない最小の高さ」(ピンの穴)。
   // 2番前の上限は、5番が平らな時は freeTop(-23.5)まで(2026-10-07)。判定が無い時だけ、従来のピンの上限(FIT_OFFS)を使う
@@ -213,7 +213,7 @@
   Auto.tireMove = async function (out) { await Auto.unlock(); if (MECH.tireOut !== !!out) { fm.moveTire(out ? 'out' : 'in'); await sleep(700); } };
   Auto.lockAll = async function () { fm.setLock('R', true); fm.setLock('L', true); await sleep(100); };
   Auto.jackDown = async function () { if (jackDown()) return; fm.jackHoldStart(-1); for (var j = 0; j < 400 && MECH.jack > 0; j++) await sleep(30); fm.jackHoldStop(); await sleep(1300); };
-  Auto.tireSet = async function (out) { await Auto.tireMove(out); await Auto.lockAll(); await Auto.jackDown(); };
+  Auto.tireSet = async function (out) { await Auto.tireMove(out); if (!out) await Auto.lockAll(); await Auto.jackDown(); };   // 伸ばした時はロック不要(縮めて走行状態に戻す時だけロック)
   Auto.stow = async function () { if (MECH.ramp) fm.toggleRamp(); for (var i = 0; i < 80 && (MECH.ramp || fm.rampT() > 0); i++) await sleep(100); };
 
   // ---------- ステップ ----------
@@ -272,20 +272,19 @@
   function tireSub(what) {
     return function () {
       var lk = '右=' + (MECH.lockR ? 'ロック' : '解除') + ' / 左=' + (MECH.lockL ? 'ロック' : '解除');
-      if (what === 'jack') return fm.tireOffGround() ? '出来ました(タイヤが浮いています)。' : 'ジャッキの ▼ を押し続ける(タイヤが地面から浮くまで)';
+      if (what === 'jack') return fm.tireOffGround() ? '出来ました(タイヤが浮いています)。' : 'ジャッキの ▲ を押し続ける(タイヤが地面から浮くまで)';
       if (what === 'unlock') return '「右引」と「左引」を押す(いま ' + lk + ')';
       if (what === 'out') return '「伸」を押す(いま ' + (MECH.tireOut ? '伸びている' : '縮んでいる') + ')';
       if (what === 'lock') return '「右押」と「左押」を押す(いま ' + lk + ')';
-      return 'ジャッキの ▲ を押し続ける(脚が全部縮むまで)';
+      return 'ジャッキの ▼ を押し続ける(脚が全部縮むまで)';
     };
   }
   add({ c: 2, info: true, t: 'なぜスライド車軸を伸ばすのか', x: 'トレーラーの台車(後ろの車軸)のタイヤは、伸ばしていない時、6番の横を通れるのは軽自動車(幅1.48m以下)だけです。それ以外の車は、6番を通り過ぎて5番・4番・中段フロア(7番)へ行けません(イージーは警告して止まり、ノーマル・ハードは止まらずに重いミスになります)。なお、6番に「積む(止まる)」のは、軽自動車と5ナンバー(幅1.755m以下)なら、伸ばしたかどうかに関係なくできます。つまり、6番以外(5・4・7番)に積む車は、軽自動車でない限り、先にスライド車軸を伸ばしておく必要があります。今回は4番に入るセダンが軽自動車ではないので、積み始める前に伸ばします。', hl: function () { return el('stageWrap'); } });
   add({ c: 2, t: 'ジャッキ・タイヤ操作盤を開く', x: 'タイヤの操作盤は、トレーラー後ろ寄りの車軸のあたりの光る枠(ジャッキとタイヤ操作盤)です。タップして、画面の下に操作盤を出してください。', hint: '絵の右寄り、後ろの車軸(タイヤ)のあたりに光る枠が2つあります。どちらをタップしても同じ操作盤が出ます。', ring: 'tire', past: tireDone, done: function () { return window.SWITCH_UI.current === 'tire'; }, fix: function () { openPanel('tire'); } });
-  add({ c: 2, t: 'ジャッキでタイヤを浮かせる', x: 'タイヤが地面に着いたままだと、車軸は動かせません。操作盤の左の「ジャッキ」(トレーラーの後ろを持ち上げる脚=ジャッキ)の ▼ を押し続けて脚を伸ばし、台車のタイヤを地面から浮かせます。', sub: tireSub('jack'), hint: '▼は押している間だけ脚が伸びます。トレーラーの後ろが少し持ち上がって、タイヤが浮いたら離します。', enter: function () { openPanel('tire'); }, hl: function () { return swCard(0); }, past: tireDone, done: function () { return fm.tireOffGround() || MECH.tireOut; }, fix: Auto.jackUp });
+  add({ c: 2, t: 'ジャッキでタイヤを浮かせる', x: 'タイヤが地面に着いたままだと、車軸は動かせません。操作盤の左の「ジャッキ」(トレーラーの後ろを持ち上げる脚=ジャッキ)の ▲ を押し続けて(ジャッキを上げて。脚が伸びます)、台車のタイヤを地面から浮かせます。', sub: tireSub('jack'), hint: '▲は押している間だけ脚が伸びます(ジャッキが上がります)。トレーラーの後ろが少し持ち上がって、タイヤが浮いたら離します。', enter: function () { openPanel('tire'); }, hl: function () { return swCard(0); }, past: tireDone, done: function () { return fm.tireOffGround() || MECH.tireOut; }, fix: Auto.jackUp });
   add({ c: 2, t: '車軸のロックを解除する', x: '車軸には、走行中にタイヤが動かないようにするロックが、左右に1つずつ付いています。操作盤の右側のボタン(上から 伸・縮・右押・右引・左押・左引)のうち、「右引」と「左引」を押して、左右のロックを両方解除します。', sub: tireSub('unlock'), hint: '「引」がロック解除、「押」がロックです。右と左、2つとも「引」を押します。タイヤが浮いていないと(前のステップ)、車軸は動かせません。', enter: function () { openPanel('tire'); }, hl: function () { return swCard(1); }, past: tireDone, done: function () { return (!MECH.lockR && !MECH.lockL) || MECH.tireOut; }, fix: Auto.unlock });
   add({ c: 2, t: 'スライド車軸を伸ばす(伸)', x: '一番上の「伸」ボタンを押すと、台車のタイヤが外側へ張り出します。これで、軽自動車以外の車も、6番の横を通れるようになります。', sub: tireSub('out'), hint: '「伸」は操作盤の右側のボタンの一番上です。ロックが掛かっていると動かないので、前のステップで両方解除します。', enter: function () { openPanel('tire'); }, hl: function () { return swCard(1); }, past: tireDone, done: function () { return MECH.tireOut; }, fix: function () { return Auto.tireMove(true); } });
-  add({ c: 2, t: 'ロックを掛ける', x: '伸ばした位置で固定するため、「右押」と「左押」を押して、左右のロックを両方掛けます。', sub: tireSub('lock'), hint: '「押」がロックです。右と左、2つとも押します。', enter: function () { openPanel('tire'); }, hl: function () { return swCard(1); }, past: tireDone, done: function () { return MECH.tireOut && MECH.lockR && MECH.lockL; }, fix: Auto.lockAll });
-  add({ c: 2, t: 'ジャッキを戻す', x: 'ジャッキの ▲ を押し続けて、脚を縮めます。タイヤが地面に着くと、台車の車高が少し下がります(エアサスの分。絵でトレーラーの後ろが少し下がります)。これでスライド車軸の伸ばしは完了です。', sub: tireSub('jackup'), hint: '▲は押している間だけ脚が縮みます。脚が全部縮むまで押し続けてください。', enter: function () { openPanel('tire'); }, hl: function () { return swCard(0); }, done: tireDone, fix: Auto.jackDown });
+  add({ c: 2, t: 'ジャッキを戻す', x: 'ジャッキの ▼ を押し続けて、脚を縮めます(ジャッキを下げます)。タイヤが地面に着くと、台車の車高が少し下がります(エアサスの分。絵でトレーラーの後ろが少し下がります)。これでスライド車軸の伸ばしは完了です(伸ばした時は、ロックを掛け直す必要はありません)。', sub: tireSub('jackup'), hint: '▼は押している間だけ脚が縮みます。脚が全部縮むまで押し続けてください。', enter: function () { openPanel('tire'); }, hl: function () { return swCard(0); }, done: tireDone, fix: Auto.jackDown });
 
   // 3. 上段につなぐ
   add({ c: 3, t: '後ろ側のスイッチを開く', x: '上の段(1〜3番)に積むには、3番フロアの後ろ端を下げて、道板につなぎます。まず、トレーラーの後ろ寄り(中央の柱の下あたり)の光っているスイッチ枠をタップして、操作盤を出してください。', hint: '絵の中央よりやや右、柱の下にある小さなスイッチが「後ろ側(3番・中段フロア)」です。タップすると、画面の下に「3番 前・3番 後・中段フロア」の操作盤が出ます。', ring: 'rear', done: function () { return window.SWITCH_UI.current === 'rear'; }, fix: function () { openPanel('rear'); } });
@@ -336,12 +335,12 @@
   function tireInSub() {
     if (tireStowed()) return '出来ました。';
     var off = fm.tireOffGround(), lk = MECH.lockR || MECH.lockL;
-    if (!off && !MECH.tireOut && !lk) return 'ジャッキの ▲ を押し続けて、ジャッキを戻す';
-    if (!off && lk) return '① ジャッキの ▼ を押し続けて、タイヤを浮かせる';
+    if (!off && !MECH.tireOut && !lk) return 'ジャッキの ▼ を押し続けて、ジャッキを戻す';
+    if (!off && lk) return '① ジャッキの ▲ を押し続けて、タイヤを浮かせる';
     if (off && lk) return '② 「右引」と「左引」でロックを解除する';
     if (off && MECH.tireOut) return '③ 「縮」を押して、スライド車軸を縮める';
     if (off && !MECH.lockR && !MECH.lockL) return '④ 「右押」と「左押」でロックを掛ける';
-    return '④ 「右押」と「左押」でロックを掛ける → ⑤ ジャッキの ▲ でジャッキを戻す';
+    return '④ 「右押」と「左押」でロックを掛ける → ⑤ ジャッキの ▼ でジャッキを戻す';
   }
   add({ c: 10, info: true, t: 'サイクル完了の条件', x: 'サイクルが完了する条件は、①7台とも積んで、全部タップで固定 ②上段のフロアが全てセットピンに載っている ③5番フロアが平ら ④中段フロアが固定ピンに載っている ⑤タイヤ・ロックが走行状態(タイヤを格納してロック) ⑥4番扇動板をしまう ⑦道板をしまう、です。このうち⑤のタイヤの格納が、まだ残っています。', hl: function () { return []; } });
   add({ c: 10, t: 'スライド車軸を縮める', x: '最初に伸ばしたスライド車軸を、縮めて元に戻します(走行する時は格納した状態です)。手順は伸ばした時の逆で、ジャッキで浮かせる → 右引・左引でロック解除 → 「縮」 → 右押・左押でロック → ジャッキを戻す、です。ここは自分の手でやってみてください(「いまやること」に、次の操作が出ます)。', sub: tireInSub, hint: '操作盤は、後ろ寄りの車軸のあたりの光る枠をタップすると出ます。「縮」は右側のボタンの上から2番目です。', ring: 'tire', enter: function () { openPanel('tire'); }, hl: function () { var off = fm.tireOffGround(); return swCard(!off && !MECH.tireOut && !(MECH.lockR || MECH.lockL) ? 0 : (!off ? 0 : 1)); }, past: function () { return !!ctx.cycleDone; }, done: tireStowed, fix: function () { return Auto.tireSet(false); } });
