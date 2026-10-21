@@ -304,7 +304,7 @@
     engKei: 'sfx_car_kei_idle', engSmall: 'sfx_car_small_idle', engMid: 'sfx_car_mid_idle', engBig: 'sfx_car_big_idle',
     engKeiTruck: 'sfx_truck_kei_truck_idle', engTruck: 'sfx_truck_big_idle',   // 車種別のエンジン(アイドリングのループ)・トレーラーのエンジン
     truckArrive: 'sfx_trailer_arrive_decel', parkHiss: 'sfx_trailer_air_vent_b', chassisRattle: 'sfx_trailer_metal_heavy_b', chassisBoom: 'sfx_trailer_metal_heavy_a',   // 到着(エンジンは回ったまま・減速)・止まった時のパーキングのエア抜け「プシュー」
-    warn: 'sfx_ui_warn_buzz', bump: 'sfx_drive_bump_pothole', ptoStart: 'sfx_floor_pto_start',
+    bump: 'sfx_drive_bump_pothole', ptoStart: 'sfx_floor_pto_start',
     switchPress: 'sfx_ui_switch_press', wireTension: 'sfx_lashing_wire_tension', carDoor: 'sfx_car_car_door', carBrake: 'sfx_drive_brake_lever',   // スイッチ・荷締めワイヤーが張る音・車のドア・パーキングブレーキ(2026-10-19)   // 「できない」ブザー・輪止め/穴の「ガタン」・PTO(油圧ポンプ)の始動(2026-10-19)
     truckStart: 'sfx_truck_engine_start', truckStop: 'sfx_truck_engine_stop'   // エンジン始動・アイドリングストップ(エンジンを止める)
   };
@@ -510,8 +510,8 @@
     S.clank = function () { var now = performance.now(); if (now - lastClank < 1200) return; lastClank = now; if (!playSample('clank', 0.8, 0.95 + 0.1 * Math.random())) synth.clank(); };
     S.dock = function () { if (!playSample('chock', 0.8, 1)) synth.dock(); };
     S.ok = function () { if (!playSample('ok', 0.6, 1)) synth.ok(); };
-    // できない(低いブザー)。ファイルは他の操作音より約10dB大きかったので、クリックと同じくらいに下げ、0.45秒で切る(2026-10-19)
-    S.warn = function () { var now = performance.now(); if (now - lastWarn < 400) return; lastWarn = now; if (!playSample('warn', 0.18, 1, 0, 0.45)) synth.warn(); };
+    // できない(低いブザー)は、鳴らさない(2026-10-21 ユーザー指示)。限界・ピンに当たった時は、ガコン(clank)で知らせる。呼び出し側はそのまま
+    S.warn = function () { };
     S.bump = function () { if (!playSample('bump', 0.7, 1)) synth.bump(); };   // 輪止め・穴を乗り越えた「ガタン」
     S.engineStart = function () { if (!playSample('ptoStart', 0.6, 1)) synth.engineStart(); };   // エンジン・PTO を入れた(油圧ポンプが立ち上がる)
     S.airBrake = function () { if (!playSample('parkHiss', 0.6, 1, 0, 1.2)) synth.airBrake(); };
