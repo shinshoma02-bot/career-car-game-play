@@ -19,6 +19,7 @@
 <script src="js/car_library.js"></script>
 <script>
 // semi-7b の素材(assets/semi-7b/)を、ステージ 2520x724(1m=114px・地面 y=577)に置いて見るだけのページ。ゲームの動きは付いていない。
+// タイヤの向き: トレーラーは左へ進むので、タイヤは反時計回り(spin が減る方向)
 // 描く順: 背景 → 地面 → トラクタ → 前・駆動タイヤ → 車 → 枠(frame_all) → 台車タイヤ(D58 方式A)
 (function () {
   var D = 'assets/semi-7b/', W = 2520, H = 724, cv = document.getElementById('cv'), ctx = cv.getContext('2d');
@@ -51,8 +52,8 @@
     var dt = Math.min(0.05, (now - (lastT || now)) / 1000); lastT = now;
     if (anim) {
       var t = (now - anim.t0) / 1000, u = Math.min(1, t / anim.dur);
-      if (anim.kind === 'in') { off = (W + 420) * Math.pow(1 - u, 3); spin += dt * 14 * (1 - u); }
-      else { off = -(W + 420) * u * u; spin += dt * 14 * u; }
+      if (anim.kind === 'in') { off = (W + 420) * Math.pow(1 - u, 3); spin -= dt * 14 * (1 - u); }
+      else { off = -(W + 420) * u * u; spin -= dt * 14 * u; }
       if (u >= 1) { if (anim.kind === 'in') off = 0; anim = null; }
     }
     ctx.clearRect(0, 0, W, H);
