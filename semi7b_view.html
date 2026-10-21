@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>semi-7b 見た目の確認</title>
+<style>
+  html,body{margin:0;background:#111;color:#cfe0ff;font:13px sans-serif}
+  #bar{display:flex;gap:8px;align-items:center;padding:6px 8px;flex-wrap:wrap}
+  button{font-size:13px;padding:5px 10px;background:#2a2f3a;color:#cfe0ff;border:1px solid #5c6f96;border-radius:6px}
+  canvas{display:block;width:100vw;height:auto;background:#000}
+</style></head><body>
+<div id="bar">
+  <b>semi-7b(8台積み・宙段つき)見た目の確認用</b>
+  <button id="bIn">入場</button><button id="bOut">出発</button>
+  <label><input type="checkbox" id="cCars" checked> 車</label>
+  <label><input type="checkbox" id="cSlots"> 積み込み位置</label>
+  <span id="msg"></span>
+</div>
+<canvas id="cv" width="2520" height="724"></canvas>
+<script src="js/car_library.js"></script>
+<script>
+// semi-7b の素材(assets/semi-7b/)を、ステージ 2520x724(1m=114px・地面 y=577)に置いて見るだけのページ。ゲームの動きは付いていない。
+// 描く順: 背景 → 地面 → トラクタ → 前・駆動タイヤ → 車 → 枠(frame_all) → 台車タイヤ(D58 方式A)
+(function () {
+  var D = 'assets/semi-7b/', W = 2520, H = 724, cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  var imgs = {}, P, off = 0, anim = null, spin = 0, lastT = 0;
+  function load(k, src) { return new Promise(function (ok) { var i = new Image(); i.onload = function () { imgs[k] = i; ok(); }; i.onerror = function () { document.getElementById('msg').textContent += ' [読めない: ' + src + ']'; ok(); }; i.src = src; }); }
+  var lib = {}; (window.CAR_LIBRARY || []).forEach(function (e) { lib[e.id] = e; });
+  fetch(D + 'parts.json').then(function (r) { return r.json(); }).then(function (p) {
+    P = p;
+    var jobs = [load('bg', 'assets/common/yard/yard_bg.png'), load('ground', 'assets/common/yard/yard_ground.png'),
+      load('tractor', D + 'tractor.png'), load('frame', D + 'frame_all.png'),
+      load('wheel_front', D + 'wheel_front.png'), load('wheel_drive', D + 'wheel_drive.png'), load('wheel_trailer', D + 'wheel_trailer.png')];
+    P.slots.forEach(function (s) { jobs.push(load('car_' + s.preview_car, 'assets/cars/' + s.preview_car + '.webp')); });
+    return Promise.all(jobs);
+  }).then(function () { off = 0; requestAnimationFrame(loop); });
+
+  function drawCar(s) {
+    var e = lib[s.preview_car], im = imgs['car_' + s.preview_car]; if (!e || !im) return;
+    var L = e.len * 114, h = im.height * L / im.width, flip = s.faces === 'right', mid = ((e.tl + e.tr) / 2) * L;   // mid = 2つのタイヤの中点(画像の左から)
+    ctx.save(); ctx.translate(s.contact_stage[0], s.contact_stage[1]); ctx.rotate(s.angle_deg * Math.PI / 180);
+    if (flip) ctx.scale(-1, 1);   // 車の前が右向きの位置は、左右反転(中点を原点に合わせてから)
+    ctx.drawImage(im, -mid, -h, L, h);
+    ctx.restore();
+  }
+  function wheelDraw(k) {   // 切り出した画像の左上 = (x0,y0)+stage_offset。円の中心 = center_stage
+    var w = P.wheels[k.replace('wheel_', '')], im = imgs[k]; if (!w || !im) return;
+    var c = w.center_stage, lx = w.x0 + P.stage_offset[0], ly = w.y0 + P.stage_offset[1];
+    ctx.save(); ctx.translate(c[0], c[1]); ctx.rotate(spin); ctx.drawImage(im, lx - c[0], ly - c[1]); ctx.restore();
+  }
+  function loop(now) {
+    var dt = Math.min(0.05, (now - (lastT || now)) / 1000); lastT = now;
+    if (anim) {
+      var t = (now - anim.t0) / 1000, u = Math.min(1, t / anim.dur);
+      if (anim.kind === 'in') { off = (W + 420) * Math.pow(1 - u, 3); spin += dt * 14 * (1 - u); }
+      else { off = -(W + 420) * u * u; spin += dt * 14 * u; }
+      if (u >= 1) { if (anim.kind === 'in') off = 0; anim = null; }
+    }
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(imgs.bg, 0, 0, W, H); if (imgs.ground) ctx.drawImage(imgs.ground, 0, 0, W, H);
+    ctx.save(); ctx.translate(off, 0);
+    var o = P.stage_offset;
+    ctx.drawImage(imgs.tractor, o[0], o[1]);
+    wheelDraw('wheel_front'); wheelDraw('wheel_drive');
+    if (document.getElementById('cCars').checked) P.slots.forEach(drawCar);
+    ctx.drawImage(imgs.frame, o[0], o[1]);
+    wheelDraw('wheel_trailer');
+    if (document.getElementById('cSlots').checked) {
+      ctx.font = '20px sans-serif'; ctx.lineWidth = 2;
+      P.slots.forEach(function (s) { ctx.strokeStyle = '#ff0'; ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(s.contact_stage[0], s.contact_stage[1], 6, 0, 7); ctx.stroke(); ctx.fillText(s.id, s.contact_stage[0] + 8, s.contact_stage[1] - 8); });
+    }
+    ctx.restore();
+    requestAnimationFrame(loop);
+  }
+  document.getElementById('bIn').onclick = function () { anim = { kind: 'in', t0: performance.now(), dur: 2.4 }; };
+  document.getElementById('bOut').onclick = function () { anim = { kind: 'out', t0: performance.now(), dur: 2.9 }; };
+})();
+</script></body></html>

@@ -880,7 +880,8 @@
     var token = ++deckToken;
     state.deck = []; state.sel = 0; state.pendingEntry = null;
     renderDeck();
-    var size = state.forceDeckSize || (T6 ? 6 : (Math.random() < 0.5 ? 6 : 7));
+    var hs = /[#&]size=([67])/.exec(location.hash || '');   // 確認用: #...&size=7 で台数を固定(cars=車のid,… と組み合わせると、同じ条件を再現しやすい)
+    var size = state.forceDeckSize || (hs ? +hs[1] : (T6 ? 6 : (Math.random() < 0.5 ? 6 : 7)));
     setStatus('車を準備しています...');
     var chance = state.impossibleChance !== undefined ? state.impossibleChance : IMPOSSIBLE_CHANCE;
     var impossible = state.deckDrawn > 0 && Math.random() < chance;

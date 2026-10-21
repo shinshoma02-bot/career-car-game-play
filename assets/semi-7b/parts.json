@@ -1,0 +1,278 @@
+{
+ "id": "semi-7b",
+ "pxPerMeter": 114,
+ "body": {
+  "file": "body_all_1945.png",
+  "size": [
+   1945,
+   453
+  ]
+ },
+ "wheels": {
+  "front": {
+   "cx": 148.8,
+   "cy": 398.8,
+   "rim": 33.0,
+   "r": 50,
+   "x0": 99,
+   "y0": 349,
+   "center_stage": [
+    269.8,
+    526.8
+   ]
+  },
+  "drive": {
+   "cx": 687.0,
+   "cy": 397.5,
+   "rim": 33.0,
+   "r": 50,
+   "x0": 637,
+   "y0": 348,
+   "center_stage": [
+    808.0,
+    525.5
+   ]
+  },
+  "trailer": {
+   "cx": 1829.6,
+   "cy": 387.1,
+   "rim": 35.0,
+   "r": 56,
+   "x0": 1774,
+   "y0": 331,
+   "center_stage": [
+    1950.6,
+    515.1
+   ]
+  }
+ },
+ "note": "cx,cy=全体画像内のタイヤ中心(px)。r=切り出し半径。x0,y0=切り出した画像の左上。ステージ座標へは、全体画像の置き場所を足す",
+ "tractor_cut": {
+  "cab_roof_y": 148,
+  "cab_right_x": 205,
+  "rack_diag_to": [
+   247,
+   225
+  ],
+  "rack_right_x": 247,
+  "rack_base_y": 352,
+  "goose_x": 560,
+  "goose_y": 333,
+  "tractor_end_x": 775
+ },
+ "slots": [
+  {
+   "id": "U1",
+   "label": "上1: 運転席の上のラック(前下がり)",
+   "contact": [
+    174.3,
+    157.6
+   ],
+   "angle_deg": 15.75,
+   "faces": "left",
+   "wheelbase_px": 308.3,
+   "wheel_centers": [
+    [
+     34.0,
+     87.2
+    ],
+    [
+     330.7,
+     170.9
+    ]
+   ],
+   "preview_car": "wagon-0",
+   "contact_stage": [
+    295.3,
+    285.6
+   ]
+  },
+  {
+   "id": "U2",
+   "label": "上2: ラックの後ろ",
+   "contact": [
+    681.6,
+    144.5
+   ],
+   "angle_deg": -6.86,
+   "faces": "right",
+   "wheelbase_px": 291.8,
+   "wheel_centers": [
+    [
+     533.2,
+     132.5
+    ],
+    [
+     822.9,
+     97.6
+    ]
+   ],
+   "preview_car": "hatch-0",
+   "contact_stage": [
+    802.6,
+    272.5
+   ]
+  },
+  {
+   "id": "U3",
+   "label": "上3: 斜めの板",
+   "contact": [
+    1180.6,
+    140.8
+   ],
+   "angle_deg": -9.92,
+   "faces": "left",
+   "wheelbase_px": 283.5,
+   "wheel_centers": [
+    [
+     1035.8,
+     136.0
+    ],
+    [
+     1315.1,
+     87.2
+    ]
+   ],
+   "preview_car": "wagon-1",
+   "contact_stage": [
+    1301.6,
+    268.8
+   ]
+  },
+  {
+   "id": "U4",
+   "label": "上4: 後ろの板",
+   "contact": [
+    1738.9,
+    127.1
+   ],
+   "angle_deg": 7.35,
+   "faces": "left",
+   "wheelbase_px": 327.3,
+   "wheel_centers": [
+    [
+     1580.4,
+     76.7
+    ],
+    [
+     1905.0,
+     118.5
+    ]
+   ],
+   "preview_car": "wagon-2",
+   "contact_stage": [
+    1859.9,
+    255.1
+   ]
+  },
+  {
+   "id": "L1",
+   "label": "下1: 運転席の後ろ",
+   "contact": [
+    687.1,
+    313.9
+   ],
+   "angle_deg": -0.68,
+   "faces": "left",
+   "wheelbase_px": 293.2,
+   "wheel_centers": [
+    [
+     540.1,
+     285.9
+    ],
+    [
+     833.4,
+     282.5
+    ]
+   ],
+   "preview_car": "compact-0",
+   "contact_stage": [
+    808.1,
+    441.9
+   ]
+  },
+  {
+   "id": "L2",
+   "label": "下2: 荷台の前寄り",
+   "contact": [
+    1135.7,
+    397.6
+   ],
+   "angle_deg": -0.67,
+   "faces": "right",
+   "wheelbase_px": 296.7,
+   "wheel_centers": [
+    [
+     987.0,
+     369.6
+    ],
+    [
+     1283.7,
+     366.2
+    ]
+   ],
+   "preview_car": "hatch-1",
+   "contact_stage": [
+    1256.7,
+    525.6
+   ]
+  },
+  {
+   "id": "L3",
+   "label": "下3: 宙段",
+   "contact": [
+    1386.9,
+    277.2
+   ],
+   "angle_deg": 2.86,
+   "faces": "left",
+   "wheelbase_px": 279.6,
+   "wheel_centers": [
+    [
+     1248.8,
+     240.6
+    ],
+    [
+     1528.0,
+     254.6
+    ]
+   ],
+   "preview_car": "hatch-2",
+   "contact_stage": [
+    1507.9,
+    405.2
+   ]
+  },
+  {
+   "id": "L4",
+   "label": "下4: 後ろ(後輪はトレーラーのタイヤの陰。車の長さから推定)",
+   "contact": [
+    1743.6,
+    399.3
+   ],
+   "angle_deg": 0.0,
+   "faces": "left",
+   "wheelbase_px": 270.5,
+   "wheel_centers": [
+    [
+     1608.3,
+     369.6
+    ],
+    [
+     1878.8,
+     369.6
+    ]
+   ],
+   "preview_car": "suv-0",
+   "contact_stage": [
+    1864.6,
+    527.3
+   ]
+  }
+ ],
+ "stage_offset": [
+  121,
+  128
+ ],
+ "slots_note": "contact=2つのタイヤが床に接する点の中点(全体画像の座標 px)。angle_deg=+で右下がり。faces=車の前の向き。wheelbase_px=生成画像の車のホイールベース(1m=114px)。位置は生成画像から測った下書き(誤差は数px〜10px程度)。*_stage はステージ座標(全体画像を stage_offset だけずらして置いた時)"
+}
