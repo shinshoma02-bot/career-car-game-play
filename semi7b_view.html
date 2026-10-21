@@ -20,7 +20,7 @@
 <script>
 // semi-7b の素材(assets/semi-7b/)を、ステージ 2520x724(1m=114px・地面 y=577)に置いて見るだけのページ。ゲームの動きは付いていない。
 // タイヤの向き: トレーラーは左へ進むので、タイヤは反時計回り(spin が減る方向)
-// 描く順: 背景 → 地面 → トラクタ → 前・駆動タイヤ → 車 → 枠(frame_all) → 台車タイヤ(D58 方式A)
+// 描く順: 背景 → 地面 → 影 → トラクタ → 前・駆動タイヤ → 車 → 枠(frame_all) → 台車タイヤ(D58 方式A)
 (function () {
   var D = 'assets/semi-7b/', W = 2520, H = 724, cv = document.getElementById('cv'), ctx = cv.getContext('2d');
   var imgs = {}, P, off = 0, anim = null, spin = 0, lastT = 0;
@@ -29,7 +29,7 @@
   fetch(D + 'parts.json').then(function (r) { return r.json(); }).then(function (p) {
     P = p;
     var jobs = [load('bg', 'assets/common/yard/yard_bg.png'), load('ground', 'assets/common/yard/yard_ground.png'),
-      load('tractor', D + 'tractor.png'), load('frame', D + 'frame_all.png'),
+      load('shadow', D + 'shadow_stage.png'), load('tractor', D + 'tractor.png'), load('frame', D + 'frame_all.png'),
       load('wheel_front', D + 'wheel_front.png'), load('wheel_drive', D + 'wheel_drive.png'), load('wheel_trailer', D + 'wheel_trailer.png')];
     P.slots.forEach(function (s) { jobs.push(load('car_' + s.preview_car, 'assets/cars/' + s.preview_car + '.webp')); });
     return Promise.all(jobs);
@@ -60,6 +60,7 @@
     ctx.drawImage(imgs.bg, 0, 0, W, H); if (imgs.ground) ctx.drawImage(imgs.ground, 0, 0, W, H);
     ctx.save(); ctx.translate(off, 0);
     var o = P.stage_offset;
+    if (imgs.shadow) ctx.drawImage(imgs.shadow, 0, 0);   // 地面の影(ステージ座標。一番先に)
     ctx.drawImage(imgs.tractor, o[0], o[1]);
     wheelDraw('wheel_front'); wheelDraw('wheel_drive');
     if (document.getElementById('cCars').checked) P.slots.forEach(drawCar);
