@@ -136,10 +136,10 @@
     { id: 'port', name: '港の岸壁', w: 2, lamps: [[380, 184], [1140, 184], [1880, 184]], lampR: 160 },
     { id: 'auction', name: '中古車オークション会場', w: 2, lamps: [[443, 367], [1183, 367], [1923, 367], [2443, 367]] },
     { id: 'factory', name: '自動車工場の構内', w: 2, lamps: [[443, 367], [1183, 367], [1923, 367], [2443, 367]] },
-    // D54(2026-10-19 グラフィック納品。ComfyUIで生成)。地面の絵が無いので、今のヤードの地面を使う。2026-10-21 ユーザーが採用(重み2。URLの #place=coast / hillside / rail で個別に見られる)
-    { id: 'coast', name: '海と岸壁', w: 2, ground: 'yard' },
-    { id: 'hillside', name: '丘の裾野', w: 2, ground: 'yard' },
-    { id: 'rail', name: '貨物駅', w: 2, ground: 'yard' }
+    // D54(2026-10-19 グラフィック納品。ComfyUIで生成)。地面の絵が無いので、今のヤードの地面を使う。重み0=ランダムには出さない(URLに #place=coast / hillside / rail を付けた時だけ。ユーザーの採用待ち)
+    { id: 'coast', name: '海と岸壁', w: 0, ground: 'yard' },
+    { id: 'hillside', name: '丘の裾野', w: 0, ground: 'yard' },
+    { id: 'rail', name: '貨物駅', w: 0, ground: 'yard' }
   ];
   var PLACE_PICK = (function () {
     var m = /[?&#]place=(\w+)/.exec(location.hash + location.search), want = m && m[1], i, tot = 0, r;

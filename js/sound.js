@@ -304,7 +304,7 @@
     engKei: 'sfx_car_kei_idle', engSmall: 'sfx_car_small_idle', engMid: 'sfx_car_mid_idle', engBig: 'sfx_car_big_idle',
     engKeiTruck: 'sfx_truck_kei_truck_idle', engTruck: 'sfx_truck_big_idle',   // 車種別のエンジン(アイドリングのループ)・トレーラーのエンジン
     truckArrive: 'sfx_trailer_arrive_decel', parkHiss: 'sfx_trailer_air_vent_b', chassisRattle: 'sfx_trailer_metal_heavy_b', chassisBoom: 'sfx_trailer_metal_heavy_a',   // 到着(エンジンは回ったまま・減速)・止まった時のパーキングのエア抜け「プシュー」
-    warn: 'sfx_ui_warn_buzz', bump: 'sfx_drive_bump_pothole', ptoStart: 'sfx_floor_pto_start',
+    bump: 'sfx_drive_bump_pothole', ptoStart: 'sfx_floor_pto_start',
     switchPress: 'sfx_ui_switch_press', wireTension: 'sfx_lashing_wire_tension', carDoor: 'sfx_car_car_door', carBrake: 'sfx_drive_brake_lever',   // スイッチ・荷締めワイヤーが張る音・車のドア・パーキングブレーキ(2026-10-19)   // 「できない」ブザー・輪止め/穴の「ガタン」・PTO(油圧ポンプ)の始動(2026-10-19)
     truckStart: 'sfx_truck_engine_start', truckStop: 'sfx_truck_engine_stop'   // エンジン始動・アイドリングストップ(エンジンを止める)
   };
@@ -335,7 +335,7 @@
   // 鳴らし続ける音(ファイルをループ再生)。loop() に渡す作り方。rate は setFreq で変える
   // 鳴らし続けるファイル(エンジン)。読み込んだ音の大きさをそろえ(音源ごとの差を直す)、lp を付けると高音を切る。
   // freq0〜freq1 は、速さ(loop の freq)から再生速度(エンジンの回転)に変える範囲。省略すると、回転は変えない
-  function makeSampleLoop(name, freq0, freq1, lp) {
+  function makeSampleLoop(name, freq0, freq1, lp, hp) {
     return function (a) {
       var buf = samples[name], d = buf.getChannelData(0), e = 0;
       for (var i = 0; i < d.length; i += 4) e += d[i] * d[i];
@@ -344,6 +344,7 @@
       var gn = a.createGain(); gn.gain.value = norm;
       var g = a.createGain(); g.gain.value = 0.0001;
       if (lp) { var fl = a.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = lp; s.connect(fl); fl.connect(gn); } else s.connect(gn);
+      if (hp) { var fh = a.createBiquadFilter(); fh.type = 'highpass'; fh.frequency.value = hp; s.disconnect(); s.connect(fh); fh.connect(lp ? fl : gn); }   // 高い帯域(シュー)だけ取り出す
       gn.connect(g); g.connect(sfxOut);
       s.start(0, Math.random() * Math.max(0.1, buf.duration - 0.2));
       return { gain: g, last: 0, setFreq: freq1 ? function (f, now) { s.playbackRate.setTargetAtTime(0.85 + 0.55 * Math.max(0, Math.min(1, (f - freq0) / (freq1 - freq0))), now, 0.15); } : null, stop: function () { s.stop(); } };
@@ -454,7 +455,8 @@
       var now = performance.now(); if (now - lastScrape < 160) return; lastScrape = now;
       playSample('scrape', 0.7, 0.8 + 0.2 * Math.random(), 0.1 + 1.3 * Math.random(), 0.4, 1600);   // ズリズリ(低め)。長い音の途中から短く切って、高い音はカット
     };
-    S.hyd = function () { if (samples.hyd) loop('hyd', makeSampleLoop('hyd'), 0.35, 0); else synth.hyd(); };
+    // 油圧(フロアの上げ下げ)の音: 低いシリンダーの音に、高い「シュー」(エア感)を重ねる(2026-10-21)
+    S.hyd = function () { if (samples.hyd) { loop('hyd', makeSampleLoop('hyd'), 0.3, 0); loop('hydAir', makeSampleLoop('hyd', 0, 0, 0, 1800), 0.3, 0); } else synth.hyd(); };
     // トレーラー入り: 最後のエアブレーキが、止まる瞬間に合うよう、ファイルの後ろ側を使う(アニメ 約2.4秒)
     // トレーラーの状態: エンジンが回っているか(到着でtrue、アイドリングストップでfalse、出る時に始動)
     var truckRunning = false;
@@ -491,12 +493,15 @@
       truckRunning = false; releaseLoop('truckIdle');
       playSample('truckStop', 0.6);
     };
-    // エンジン始動(S1・2026-10-21 開発から依頼): 止めていたアイドリングを、始動の音から再開する(エンジンを入れ直した時)
+    // エンジンを入れ直した(S1・2026-10-22): 始動の音を鳴らして、少し待ってからアイドリングを再開する。止めるのが早ければ、再開しない
     S.truckStart = function () {
       if (truckRunning) return;
-      if (!playSample('truckStart', 0.6, 1)) { S.engineStart(); return; }
+      if (!samples.truckStart) { S.engineStart(); return; }
+      playSample('truckStart', 0.6, 1, 0, 1.6);
       truckRunning = true;
-      if (samples.engTruck) holdLoop('truckIdle', makeSampleLoop('engTruck', 0, 0, 1400), 0.18);
+      setTimeout(function () {
+        if (truckRunning && samples.engTruck) holdLoop('truckIdle', makeSampleLoop('engTruck', 0, 0, 1400), 0.18);
+      }, 1200);
     };
     // 走り去る: エンジンが止まっていたら、始動の音からつなぐ。そのあと、出だしのエア抜けからアニメの長さまで
     S.truckOut = function (sec) {
@@ -515,8 +520,8 @@
     S.clank = function () { var now = performance.now(); if (now - lastClank < 1200) return; lastClank = now; if (!playSample('clank', 0.8, 0.95 + 0.1 * Math.random())) synth.clank(); };
     S.dock = function () { if (!playSample('chock', 0.8, 1)) synth.dock(); };
     S.ok = function () { if (!playSample('ok', 0.6, 1)) synth.ok(); };
-    // できない(低いブザー)。ファイルは他の操作音より約10dB大きかったので、クリックと同じくらいに下げ、0.45秒で切る(2026-10-19)
-    S.warn = function () { var now = performance.now(); if (now - lastWarn < 400) return; lastWarn = now; if (!playSample('warn', 0.18, 1, 0, 0.45)) synth.warn(); };
+    // できない(低いブザー)は、鳴らさない(2026-10-21 ユーザー指示)。限界・ピンに当たった時は、ガコン(clank)で知らせる。呼び出し側はそのまま
+    S.warn = function () { };
     S.bump = function () { if (!playSample('bump', 0.7, 1)) synth.bump(); };   // 輪止め・穴を乗り越えた「ガタン」
     S.engineStart = function () { if (!playSample('ptoStart', 0.6, 1)) synth.engineStart(); };   // エンジン・PTO を入れた(油圧ポンプが立ち上がる)
     S.airBrake = function () { if (!playSample('parkHiss', 0.6, 1, 0, 1.2)) synth.airBrake(); };
