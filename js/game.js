@@ -844,10 +844,14 @@
   }
   // わざと積めない荷物: 6番に載せられる車(幅1.755m以下)が1台も無い組み合わせ。6番が埋まらないので、どう並べても積み終わらない(確実に積めない)
   var IMPOSSIBLE_CHANCE = 0.12;   // 新しい荷物が積めない荷物になる確率(最初の荷物は必ず積める。state.impossibleChance で上書きできる=確認用)
-  function drawImpossibleDeck(size) {
-    var pool = lib.filter(function (e) { return !fitsSlot6(e); }), out = [];
-    while (out.length < size && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-    return Promise.all(out.map(loadItem)).then(function (items) { items.drawTries = 1; items.loadable = { ok: false, why: '6番に載せられる車が無い' }; items.impossible = true; return items; });
+  // 2026-10-22 ユーザー指示: 積めない組み合わせは弾かず、そのまま出題する。プレイヤーは「配車に連絡」で荷物を変える(その時だけ、積めない荷物を見抜けたことになる)
+  // → 判定(LOADABLE.check)が「積めない」と出す、ふつうに引いた組み合わせを使う。6番に載せられる車が無い荷物も、この中に入る
+  function drawImpossibleDeck(size, tries) {
+    tries = tries || 0;
+    var entries = pickCars(size), r = { ok: false, why: '判定なし' };
+    if (window.LOADABLE) r = window.LOADABLE.check(entries.map(function (en) { return { entry: en }; }));
+    if (r.ok && tries < MAX_REDRAW) return drawImpossibleDeck(size, tries + 1);   // 積める組み合わせは、積めない荷物にならないので引き直す
+    return Promise.all(entries.map(loadItem)).then(function (items) { items.drawTries = tries + 1; items.loadable = r; items.impossible = true; return items; });
   }
   // チュートリアルの最初の荷物: 車を厳選した固定デッキ(ガイドの順 = 1番・2番・3番・4番・5番・7番(中段フロア)・6番)。js/tutorial.js が車名つきで案内する
   //  選び方(2026-10-07。中段フロアの判定を直したあとの LOADABLE.check の固定割り当てで、候補約2400通りを実際の高さ計算で比べた結果):
@@ -1917,6 +1921,7 @@
     if (state.car || Object.keys(state.occupied).length || /mode=tutorial/.test(location.hash || '')) return;
     newDeck();
   };
+  state.newDeck = newDeck;   // 確認用: 新しい荷物を引き直す(検証スクリプトが使う)
   updateChockUi();
   newDeck();
 })();
