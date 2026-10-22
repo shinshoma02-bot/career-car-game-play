@@ -395,6 +395,7 @@
   function render() {
     if (!panel) return;
     var s = S[ctx.i], total = S.length;
+    if (window.VOICE_GUIDE && !ctx.ended) window.VOICE_GUIDE.step(s.t);   // ステップが変わった時、解説の声を鳴らす(voice_guide.js。声のファイルが無ければ鳴らない)
     var body = panel.querySelector('.tutBody');
     panel.classList.toggle('min', ctx.min);
     panel.querySelector('.tutFold').textContent = ctx.min ? '開く' : '折りたたむ';
