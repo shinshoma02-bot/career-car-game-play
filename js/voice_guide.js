@@ -202,12 +202,16 @@
 ];
   var BY_TITLE = {}; TABLE.forEach(function (o) { BY_TITLE[o.title] = o; });
   var DANGER = { near: ["危ない！", "危ない！ 止まれ！"], hit: ["おっとっと！", "うわっ！", "やばい、ぶつけた！"] };   // 声のファイル: danger_near_1..2, danger_hit_1..3
-  var VOICES = [{ id: "senpai", name: "落ち着いた先輩風" }, { id: "zundamon", name: "ずんだもん" }];   // ずんだもん: 声のファイルが無い間は、何も鳴らない(画面の文字だけ)
-  var voice = "senpai";
-  try { voice = localStorage.getItem("guideVoice") || "senpai"; } catch (e) { }
+  var VOICES = [{ id: "senpai", name: "落ち着いた先輩風" }, { id: "zundamon", name: "ずんだもん" }];
+  // 声の選び方(2026-10-22 ユーザー指示): 声を変えるのはメイン画面(タイトル)だけ。ゲーム中は、選んである声を見るだけ。ボイスのオンオフは、どの画面でもできる
+  var ON_MAIN = /title\.html$/.test(location.pathname) || /\/$/.test(location.pathname);
+  var voice = "senpai", on = true;
+  try { voice = localStorage.getItem("guideVoice") || "senpai"; on = localStorage.getItem("guideVoiceOn") !== "0"; } catch (e) { }
   var cur = null, lastTitle = null;
+  function voiceName() { var v = VOICES.filter(function (x) { return x.id === voice; })[0]; return v ? v.name : voice; }
   function enabledGuide() { var gs = window.GAME_STATE, gm = window.GAME_MODE; return !!((gm && gm.tutorial) || (gs && gs.difficulty === "easy")); }   // 解説の声は、チュートリアルとイージーだけ
   function play(file) {
+    if (!on) return;   // ボイスOFF: 声は鳴らさない(画面の文字だけ)
     try {
       if (cur) { cur.pause(); cur = null; }
       var a = new Audio("assets/voice/guide/" + voice + "/" + file + ".mp3");
@@ -223,27 +227,52 @@
     if (!enabledGuide()) return;
     var o = BY_TITLE[title]; if (o) play(o.id);
   }
-  // 危ない動作(衝突): 大きいほど「おっとっと」。小さい時は「危ない！」。ノーマル・ハードでも鳴らす(1人前でも、驚いた声は出る)
+  // 危ない動作(衝突): 大きいほど「おっとっと」。小さい時は「危ない！」。ノーマル・ハードでも鳴らす(驚いた声は、1人前の設定でも出す)。ボイスOFFの時は鳴らさない
   var lastDanger = 0;
   function danger(kind) {
+    if (!on) return;
     var now = performance.now(); if (now - lastDanger < 1500) return; lastDanger = now;
     var n = kind === "hit" ? 3 : 2, k = Math.floor(Math.random() * n) + 1;
     play("danger_" + kind + "_" + k);
   }
-  // 音設定の画面に、声の選択を1行足す(sound.js の画面を変えずに、ここで差し込む)
-  function addPickerRow() {
+  // 音設定の画面に、声の行を足す(sound.js の画面を変えずに、ここで差し込む)
+  function row(label, body) {
+    var r = document.createElement("div"); r.className = "sfx-row guideRow";
+    r.innerHTML = '<div class="sfx-label"><span>' + label + '</span></div>';
+    r.appendChild(body);
+    return r;
+  }
+  function addRows() {
     var box = document.querySelector("#sfxPanel .sfx-box"), tog = document.getElementById("sfxTog");
     if (!box || !tog || document.getElementById("guideVoiceRow")) return;
-    var row = document.createElement("div"); row.id = "guideVoiceRow"; row.className = "sfx-row";
-    row.innerHTML = '<div class="sfx-label"><span>教えてくれる声</span><b></b></div><select id="guideVoice" style="width:100%;min-height:36px;font-size:15px;background:#243446;color:#dfe8f2;border:2px solid #4b6078;border-radius:8px"></select>';
-    VOICES.forEach(function (v) { var op = document.createElement("option"); op.value = v.id; op.textContent = v.name; row.querySelector("select").appendChild(op); });
-    row.querySelector("select").value = voice;
-    row.querySelector("select").addEventListener("change", function (e) { voice = e.target.value; try { localStorage.setItem("guideVoice", voice); } catch (x) { } });
+    var rows = [];
+    // 声の選択: メイン画面だけ変えられる。ゲーム中は、今の声を見るだけ
+    var pick;
+    if (ON_MAIN) {
+      pick = document.createElement("select"); pick.id = "guideVoice";
+      pick.style.cssText = "width:100%;min-height:36px;font-size:15px;background:#243446;color:#dfe8f2;border:2px solid #4b6078;border-radius:8px";
+      VOICES.forEach(function (v) { var op = document.createElement("option"); op.value = v.id; op.textContent = v.name; pick.appendChild(op); });
+      pick.value = voice;
+      pick.addEventListener("change", function (e) { voice = e.target.value; try { localStorage.setItem("guideVoice", voice); } catch (x) { } });
+    } else {
+      pick = document.createElement("div"); pick.id = "guideVoice";
+      pick.style.cssText = "font-size:15px;color:#dfe8f2;padding:6px 0";
+      pick.textContent = voiceName() + '(声は、タイトル画面で変えられます)';
+    }
+    var r1 = row("教えてくれる声", pick);
+    rows.push(r1);
     var credit = document.createElement("div"); credit.id = "guideVoiceCredit"; credit.style.cssText = "margin-top:6px;font-size:12px;color:#9fb0c2;text-align:left";
     credit.textContent = "ずんだもんの声: VOICEVOX:ずんだもん";   // クレジット表記(VOICEVOX・ずんだもん音源の規約。音の担当が決めた文)
-    row.appendChild(credit);
-    box.insertBefore(row, tog);
+    r1.appendChild(credit);
+    // ボイスのオンオフ: どの画面でも変えられる
+    var tg = document.createElement("button"); tg.type = "button"; tg.id = "guideVoiceTog"; tg.className = "sfx-btn";
+    function paint() { tg.textContent = on ? "ボイス:ON(タップでOFF)" : "ボイス:OFF(タップでON)"; tg.className = on ? "sfx-btn on" : "sfx-btn"; }
+    tg.addEventListener("click", function () { on = !on; try { localStorage.setItem("guideVoiceOn", on ? "1" : "0"); } catch (x) { } paint(); if (!on && cur) { cur.pause(); cur = null; } });
+    paint();
+    rows.push(row("ボイス", tg));
+    rows.forEach(function (r) { box.insertBefore(r, tog); });
+    if (rows.length) rows[0].id = "guideVoiceRow";
   }
-  var iv = setInterval(function () { if (document.querySelector("#sfxPanel .sfx-box")) { addPickerRow(); clearInterval(iv); } }, 300);
-  window.VOICE_GUIDE = { step: step, danger: danger, play: play, voices: VOICES, table: TABLE };
+  var iv = setInterval(function () { if (document.querySelector("#sfxPanel .sfx-box")) { addRows(); clearInterval(iv); } }, 300);
+  window.VOICE_GUIDE = { step: step, danger: danger, play: play, voices: VOICES, table: TABLE, onMain: ON_MAIN };
 })();
