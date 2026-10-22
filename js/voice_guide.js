@@ -202,7 +202,7 @@
 ];
   var BY_TITLE = {}; TABLE.forEach(function (o) { BY_TITLE[o.title] = o; });
   var DANGER = { near: ["危ない！", "危ない！ 止まれ！"], hit: ["おっとっと！", "うわっ！", "やばい、ぶつけた！"] };   // 声のファイル: danger_near_1..2, danger_hit_1..3
-  var VOICES = [{ id: "senpai", name: "落ち着いた先輩風" }];
+  var VOICES = [{ id: "senpai", name: "落ち着いた先輩風" }, { id: "zundamon", name: "ずんだもん" }];   // ずんだもん: 声のファイルが無い間は、何も鳴らない(画面の文字だけ)
   var voice = "senpai";
   try { voice = localStorage.getItem("guideVoice") || "senpai"; } catch (e) { }
   var cur = null, lastTitle = null;
