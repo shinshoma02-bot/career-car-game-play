@@ -1161,6 +1161,12 @@
     var fm = window.FLOOR_MECH; if (!fm || !fm.bridgeSeg || !fm.slideGeom) return null;   // semi-6b の機構には、4番扇動板・スライド板が無い(タップのたびに例外になっていた。2026-10-13 検証で発見)
     var best = null;
     function cand(d, run) { if (!best || d < best.d) best = { d: Math.max(0, d), run: run }; }
+    // 道板(後部の板。出している時も、しまっている時も、板があった場所): タップすると「道板を出す/しまう」のポップを出す(2026-10-21)。押すのはポップのボタン
+    var rp = cfg.ramp, dr = distSeg(x, y, rp.top, rp.bottom);
+    if (dr <= 10 + tol) cand(dr, function (ev) {
+      if (!window.MECH_POP) return;
+      window.MECH_POP.show(ev.clientX, ev.clientY, '道板', [{ label: function () { return fm.MECH.ramp ? '道板をしまう' : '道板を出す'; }, run: function () { fm.toggleRamp(); }, keep: false }]);
+    });
     // 4番扇動板: 根元から先端までの線(出ている時は5番側へ、格納中は下に垂れている)
     var sg = fm.bridgeSeg(), db = distSeg(x, y, sg.a, sg.b);
     if (db <= 9 + tol) cand(db, function () { fm.toggleBridge(); });
@@ -1860,7 +1866,7 @@
     var mechTol = 10 * scaleX;
     if (!tightSwitchAt(x, y, 3 * scaleX) && !carAt(x, y)) {
       var mh = mechanismAt(x, y, mechTol);
-      if (mh) { mh.run(); return; }
+      if (mh) { mh.run(e); return; }   // 道板はポップを出すので、クリックの位置(e)を渡す
     }
     // トレーラー上のスイッチ(とその周り)をタップ: そのグループの操作盤を出す
     var groups = (cfg.newArt && cfg.newArt.switchGroups) || [];

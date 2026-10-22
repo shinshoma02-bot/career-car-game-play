@@ -197,6 +197,11 @@
   .swCard { background: #222; border-radius: 8px; padding: 8px; text-align: center; }
   .swCard.tire { text-align: left; }
   .swLabel { font-size: 12px; color: #ccc; margin-bottom: 6px; }
+  /* 扇動板・スライド板のボタン(前側の操作盤の中。floor_controls.js の plateCard。2026-10-21) */
+  .plateCard { min-width: 190px; }
+  .plateCard .plateBtn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; margin: 4px 0; padding: 6px 8px; font-size: 14px; text-align: left; color: #e8f1ea; background: #2a2a2a; border: 1px solid #555; border-radius: 6px; cursor: pointer; }
+  .plateCard .plateBtn.on { background: #2d6a2d; border-color: #4a4; color: #fff; }
+  .plateCard .plateIcon { width: 34px; height: 26px; object-fit: contain; flex: none; }
   .swCard .pinRow { margin-top: 6px; }
   .swCard .pinRow button { background: #2a2a2a; color: #fff; border: 1px solid #555; border-radius: 5px; font-size: 13px; padding: 11px 0; cursor: pointer; }
   .swCard .pinRow button.on { background: #2d6a2d; border-color: #4a4; }
@@ -319,6 +324,12 @@
   }
   #modeBar > span:empty { display: none; }
   #floorPanel .mechRow button.hold6b::before { display: none; }   /* semi-6b の仮の昇降ボタン(アイコン無し) */
+  /* 機構の操作ポップ(道板・扇動板・スライド板。mech_popup.js。2026-10-21) */
+  #mechPop { position: fixed; z-index: 60; min-width: 170px; padding: 8px; background: #17232b; border: 1px solid #5a7d6a; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+  #mechPop .mechPopTitle { font-size: 13px; color: #9fc3ad; margin: 0 2px 6px; letter-spacing: .04em; }
+  #mechPop .mechPopBtn { display: block; width: 100%; min-height: 40px; margin: 4px 0; padding: 8px 10px; font-size: 15px; text-align: left; color: #e8f1ea; background: #223540; border: 1px solid #3e5a66; border-radius: 7px; cursor: pointer; }
+  #mechPop .mechPopBtn:active { background: #2c4652; }
+  #mechPop .mechPopBtn.on { background: #2d6a2d; border-color: #4a4; color: #fff; }
   #btnRamp::before { background-image: url(assets/common/ui/ic_ramp.png?v=279.1.96); }
   #btnBridge::before { background-image: url(assets/common/ui/ic_bridge.png?v=279.1.96); }
   #btnSlide::before { background-image: url(assets/common/ui/ic_slide.png?v=279.1.96); }
@@ -669,8 +680,8 @@
 (function () {
   var m = /[#&]trailer=(semi-6b?)(?:&|$)/.exec(location.hash), id = window.TRAILER_ID = m ? m[1] : 'semi-6', V = '?v=279.1.96';
   var list = id === 'semi-6b'
-    ? ['trailer_config_semi6b', 'sound', 'car_library', 'car_dims', 'car_tires', 'floor_mech_6b', 'loadable_6b', 'main', 'game', 'floor_controls_6b', 'modes', 'dispatch', 'ui_layout', 'ui_hide']
-    : ['trailer_config', 'trailer_assets', 'sound', 'car_library', 'car_dims', 'car_tires', 'floor_mech', 'loadable', 'main', 'game', 'floor_controls', 'modes', 'tutorial', 'dispatch', 'ui_layout', 'ui_hide'];
+    ? ['trailer_config_semi6b', 'sound', 'car_library', 'car_dims', 'car_tires', 'floor_mech_6b', 'loadable_6b', 'main', 'mech_popup', 'game', 'floor_controls_6b', 'modes', 'dispatch', 'ui_layout', 'ui_hide']
+    : ['trailer_config', 'trailer_assets', 'sound', 'car_library', 'car_dims', 'car_tires', 'floor_mech', 'loadable', 'main', 'mech_popup', 'game', 'floor_controls', 'modes', 'tutorial', 'dispatch', 'ui_layout', 'ui_hide'];
   list.forEach(function (n) { document.write('<script src="js/' + n + '.js' + V + '"><\/script>'); });
 })();
 </script>
