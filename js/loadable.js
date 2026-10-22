@@ -280,6 +280,8 @@
   function check(items, opts) {
     var n = items.length, fx = opts && opts.fixed;
     if (!items.some(function (it) { return isNarrow(it.entry); })) return { ok: false, why: '6番に積める幅の車が無い' };
+    // 7台で、ミニバン・SUVが3台以上は積めない(2026-10-22 ユーザー指示)。6台は、1番・4番を低い車にして、6番のタイヤを格納して空けた所に大きい車を入れられるので、判定にまかせる
+    if (items.length === 7 && items.filter(function (it) { return /^(minivan|suv)-/.test(it.entry.id); }).length >= 3) return { ok: false, why: '7台で、ミニバン・SUVが3台以上は積めない' };
     var fw = items.map(function (it) { return dims(it, false); });
     var limit = (window.GAME_MODE && window.GAME_MODE.SCORE ? window.GAME_MODE.SCORE.heightLimitM : 4.1) + SLACK_M;
     var idx = items.map(function (_, i) { return i; });

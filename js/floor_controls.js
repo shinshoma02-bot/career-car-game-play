@@ -89,6 +89,36 @@
       open(g);
     }
   }, 500);
+  // 扇動板・スライド板のカード(前側の操作盤の中。アイコン付きのボタン。押すと動き、開いたまま操作できる)
+  var plateBtns = [];
+  function plateCard() {
+    var card = document.createElement('div');
+    card.className = 'swCard plateCard';
+    var lab = document.createElement('div'); lab.className = 'swLabel'; lab.textContent = '扇動板・スライド板'; card.appendChild(lab);
+    plateBtns = [
+      { icon: 'ic_slide', label: function () { return fm.MECH.slide ? 'スライド板を格納' : 'スライド板を搬出'; }, on: function () { return fm.MECH.slide; }, run: fm.toggleSlide },
+      { icon: 'ic_flap2', label: function () { return fm.MECH.f2Flap ? '2番扇動板を閉じる' : '2番扇動板を開く'; }, on: function () { return fm.MECH.f2Flap; }, run: fm.toggleF2Flap },
+      { icon: 'ic_bridge', label: function () { return fm.MECH.bridge ? '4番扇動板を格納' : '4番扇動板を搬出'; }, on: function () { return fm.MECH.bridge; }, run: fm.toggleBridge }
+    ].map(function (it) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'plateBtn';
+      b.innerHTML = '<img src="assets/common/ui/' + it.icon + '.png?v=279.1.96" alt="" class="plateIcon">' + '<span></span>';
+      b.addEventListener('click', function () { it.run(); renderMechButtons(); });
+      card.appendChild(b);
+      it.el = b;
+      return it;
+    });
+    renderPlate();
+    return card;
+  }
+  function renderPlate() {
+    plateBtns.forEach(function (it) {
+      if (!it.el) return;
+      it.el.querySelector('span').textContent = it.label();
+      it.el.classList.toggle('on', !!it.on());
+    });
+  }
+  setInterval(renderPlate, 500);
   function renderMechButtons() {
     btnAutoSw.textContent = '昇降ボタン自動切りかえ ' + (autoSw ? 'ON' : 'OFF');
     btnAutoSw.classList.toggle('on', autoSw);
@@ -100,6 +130,9 @@
     btnSlide.classList.toggle('on', fm.MECH.slide);
     btnF2Flap.textContent = fm.MECH.f2Flap ? '2番扇動板を閉じる' : '2番扇動板を開く';
     btnF2Flap.classList.toggle('on', fm.MECH.f2Flap);
+    // 通常の操作では、扇動板・スライド板は1番・2番前のスイッチのポップから操作する(常駐ボタンは出さない)。チュートリアルは、ガイドがボタンを指すので従来どおり
+    [btnBridge, btnSlide, btnF2Flap].forEach(function (b) { b.style.display = isTutorial ? '' : 'none'; });
+    renderPlate();
   }
 
   // ---- 動力(D43): エンジン・PTO・昇降メインスイッチ。ノーマル・ハードだけ操作が必要(イージー・シミュレーションでは、常に ON として扱い、行ごと隠す)----
@@ -285,6 +318,7 @@
     if (g.tire) { tc = tireCard(); cards.appendChild(tc); }
     swPanel.appendChild(cards);
     if (tc && tc.help) swPanel.appendChild(tc.help);
+    if (id === 'front') cards.appendChild(plateCard());   // 1番・2番前のスイッチの横に、扇動板・スライド板のボタン(2026-10-21)
     renderPinButtons(); renderRearPin(); renderStopPin();
     // (以前は、操作盤へ画面を自動でスクロールしていたが、ストレスになるのでやめた。ユーザー指示 2026-10-15)
   }
