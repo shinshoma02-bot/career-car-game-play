@@ -239,6 +239,9 @@
     VOICES.forEach(function (v) { var op = document.createElement("option"); op.value = v.id; op.textContent = v.name; row.querySelector("select").appendChild(op); });
     row.querySelector("select").value = voice;
     row.querySelector("select").addEventListener("change", function (e) { voice = e.target.value; try { localStorage.setItem("guideVoice", voice); } catch (x) { } });
+    var credit = document.createElement("div"); credit.id = "guideVoiceCredit"; credit.style.cssText = "margin-top:6px;font-size:12px;color:#9fb0c2;text-align:left";
+    credit.textContent = "ずんだもんの声: VOICEVOX:ずんだもん";   // クレジット表記(VOICEVOX・ずんだもん音源の規約。音の担当が決めた文)
+    row.appendChild(credit);
     box.insertBefore(row, tog);
   }
   var iv = setInterval(function () { if (document.querySelector("#sfxPanel .sfx-box")) { addPickerRow(); clearInterval(iv); } }, 300);
