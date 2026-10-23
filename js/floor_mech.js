@@ -626,9 +626,7 @@
   }
   function toggleBridge() {
     var st = window.GAME_STATE, car = st && st.car;
-    if (MECH.bridge && carTiresOn(cfg.bridgePlate.anchor[0], cfg.bridgePlate.tipX)) {
-      onWarn('車のタイヤが4番扇動板の上にあるので格納できません'); return;
-    }
+    // 2026-10-23 ユーザー指示: 格納・搬出は、車があっても自由にできる(当たりは当たり判定で扱う)
     bridgeT(); // 切り替え前の位置まで進めてから、新しい向きで動かし始める
     MECH.bridge = !MECH.bridge;
     if (window.SFX) window.SFX.ramp();
@@ -689,13 +687,10 @@
   function toggleSlide() {
     var st = window.GAME_STATE, car = st && st.car;
     slideT();
+    // 2026-10-23 ユーザー指示: 格納・搬出は、車があっても自由にできる。車に当たるかは、動かした後の当たり判定(routeProblems の slide)で扱う(強制で止めない)
     if (MECH.slide) {
-      if (carTiresOn(FLOORS.F1.x1 - 10, FLOORS.F1.x1 + SLIDE.len)) {
-        onWarn('車のタイヤがスライド板の上にあるので、しまえません'); return;
-      }
       MECH.slide = false; if (window.SFX) window.SFX.ramp(); onInfo('スライド板を格納した(1番フロアの下へ)');
     } else {
-      if (slideHitsCar2(curOffs(), 1)) { onWarn('2番の車に当たるので、スライド板を出せません'); return; }
       MECH.slide = true; if (window.SFX) window.SFX.ramp(); onInfo('スライド板を搬出した');
     }
   }
@@ -824,8 +819,7 @@
       });
       return worst;
     }
-    // 出しているスライド板(1番の後端)が、2番の車に当たらないか(当たる状態に新しくなる動きだけ止める)
-    if (slideT() > 0.02 && slideHitsCar2(offs) && !slideHitsCar2(curOffs())) return 'スライド板が2番の車に当たる(スライド板を格納してください)';
+    // (2026-10-23 ユーザー指示: スライド板が車に当たるかで、フロアの動きを止めない。当たりは当たり判定で扱う)
     if (cars.length) {
       var wc = worstOverlap(offs);
       if (wc.v > FRAME_GAP_PX && wc.v > worstOverlap(curOffs()).v + 0.01) { roofHitSlot = String(wc.n); return wc.n + '番の車に当たる'; }
