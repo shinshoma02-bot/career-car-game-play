@@ -272,6 +272,7 @@
       pts.push({ floor: 'F2', x: f2front[0], y: f2front[1] });
       extra.f2front = { floor: 'F2', x: f2front[0], y: f2front[1] };
       pts.push({ floor: 'F1', x: f1rear[0], y: f1rear[1] });
+      extra.f1rear = { x: f1rear[0], y: f1rear[1] };   // 1番の後端(走る道の高さ)。1番フロアを上げていると、ここで車が上がれずに当たる(2026-10-23 ユーザー指示)
       pts.push(slotPt('1', 'F1'));
       tg['3'] = slotPt('3', 'F3'); tg['2'] = slotPt('2', 'F2'); tg['1'] = slotPt('1', 'F1');
     } else if (id === '7') {
@@ -538,6 +539,11 @@
       var sx0 = car.x - car.leftTireX;
       if (fm.slideT() > 0.02 && fm.slideHitsBody(sx0, sx0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), car.y, undefined, fm.slideT())) {
         out.push({ key: 'slide', phys: true, msg: 'スライド板に車の前が当たります。スライド板を格納してください。' });
+      }
+      // 1番フロアが上がっている: 道(走る高さ)より上にあるフロアの後端へは、車が上がれない(当たって止まる)
+      if (car.f1RearArc !== undefined && car.f1RearY !== undefined && car.progress >= car.f1RearArc - 2 && car.progress <= car.f1RearArc + 30) {   // 入口の所だけ見る(1番に乗った後は止めない)
+        var f1now = fm.onFloor('F1', fm.FLOORS.F1.rear.pt[0], fm.FLOORS.F1.rear.pt[1]);
+        if (car.f1RearY - f1now[1] > 12) out.push({ key: 'f1rise', phys: true, stopAt: car.f1RearArc, msg: '1番フロアが上がっていて、車が上れません。1番フロアを下げてから進めてください。' });
       }
       // 2番扇動板が開いている: 1番へは通れない(止める)
       if (car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 30 && fm.MECH.f2Flap) {
@@ -1058,6 +1064,8 @@
     car.rampArc = car.pathTool.arcOf(pts[2]);   // 道板の上端まで(上段・下段の道が分かれる前の共通部分)
     car.f2FrontArc = car.route.extra.f2front ? car.pathTool.arcOf(resolvePoint(car.route.extra.f2front)) : undefined;
     car.bridgeWallArc = car.route.extra.bridgeWall ? car.pathTool.arcOf(resolvePoint(car.route.extra.bridgeWall)) : undefined;
+    car.f1RearArc = car.route.extra.f1rear ? car.pathTool.arcOf(car.route.extra.f1rear) : undefined;
+    car.f1RearY = car.route.extra.f1rear ? car.route.extra.f1rear.y : undefined;
     car.anchorWallArc = car.route.extra.anchorWall ? car.pathTool.arcOf(resolvePoint(car.route.extra.anchorWall)) : undefined;
     car.f5EdgeArc = car.route.extra.f5Edge ? car.pathTool.arcOf(resolvePoint(car.route.extra.f5Edge)) : undefined;
   }
