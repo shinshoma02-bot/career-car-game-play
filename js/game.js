@@ -1701,8 +1701,13 @@
     if (car.seated && applied < -0.2) car.contacted = false;   // 輪止めから離れる向きに動かしたら、OK(固定でない限り)を外す
     // 3番フロアが道板から離れている(上げている)のに、車が3番の後端より後ろ(道板との間の空中)へ出たら、車が落ちる事故
     if (car.route.id === 'U' && car.f3RearArc !== undefined && !window.FLOOR_MECH.upperConnected() && car.progress - (car.wbPx || 0) < car.f3RearArc - 2 && car.progress > 1) {
-      edgeBreak(car, car.pts[3].x, '3番フロア');   // 後ろのタイヤが後端を越えたら(先頭が越えるのを待たない)
-      return false;
+      // #physics=1 の時は、3番の後端と道板の高さで、重力の計算(simEntry)が決める: 通る(道板へ滑り降りる)/ぶつかる / 落ちる
+      var r3 = PHYS_ENTRY ? (function () {
+        var fm3 = window.FLOOR_MECH, yR = fm3.onFloor('F3', fm3.FLOORS.F3.rear.pt[0], fm3.FLOORS.F3.rear.pt[1])[1];
+        return simEntry(yR, cfg.ramp.top[1], f1OverhangPx(car));
+      })() : 'fall';
+      if (r3 === 'pass') { /* 道板へ滑り降りて通る(事故にしない) */ }
+      else { edgeBreak(car, car.pts[3].x, '3番フロア'); return false; }   // 後ろのタイヤが後端を越えたら(先頭が越えるのを待たない)
     }
     // 2番の前端の先で、1番が14px以上低い(道が無い): 車の前が端を越えたら、落ちる(事故)
     if (car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc + 8) {
