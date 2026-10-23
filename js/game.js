@@ -548,7 +548,28 @@
     return sb > car.y - f1OverhangPx(car);
   }
   // 段階2(2026-10-23): 1番の入口を、重力で動かした計算で決める。URL に #physics=1 を付けた時だけ。通常の遊び方は、今の規則のまま
-  var PHYS_ENTRY = /[#&]physics=1/.test(location.hash || '');
+  var PHYS_ENTRY = /[#&]physics=[12]/.test(location.hash || '');
+  // 車の動き自体を重力で動かす(#physics=2)。今は、1番の入口(2番の前端の前後)の前輪・後輪だけ。接地の高さを、重力と床の高さから毎フレーム計算する
+  var PHYS_MOTION = /[#&]physics=2/.test(location.hash || '');
+  var PHYS_G = 2400;
+  function physMotion(car, dt) {
+    var fm = window.FLOOR_MECH, onWin = car.route && car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 80 && car.progress < car.f2FrontArc + 160;
+    if (!PHYS_MOTION || !onWin || !car.pathTool) { car.physOn = false; return; }
+    var J = car.pathTool.at(car.f2FrontArc).x;
+    var rearP = car.pathTool.at(car.progress - (car.wbPx || 0));
+    function surf(x) {   // 床の上面(画面の y)。2番の前端より左は2番、右は1番
+      var a = fm.onFloor(x < J ? 'F2' : 'F1', x < J ? fm.FLOORS.F2.front.pt[0] : fm.FLOORS.F1.rear.pt[0], x < J ? fm.FLOORS.F2.front.pt[1] : fm.FLOORS.F1.rear.pt[1]);
+      return a[1];
+    }
+    if (!car.physOn) { car.physOn = true; car.physFY = car.y; car.physRY = rearP.y; car.physFVy = 0; car.physRVy = 0; }
+    var front = car.physFY, rear = car.physRY, sF = surf(car.x), sR = surf(rearP.x);
+    // 前輪・後輪: 床の上にあれば、そこで支えられる。床より上にある(浮いている)なら、重力で落ちて、床に着く。床が高い(段差)時は、まだ上がらない(routeProblems が止める)
+    car.physFVy += PHYS_G * dt; front += car.physFVy * dt; if (front >= sF) { front = sF; car.physFVy = 0; }
+    car.physRVy += PHYS_G * dt; rear += car.physRVy * dt; if (rear >= sR) { rear = sR; car.physRVy = 0; }
+    car.physFY = front; car.physRY = rear;
+    car.y = front;
+    car.physFrontX = car.x; car.physRearX = rearP.x;
+  }
   // 前輪が、2番の前端から1番の床へ進む。床の上面 surf・車の接地線 y0・張り出しの高さ overH。結果: 'pass'(通る)/'block'(縁にぶつかる)/'fall'(支えが無い)
   function simEntry(y0, surf, overH) {
     var G = 2400, STEP = 14, DT = 1 / 240, y = y0, vy = 0, step = y0 - surf;
@@ -1695,6 +1716,7 @@
     var applied = car.progress - before;
     var p = car.pathTool.at(car.progress);
     car.x = p.x; car.y = p.y;
+    physMotion(car, dt);
     rideBridge(car);
     // 後ろのタイヤが床の上に載ったら「床の上の車」。道板が出ていなくても、地面を走る扱いにしない(床の高さのまま。後端を越えた時は edgeBreak)
     if (!T6 && car.progress - (car.wbPx || 0) > tailRearTireArc(car) - (car.wbPx || 0) + 4) car.onDeck = true;

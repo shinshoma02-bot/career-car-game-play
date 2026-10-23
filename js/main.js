@@ -1758,6 +1758,7 @@
         var L = car.pathTool.at(car.progress);
         var R = car.pathTool.at(car.progress - car.wbPx);
         rotDeg = car.groundRun ? 0 : Math.atan2(-(L.y - R.y), -(L.x - R.x)) * 180 / Math.PI;
+        if (car.physOn && car.physFrontX !== undefined) rotDeg = Math.atan2(-(car.physFY - car.physRY), -(car.physFrontX - car.physRearX)) * 180 / Math.PI;   // #physics=2: 前輪・後輪の物理の高さで傾ける
       }
       if (curTilt) {
         var rb = cfg.ramp.bottom[0], rt = cfg.ramp.top[0];
