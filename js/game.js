@@ -608,9 +608,17 @@
         var fmP = window.FLOOR_MECH, a2 = fmP.onFloor('F2', fmP.FLOORS.F2.front.pt[0], fmP.FLOORS.F2.front.pt[1]), b1 = fmP.onFloor('F1', fmP.FLOORS.F1.rear.pt[0], fmP.FLOORS.F1.rear.pt[1]);
         var rPhys = simEntry(a2[1], b1[1], f1OverhangPx(car));
         car.f1PhysFall = rPhys === 'fall';   // 支えが無い: 下の per-frame 処理で、事故(傾いて引っかかる)にする
-        if (rPhys === 'block') out.push({ key: 'f1rise', phys: true, stopAt: car.f2FrontArc, msg: '1番フロアの方が高く、車は上れません。2番と1番の高さをそろえてから進めてください。' });
+        if (rPhys === 'block') {
+          // 速いとぶつかって大破し、落ちる(ご指摘 2026-10-23)。遅いと、その位置で止まる
+          if (Math.abs(car.velocity) >= 150 && !car.fellF1) { car.fellF1 = true; accident(car, '1番フロアに勢いよくぶつかって大破し、落ちてしまいました。'); return out; }
+          out.push({ key: 'f1rise', phys: true, stopAt: car.f2FrontArc, msg: '1番フロアの方が高く、車は上れません。2番と1番の高さをそろえてから進めてください。' });
+        }
       } else if (jd !== null && jd > 14 && car.f2FrontArc !== undefined && car.progress >= car.f2FrontArc - 2 && car.progress <= car.f2FrontArc + 30 && f1SlabHitsHood(car)) {
         out.push({ key: 'f1rise', phys: true, stopAt: car.f2FrontArc, msg: '1番フロアの方が高く、車は上れません。2番と1番の高さをそろえてから進めてください。' });
+      }
+      // #physics=1: 3番の後端が道板から離れている(床を上げた)時は、車がその位置で止まる(事故にしない)(2026-10-23 ご指摘)
+      if (PHYS_ENTRY && car.route.id === 'U' && car.f3RearArc !== undefined && !fm.upperConnected() && car.progress > car.f3RearArc - 40 && car.progress < car.f3RearArc + 40) {
+        out.push({ key: 'f3lift', phys: true, msg: '3番フロアが道板から離れているので、車はここで止まります。フロアを道板につなぎ直してください。' });
       }
       // 2番扇動板が開いている: 1番へは通れない(止める)
       // (2番扇動板が開いている時は、止めずに、スライド板を格納した時と同じ溝として扱う。updateVelocity の隙間)
@@ -1564,7 +1572,7 @@
       var gpf = car.progress, gpr = car.progress - (car.wbPx || 0), gpv = car.gapPrev;
       if (gapOpen && gpv) {
         var gv = Math.max(Math.abs(car.velocity), 260), crossF = (gpv.f < gE) !== (gpf < gE), crossR = (gpv.r < gE) !== (gpr < gE);
-        var gRes = PHYS_ENTRY ? simGap(gapW, tireD) : (gapW >= tireD ? 'fall' : 'wedge');
+        var gRes = PHYS_ENTRY ? (fmH.MECH.f2Flap ? 'fall' : simGap(gapW, tireD)) : (gapW >= tireD ? 'fall' : 'wedge');   // 2番扇動板が開いている時は、少しでも差し掛かったら、ぶつかって落ちる(ご指摘)
         if ((crossF || crossR) && gRes === 'fall' && !car.fellGap) {
           car.fellGap = true;
           accident(car, (fmH.MECH.f2Flap && !fmH.MECH.slide ? 'スライド板も2番扇動板も無い大きな穴に' : '穴(幅' + Math.round(gapW / 114 * 100) + 'cm)に') + 'タイヤが落ち込んで、傾いて引っかかってしまいました。', resolvePoint(car.route.extra.f2front).x, -1);   // 地面へは落ちず、穴の縁を支点に、前が沈む向きに傾いて止まる
@@ -1707,6 +1715,7 @@
         return simEntry(yR, cfg.ramp.top[1], f1OverhangPx(car));
       })() : 'fall';
       if (r3 === 'pass') { /* 道板へ滑り降りて通る(事故にしない) */ }
+      else if (PHYS_ENTRY) { /* #physics=1: 3番が道板から離れても事故にしない。routeProblems の f3lift で、その位置に止める(ご指摘) */ }
       else { edgeBreak(car, car.pts[3].x, '3番フロア'); return false; }   // 後ろのタイヤが後端を越えたら(先頭が越えるのを待たない)
     }
     // 2番の前端の先で、1番が14px以上低い(道が無い): 車の前が端を越えたら、落ちる(事故)
