@@ -566,11 +566,26 @@
   // RAMP.t: 0=格納、1=展開完了。約1.15秒で移行(出す時はスライド→傾き、しまう時は逆)。積み込みは展開完了(t=1)が必要
   var RAMP = { t: 0, last: null };
   var RAMP_SEC = 1.15;
+  // 道板が出ていく途中で、地面の車(道板の先の所にいる車)に当たるか。道板の先端が、車の体の x 範囲に入っていれば当たる(2026-10-23)
+  function rampHitsCar(t) {
+    var g = window.GAME_STATE, c = g && g.car; if (!c || c.seated || !c.progress) return false;
+    var top = cfg.ramp.top, reach = top[0] + (cfg.ramp.bottom[0] - top[0]) * t;   // 道板の先の x(出ていく分だけ伸びる)
+    var x0 = c.x - c.leftTireX, x1 = x0 + c.w;
+    return reach > x0 && top[0] < x1 && c.y - (c.h || 0) < cfg.ramp.groundY;   // 車の体が地面の上にある
+  }
+  // 道板が車に当たったら止まり(0.9秒)、少し戻って、そこで止まる(板のスライド板と同じ)
+  var rampStuck = null;
   function rampUpdate() {
     var now = performance.now(), dt = RAMP.last === null ? 0 : Math.min(2, (now - RAMP.last) / 1000); // 描画が止まっていた間の経過も反映する
     RAMP.last = now;
     var target = MECH.ramp ? 1 : 0, step = dt / RAMP_SEC;
+    if (rampStuck && rampStuck.target !== target) rampStuck = null;   // 向きが変わったら、止まりは解く
+    if (rampStuck) {
+      if (!rampStuck.retracted && now - rampStuck.t0 >= 900) { RAMP.t = Math.max(0, rampStuck.at - 0.12); rampStuck.retracted = true; }
+      return;
+    }
     if (RAMP.t !== target && window.SFX) window.SFX.rampMove();   // 道板が動いている間のガラガラ(音。A2)
+    if (target === 1 && RAMP.t !== target && rampHitsCar(RAMP.t)) { rampStuck = { t0: now, at: RAMP.t, target: target }; RAMP.last = now; return; }
     RAMP.t = RAMP.t < target ? Math.min(target, RAMP.t + step) : Math.max(target, RAMP.t - step);
   }
   function rampReady() { rampUpdate(); return MECH.ramp && RAMP.t >= 1; } // 描画が止まっていても時間経過で進める
