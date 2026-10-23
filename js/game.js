@@ -542,8 +542,11 @@
       }
       // 1番フロアが上がっている: 道(走る高さ)より上にあるフロアの後端へは、車が上がれない(当たって止まる)
       if (car.f1RearArc !== undefined && car.f1RearY !== undefined && car.progress >= car.f1RearArc - 2 && car.progress <= car.f1RearArc + 30) {   // 入口の所だけ見る(1番に乗った後は止めない)
-        var f1now = fm.onFloor('F1', fm.FLOORS.F1.rear.pt[0], fm.FLOORS.F1.rear.pt[1]);
-        if (car.f1RearY - f1now[1] > 12) out.push({ key: 'f1rise', phys: true, stopAt: car.f1RearArc, msg: '1番フロアが上がっていて、車が上れません。1番フロアを下げてから進めてください。' });
+        // 道の高さ = 1番の後端を走行位置に置いた時の高さ(フロアが上がっても、道は変えない)。今のフロアの後端が、それより12px以上上にあれば、車は上れない
+        var f1rest = fm.FLOORS.F1.rear.pt, E = fm.ENDS;
+        var f1trav = fm.onFloor('F1', f1rest[0], f1rest[1], { F1f: E.F1f.travel, F1r: E.F1r.travel, F2f: E.F2f.travel, MID: E.MID.travel, F3r: E.F3r.travel, F7: 0, F5f: 0, F5r: 0 });
+        var f1now = fm.onFloor('F1', f1rest[0], f1rest[1]);
+        if (f1trav[1] - f1now[1] > 12) out.push({ key: 'f1rise', phys: true, stopAt: car.f1RearArc, msg: '1番フロアが上がっていて、車が上れません。1番フロアを下げてから進めてください。' });
       }
       // 2番扇動板が開いている: 1番へは通れない(止める)
       if (car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 30 && fm.MECH.f2Flap) {
