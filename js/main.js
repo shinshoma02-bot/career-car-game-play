@@ -1656,7 +1656,7 @@
       }
     }
     var fallY = 0, fallRot = 0, acc = car.accident, hangDeg = 0;
-    if (acc && acc.hang !== undefined) hangDeg = 16 * (1 - Math.exp(-3.2 * (performance.now() - acc.t0) / 1000));   // 端にひっかかって、後ろ側が下がって傾く(落ちない)
+    if (acc && acc.hang !== undefined) hangDeg = (acc.hangDir || 1) * 16 * (1 - Math.exp(-3.2 * (performance.now() - acc.t0) / 1000));   // 端にひっかかって、後ろ側が下がって傾く(落ちない)
     if (acc && acc.hang === undefined) {
       var ft = (performance.now() - acc.t0) / 1000, maxFall = Math.max(0, cfg.ramp.groundY - car.y);
       fallY = Math.min(maxFall, 700 * ft * ft);

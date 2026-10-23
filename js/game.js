@@ -133,11 +133,11 @@
     recordMiss('2番の車に2番扇動板がぶつかった', 'major');
   };
   // 事故(車の落下など): 衝撃の演出のあと作業を止めて、一からやり直し(modes.jsが結果画面を出す)
-  function accident(car, reason, hangX) {
+  function accident(car, reason, hangX, hangDir) {   // hangDir: 傾く向き(1=右が下がる=後ろが端を越えた時・-1=左が下がる=前が穴に落ち込んだ時)
     if (state.accident) return;
     state.accident = { reason: reason };
     car.accident = { t0: performance.now(), landed: false };
-    if (hangX !== undefined) car.accident.hang = hangX;   // ひっかかって傾いて止まる(落ちない)。hangX=端の x(ここを支点に傾く)
+    if (hangX !== undefined) { car.accident.hang = hangX; car.accident.hangDir = hangDir || 1; }   // ひっかかって傾いて止まる(落ちない)。hangX=端の x(ここを支点に傾く)
     car.velocity = 0;
     state.frozen = true;
     triggerShake(12, 1400);
@@ -149,11 +149,12 @@
   //  ゆっくり: 後ろのタイヤが端から外れ、車の後ろ側が端の部材にひっかかって、傾いて止まる(戻れない)。
   //  勢いがある: そのまま端から落ちる(落下→大破。やり直し)。どちらも、地面へ瞬間移動したり、前進で元に戻ったりしない
   var EDGE_FALL_V = 170;   // これ以上の速さ(px/秒)で端を越えたら落ちる
-  function edgeBreak(car, edgeX, what) {
+  function edgeBreak(car, edgeX, what, hangDir) {
     var v = Math.abs(car.velocity);
-    if (v >= EDGE_FALL_V) { accident(car, what + 'の端から、勢いよく落ちてしまいました。'); return; }
+    // (2026-10-23 ユーザー指示: 地面まで落下する演出は大げさ。勢いがあっても、端で傾いて引っかかって止まる。事故で終わるのは同じ)
+    if (v >= EDGE_FALL_V) { car.velocity = 0; accident(car, what + 'の端から勢いよく外れて、傾いて落ち込んでしまいました。', edgeX, hangDir); return; }
     car.velocity = 0;
-    accident(car, what + 'の端に、車の後ろがひっかかって傾いてしまいました(ゆっくり出すと、後ろのタイヤが外れます)。', edgeX);
+    accident(car, what + 'の端に、車の後ろがひっかかって傾いてしまいました(ゆっくり出すと、後ろのタイヤが外れます)。', edgeX, hangDir);
   }
 
   // ---- 輪止め・タイヤストッパ・タイヤ落とし(第5章)----
@@ -1530,7 +1531,7 @@
         var gv = Math.max(Math.abs(car.velocity), 260), crossF = (gpv.f < gE) !== (gpf < gE), crossR = (gpv.r < gE) !== (gpr < gE);
         if ((crossF || crossR) && gapW >= tireD && !car.fellGap) {
           car.fellGap = true;
-          accident(car, (fmH.MECH.f2Flap && !fmH.MECH.slide ? 'スライド板も2番扇動板も無い大きな穴に' : '穴(幅' + Math.round(gapW / 114 * 100) + 'cm)に') + 'タイヤが落ち込んでしまいました。');
+          accident(car, (fmH.MECH.f2Flap && !fmH.MECH.slide ? 'スライド板も2番扇動板も無い大きな穴に' : '穴(幅' + Math.round(gapW / 114 * 100) + 'cm)に') + 'タイヤが落ち込んで、傾いて引っかかってしまいました。', resolvePoint(car.route.extra.f2front).x, -1);   // 地面へは落ちず、穴の縁を支点に、前が沈む向きに傾いて止まる
         } else {
           if (crossF) rideOver(car, gv, 'hole', 'L');   // 前のタイヤ(画面の左)
           if (crossR) rideOver(car, gv, 'hole', 'R');   // 後ろのタイヤ(画面の右)
@@ -1671,7 +1672,7 @@
     if (car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc + 8) {
       var jf = f1JointRise();
       // 1番の方が低い(道が無い)、または高すぎて縁がボンネットに当たらない(縁の下を通っても床が無い)なら、落ちる
-      if (jf !== null && (jf < -14 || (jf > 14 && !f1SlabHitsHood(car))) && !car.fellF1) { car.fellF1 = true; edgeBreak(car, resolvePoint(car.route.extra.f2front).x, '2番フロア'); return false; }
+      if (jf !== null && (jf < -14 || (jf > 14 && !f1SlabHitsHood(car))) && !car.fellF1) { car.fellF1 = true; edgeBreak(car, resolvePoint(car.route.extra.f2front).x, '2番フロア', -1); return false; }
     }
     checkUnderFloors(car);
     updateSeated(car, bars);
