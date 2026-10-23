@@ -525,6 +525,15 @@
     car.progress = sp; car.x = sx; car.y = sy;
     return hit;
   }
+  // 1番フロアの後ろの縁(厚み)が、車のボンネットの高さに入っているか(入っていれば、縁にぶつかる。ボンネットより上なら、車は縁の下を通るが、床が無いので落ちる)
+  function f1SlabHitsHood(car) {
+    var fm = window.FLOOR_MECH, F1 = fm.FLOORS.F1;
+    if (!F1 || !F1.bottom) return true;
+    var x = F1.x1 - 4, sb = fm.onFloor('F1', x, F1.bottom(x))[1];
+    var n = car.prof ? car.prof.length : 0, i0 = 0, hf;
+    if (n) { while (i0 < n - 1 && car.prof[i0] < 0.2) i0++; hf = car.h * car.prof[Math.min(n - 1, i0 + 3)]; } else hf = car.h * 0.5;
+    return sb > car.y - hf;
+  }
   // 2番の前端→1番の後端の高さの差(正 = 1番の方が高い)。上段の道のときだけ意味がある
   function f1JointRise() {
     var fm = window.FLOOR_MECH, st = state.car;
@@ -551,7 +560,7 @@
       // 2番の前端→1番の後端のつなぎ目: 1番の方が14px以上高い = 段差(障害物)。車は上がれずに、2番の前端でぶつかって止まる。
       // 14pxは、2番↔1番が「つながっている」と見る許容(f1Connected)と同じ。2番と1番を同じ高さにそろえて上げれば通れる
       var jd = f1JointRise();
-      if (jd !== null && jd > 14 && car.f2FrontArc !== undefined && car.progress >= car.f2FrontArc - 2 && car.progress <= car.f2FrontArc + 30) {
+      if (jd !== null && jd > 14 && car.f2FrontArc !== undefined && car.progress >= car.f2FrontArc - 2 && car.progress <= car.f2FrontArc + 30 && f1SlabHitsHood(car)) {
         out.push({ key: 'f1rise', phys: true, stopAt: car.f2FrontArc, msg: '1番フロアの方が高く、車は上れません。2番と1番の高さをそろえてから進めてください。' });
       }
       // 2番扇動板が開いている: 1番へは通れない(止める)
@@ -1641,7 +1650,8 @@
     // 2番の前端の先で、1番が14px以上低い(道が無い): 車の前が端を越えたら、落ちる(事故)
     if (car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc + 8) {
       var jf = f1JointRise();
-      if (jf !== null && jf < -14 && !car.fellF1) { car.fellF1 = true; edgeBreak(car, resolvePoint(car.route.extra.f2front).x, '2番フロア'); return false; }
+      // 1番の方が低い(道が無い)、または高すぎて縁がボンネットに当たらない(縁の下を通っても床が無い)なら、落ちる
+      if (jf !== null && (jf < -14 || (jf > 14 && !f1SlabHitsHood(car))) && !car.fellF1) { car.fellF1 = true; edgeBreak(car, resolvePoint(car.route.extra.f2front).x, '2番フロア'); return false; }
     }
     checkUnderFloors(car);
     updateSeated(car, bars);
