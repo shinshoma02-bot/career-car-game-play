@@ -1522,12 +1522,19 @@
     // 隙間(スライド板を格納 / 2番扇動板が開いている): タイヤが1本ずつ、溝を通る時に沈む(前のタイヤ→後ろのタイヤ。バックは後ろ→前)。2・3番の落としと同じ考え方。止めない(2026-10-23 ユーザー指示)
     if (car.route && car.route.id === 'U' && car.f2FrontArc !== undefined && window.FLOOR_MECH) {
       var fmH = window.FLOOR_MECH, gE = car.f2FrontArc - 30, jr = f1JointRise();
-      var gapOpen = jr !== null && Math.abs(jr) <= 14 && (!fmH.MECH.slide || fmH.MECH.f2Flap);
+      // 穴の幅 = 開いている2番扇動板の長さ + 格納しているスライド板の長さ。タイヤの直径より狭ければ、ハマる(衝撃)。直径以上なら、タイヤが落ち込む(落下・事故)。車ごとにタイヤの大きさが違う(2026-10-23 ユーザー指示)
+      var gapW = (fmH.MECH.f2Flap ? fmH.F2_FLAP_LEN : 0) + (!fmH.MECH.slide ? fmH.SLIDE.len : 0), tireD = 2 * (car.wheelRPx || 30);
+      var gapOpen = jr !== null && Math.abs(jr) <= 14 && gapW > 0;
       var gpf = car.progress, gpr = car.progress - (car.wbPx || 0), gpv = car.gapPrev;
       if (gapOpen && gpv) {
-        var gv = Math.max(Math.abs(car.velocity), 260);
-        if ((gpv.f < gE) !== (gpf < gE)) rideOver(car, gv, 'hole', 'L');   // 前のタイヤ(画面の左)
-        if ((gpv.r < gE) !== (gpr < gE)) rideOver(car, gv, 'hole', 'R');   // 後ろのタイヤ(画面の右)
+        var gv = Math.max(Math.abs(car.velocity), 260), crossF = (gpv.f < gE) !== (gpf < gE), crossR = (gpv.r < gE) !== (gpr < gE);
+        if ((crossF || crossR) && gapW >= tireD && !car.fellGap) {
+          car.fellGap = true;
+          accident(car, (fmH.MECH.f2Flap && !fmH.MECH.slide ? 'スライド板も2番扇動板も無い大きな穴に' : '穴(幅' + Math.round(gapW / 114 * 100) + 'cm)に') + 'タイヤが落ち込んでしまいました。');
+        } else {
+          if (crossF) rideOver(car, gv, 'hole', 'L');   // 前のタイヤ(画面の左)
+          if (crossR) rideOver(car, gv, 'hole', 'R');   // 後ろのタイヤ(画面の右)
+        }
       }
       car.gapPrev = { f: gpf, r: gpr };
     }
