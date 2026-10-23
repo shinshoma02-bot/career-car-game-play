@@ -87,7 +87,7 @@
     if (car.damage >= 1) setTimeout(function () { wreck(car, '車が原型をとどめないほど壊れました。'); }, 700);
     triggerShake(0.4 + 11 * sev, 250 + 900 * sev);
     if (window.SFX) window.SFX.impact(sev, at.kind);   // 効果音
-    if (window.VOICE_GUIDE && sev > 0.25) window.VOICE_GUIDE.danger(sev > 0.6 ? 'hit' : 'near');   // 危ない声(おっとっと・危ない。voice_guide.js)
+    if (window.VOICE_GUIDE) window.VOICE_GUIDE.danger(sev > 0.6 ? 'crash' : 'slow');   // ぶつかった声: ゆっくり当たった=「おっとっと」・勢いよく=「ぶつかった」(voice_guide.js)
     // 跳ね返り(走っている車): 軽いほど弾む
     if (car === state.car && !car.seated && opt.recoil !== false && (at.kind === 'front' || at.kind === 'side')) car.velocity = -Math.min(90, v * (0.05 + 0.25 * (1 - sev)));
     // 粒(火花・破片・ガラス・ほこり): 場所はステージ座標(車の左端から u、地面から v)

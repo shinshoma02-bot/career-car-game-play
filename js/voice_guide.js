@@ -229,11 +229,13 @@
   }
   // 危ない動作(衝突): 大きいほど「おっとっと」。小さい時は「危ない！」。ノーマル・ハードでも鳴らす(驚いた声は、1人前の設定でも出す)。ボイスOFFの時は鳴らさない
   var lastDanger = 0;
+  // 種類(2026-10-23 ユーザー指示): near = 当たる寸前の「危ない！」(予告。まだ未実装)/ slow = ゆっくり当たった「おっとっと」/ crash = 勢いよくぶつかった後の別のセリフ
+  var FILES = { near: ["danger_near_1", "danger_near_2"], slow: ["danger_hit_1", "danger_hit_2", "danger_hit_3"], crash: ["danger_crash_1", "danger_crash_2", "danger_crash_3"] };
   function danger(kind) {
-    if (!on) return;
+    if (!on || !FILES[kind]) return;
     var now = performance.now(); if (now - lastDanger < 1500) return; lastDanger = now;
-    var n = kind === "hit" ? 3 : 2, k = Math.floor(Math.random() * n) + 1;
-    play("danger_" + kind + "_" + k);
+    var list = FILES[kind];
+    play(list[Math.floor(Math.random() * list.length)]);
   }
   // 音設定の画面に、声の行を足す(sound.js の画面を変えずに、ここで差し込む)
   function row(label, body) {
