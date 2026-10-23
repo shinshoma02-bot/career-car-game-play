@@ -272,7 +272,8 @@
       pts.push({ floor: 'F2', x: f2front[0], y: f2front[1] });
       extra.f2front = { floor: 'F2', x: f2front[0], y: f2front[1] };
       pts.push({ floor: 'F1', x: f1rear[0], y: f1rear[1] });
-      extra.f1rear = { x: f1rear[0], y: f1rear[1] };   // 1番の後端(走る道の高さ)。1番フロアを上げていると、ここで車が上がれずに当たる(2026-10-23 ユーザー指示)
+      extra.f1rear = { x: f1rear[0], y: f1rear[1] };
+      extra.f1rearFloor = { floor: 'F1', x: f1rear[0], y: f1rear[1] };   // 2番の前端→1番の後端の「つなぎ目」(今のフロアの位置で高さを比べる)
       pts.push(slotPt('1', 'F1'));
       tg['3'] = slotPt('3', 'F3'); tg['2'] = slotPt('2', 'F2'); tg['1'] = slotPt('1', 'F1');
     } else if (id === '7') {
@@ -524,6 +525,12 @@
     car.progress = sp; car.x = sx; car.y = sy;
     return hit;
   }
+  // 2番の前端→1番の後端の高さの差(正 = 1番の方が高い)。上段の道のときだけ意味がある
+  function f1JointRise() {
+    var fm = window.FLOOR_MECH, st = state.car;
+    if (!st || !st.route || !st.route.extra || !st.route.extra.f2front || !st.route.extra.f1rearFloor) return null;
+    return resolvePoint(st.route.extra.f2front).y - resolvePoint(st.route.extra.f1rearFloor).y;
+  }
   function routeProblems(car) {
     if (T6) return window.FLOOR_MECH.routeProblems6b(car);
     var fm = window.FLOOR_MECH, out = [], id = car.route.id;
@@ -540,13 +547,12 @@
       if (fm.slideT() > 0.02 && fm.slideHitsBody(sx0, sx0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), car.y, undefined, fm.slideT())) {
         out.push({ key: 'slide', phys: true, msg: 'スライド板に車の前が当たります。スライド板を格納してください。' });
       }
-      // 1番フロアが上がっている: 道(走る高さ)より上にあるフロアの後端へは、車が上がれない(当たって止まる)
-      if (car.f1RearArc !== undefined && car.f1RearY !== undefined && car.progress >= car.f1RearArc - 2 && car.progress <= car.f1RearArc + 30) {   // 入口の所だけ見る(1番に乗った後は止めない)
-        // 道の高さ = 1番の後端を走行位置に置いた時の高さ(フロアが上がっても、道は変えない)。今のフロアの後端が、それより12px以上上にあれば、車は上れない
-        var f1rest = fm.FLOORS.F1.rear.pt, E = fm.ENDS;
-        var f1trav = fm.onFloor('F1', f1rest[0], f1rest[1], { F1f: E.F1f.travel, F1r: E.F1r.travel, F2f: E.F2f.travel, MID: E.MID.travel, F3r: E.F3r.travel, F7: 0, F5f: 0, F5r: 0 });
-        var f1now = fm.onFloor('F1', f1rest[0], f1rest[1]);
-        if (f1trav[1] - f1now[1] > 12) out.push({ key: 'f1rise', phys: true, stopAt: car.f1RearArc, msg: '1番フロアが上がっていて、車が上れません。1番フロアを下げてから進めてください。' });
+      // 物理の考え方(2026-10-23 ユーザー指示): 道が無ければ落ちる・穴があればハマる・障害物があればぶつかる。
+      // 2番の前端→1番の後端のつなぎ目: 1番の方が14px以上高い = 段差(障害物)。車は上がれずに、2番の前端でぶつかって止まる。
+      // 14pxは、2番↔1番が「つながっている」と見る許容(f1Connected)と同じ。2番と1番を同じ高さにそろえて上げれば通れる
+      var jd = f1JointRise();
+      if (jd !== null && jd > 14 && car.f2FrontArc !== undefined && car.progress >= car.f2FrontArc - 2 && car.progress <= car.f2FrontArc + 30) {
+        out.push({ key: 'f1rise', phys: true, stopAt: car.f2FrontArc, msg: '1番フロアの方が高く、車は上れません。2番と1番の高さをそろえてから進めてください。' });
       }
       // 2番扇動板が開いている: 1番へは通れない(止める)
       if (car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 30 && fm.MECH.f2Flap) {
@@ -1497,7 +1503,8 @@
     if (car.route && car.route.id === 'U' && pressedDir > 0 && car.f2FrontArc !== undefined && window.FLOOR_MECH) {
       var fmH = window.FLOOR_MECH;
       if (car.progress < car.f2FrontArc - 80) car.slideHoleDone = false;
-      if (!fmH.MECH.slide && !fmH.MECH.f2Flap && !car.slideHoleDone && car.progress > car.f2FrontArc - 30 && car.progress < car.f2FrontArc + 40) {
+      var jr = f1JointRise();
+      if (jr !== null && Math.abs(jr) <= 14 && !fmH.MECH.slide && !fmH.MECH.f2Flap && !car.slideHoleDone && car.progress > car.f2FrontArc - 30 && car.progress < car.f2FrontArc + 40) {
         car.slideHoleDone = true;
         rideOver(car, Math.abs(car.velocity) || 350, 'hole');
       }
@@ -1630,6 +1637,11 @@
     if (car.route.id === 'U' && car.f3RearArc !== undefined && !window.FLOOR_MECH.upperConnected() && car.progress - (car.wbPx || 0) < car.f3RearArc - 2 && car.progress > 1) {
       edgeBreak(car, car.pts[3].x, '3番フロア');   // 後ろのタイヤが後端を越えたら(先頭が越えるのを待たない)
       return false;
+    }
+    // 2番の前端の先で、1番が14px以上低い(道が無い): 車の前が端を越えたら、落ちる(事故)
+    if (car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc + 8) {
+      var jf = f1JointRise();
+      if (jf !== null && jf < -14 && !car.fellF1) { car.fellF1 = true; edgeBreak(car, resolvePoint(car.route.extra.f2front).x, '2番フロア'); return false; }
     }
     checkUnderFloors(car);
     updateSeated(car, bars);
