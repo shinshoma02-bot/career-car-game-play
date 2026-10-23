@@ -529,19 +529,37 @@
     return hit;
   }
   // 1番フロアの後ろの縁(厚み)が、車のボンネットの高さに入っているか(入っていれば、縁にぶつかる。ボンネットより上なら、車は縁の下を通るが、床が無いので落ちる)
-  function f1SlabHitsHood(car) {
-    var fm = window.FLOOR_MECH, F1 = fm.FLOORS.F1;
-    if (!F1 || !F1.bottom) return true;
-    var x = F1.x1 - 4, sb = fm.onFloor('F1', x, F1.bottom(x))[1];
-    // 車ごとの形(prof=前から見た輪郭の高さ)。バンパーの先から前タイヤまでの張り出しのうち、いちばん高い所が、縁の下端より高ければ当たる。
-    // 平べったいスポーツカーは低いので通れて、前が切り立った箱バンは当たる(2026-10-23 ユーザー指示)
+  // 車の前の張り出しの高さ(px、接地線から上へ。バンパーの先から前タイヤまでの最大)
+  function f1OverhangPx(car) {
     var n = car.prof ? car.prof.length : 0, i0 = 0, i1, hf = 0, c;
     if (n) {
       while (i0 < n - 1 && car.prof[i0] < 0.2) i0++;
       i1 = Math.max(i0 + 1, Math.min(n - 1, Math.floor(car.leftTireX / car.w * n)));
       for (c = i0; c <= i1; c++) hf = Math.max(hf, car.h * car.prof[c]);
     } else hf = car.h * 0.5;
-    return sb > car.y - hf;
+    return hf;
+  }
+  function f1SlabHitsHood(car) {
+    var fm = window.FLOOR_MECH, F1 = fm.FLOORS.F1;
+    if (!F1 || !F1.bottom) return true;
+    var x = F1.x1 - 4, sb = fm.onFloor('F1', x, F1.bottom(x))[1];
+    // 車ごとの形(prof=前から見た輪郭の高さ)。バンパーの先から前タイヤまでの張り出しのうち、いちばん高い所が、縁の下端より高ければ当たる。
+    // 平べったいスポーツカーは低いので通れて、前が切り立った箱バンは当たる(2026-10-23 ユーザー指示)
+    return sb > car.y - f1OverhangPx(car);
+  }
+  // 段階2(2026-10-23): 1番の入口を、重力で動かした計算で決める。URL に #physics=1 を付けた時だけ。通常の遊び方は、今の規則のまま
+  var PHYS_ENTRY = /[#&]physics=1/.test(location.hash || '');
+  // 前輪が、2番の前端から1番の床へ進む。床の上面 surf・車の接地線 y0・張り出しの高さ overH。結果: 'pass'(通る)/'block'(縁にぶつかる)/'fall'(支えが無い)
+  function simEntry(y0, surf, overH) {
+    var G = 2400, STEP = 14, DT = 1 / 240, y = y0, vy = 0, step = y0 - surf;
+    if (step <= STEP) { y = y0; } else if (surf + 10 > y0 - overH) return 'block';   // 床が14px超えて高い: 縁が張り出しに入れば、ぶつかる
+    // 床の下を通る(または床が低い): 重力で落ちて、床に着く(床が車より下にある時)か、支えが無くて落ちる
+    for (var t = 0; t < 2; t += DT) {
+      vy += G * DT; y += vy * DT;
+      if (step <= STEP && y >= surf) return 'pass';
+      if (y > 700) return 'fall';
+    }
+    return step <= STEP ? 'pass' : 'fall';
   }
   // 2番の前端→1番の後端の高さの差(正 = 1番の方が高い)。上段の道のときだけ意味がある
   function f1JointRise() {
@@ -574,7 +592,12 @@
       // 2番の前端→1番の後端のつなぎ目: 1番の方が14px以上高い = 段差(障害物)。車は上がれずに、2番の前端でぶつかって止まる。
       // 14pxは、2番↔1番が「つながっている」と見る許容(f1Connected)と同じ。2番と1番を同じ高さにそろえて上げれば通れる
       var jd = f1JointRise();
-      if (jd !== null && jd > 14 && car.f2FrontArc !== undefined && car.progress >= car.f2FrontArc - 2 && car.progress <= car.f2FrontArc + 30 && f1SlabHitsHood(car)) {
+      if (PHYS_ENTRY && car.f2FrontArc !== undefined && car.progress >= car.f2FrontArc - 2 && car.progress <= car.f2FrontArc + 30) {
+        var fmP = window.FLOOR_MECH, a2 = fmP.onFloor('F2', fmP.FLOORS.F2.front.pt[0], fmP.FLOORS.F2.front.pt[1]), b1 = fmP.onFloor('F1', fmP.FLOORS.F1.rear.pt[0], fmP.FLOORS.F1.rear.pt[1]);
+        var rPhys = simEntry(a2[1], b1[1], f1OverhangPx(car));
+        car.f1PhysFall = rPhys === 'fall';   // 支えが無い: 下の per-frame 処理で、事故(傾いて引っかかる)にする
+        if (rPhys === 'block') out.push({ key: 'f1rise', phys: true, stopAt: car.f2FrontArc, msg: '1番フロアの方が高く、車は上れません。2番と1番の高さをそろえてから進めてください。' });
+      } else if (jd !== null && jd > 14 && car.f2FrontArc !== undefined && car.progress >= car.f2FrontArc - 2 && car.progress <= car.f2FrontArc + 30 && f1SlabHitsHood(car)) {
         out.push({ key: 'f1rise', phys: true, stopAt: car.f2FrontArc, msg: '1番フロアの方が高く、車は上れません。2番と1番の高さをそろえてから進めてください。' });
       }
       // 2番扇動板が開いている: 1番へは通れない(止める)
@@ -1672,7 +1695,7 @@
     if (car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc + 8) {
       var jf = f1JointRise();
       // 1番の方が低い(道が無い)、または高すぎて縁がボンネットに当たらない(縁の下を通っても床が無い)なら、落ちる
-      if (jf !== null && (jf < -14 || (jf > 14 && !f1SlabHitsHood(car))) && !car.fellF1) { car.fellF1 = true; edgeBreak(car, resolvePoint(car.route.extra.f2front).x, '2番フロア', -1); return false; }
+      if ((car.f1PhysFall || (jf !== null && (jf < -14 || (jf > 14 && !f1SlabHitsHood(car))))) && !car.fellF1) { car.fellF1 = true; edgeBreak(car, resolvePoint(car.route.extra.f2front).x, '2番フロア', -1); return false; }
     }
     checkUnderFloors(car);
     updateSeated(car, bars);
