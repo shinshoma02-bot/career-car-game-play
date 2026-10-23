@@ -287,6 +287,7 @@
       pts.push({ floor: 'F5', x: cfg.bridgePlate.tipX, y: f5.front.pt[1] });
       extra.bridgeWall = { floor: 'F5', x: cfg.bridgePlate.tipX, y: f5.front.pt[1] };   // 5番フロアの前端(スロープの上端)。4番扇動板が出ていない間は、ここから先(4番との隙間)へ進めない(格納した4番扇動板が垂れ下がっている)
       pts.push({ x: fm.BR_ANCHOR[0], y: fm.BR_ANCHOR[1] });
+      extra.anchorWall = { x: fm.BR_ANCHOR[0], y: fm.BR_ANCHOR[1] };   // 4番扇動板の付け根(4番と5番の境の壁)。5番が平らの間は、壁に当たる(2026-10-23 ユーザー指示: 5番をスロープにすると壁が無くなる)
       pts.push(slotPt('4'));
       tg['6'] = slotPt('6'); tg['5'] = slotPt('5', 'F5'); tg['4'] = slotPt('4');
     } else {
@@ -541,6 +542,10 @@
       if (hb) out.push({ key: 'hang', phys: true, msg: '中段フロアが上がっていて通れません。中段フロアを下げてから(格納してから)通ってください。' });
       // (旧)lowFloorBlocked: フロアが絵の高さより下がっていたら、車と重ならなくても通さなかった → 実際の重なり(上の lowroof)だけにした
       // 5番フロアがスロープなのに4番扇動板が出ていない: スロープを上って、上端で、垂れ下がった4番扇動板に当たって止まる
+      // 4番扇動板の付け根の壁(4番と5番の境): 5番フロアが平らの間は、車の体が壁に当たる。5番をスロープにすると壁が無くなるので、通れる
+      if (id === '4' && !fm.f5Slope() && car.anchorWallArc !== undefined && car.progress >= car.anchorWallArc - 1 && car.progress <= car.anchorWallArc + 40) {
+        out.push({ key: 'anchorwall', phys: true, stopAt: car.anchorWallArc, msg: '5番フロアが平らのままでは、4番との境の壁に当たります。5番をスロープにしてから進めてください。' });
+      }
       if (id === '4' && !fm.bridgeReady() && car.bridgeWallArc !== undefined && car.progress >= car.bridgeWallArc - 1) {
         out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '4番扇動板が出ていないので、スロープの先(4番との隙間)へは進めません。4番扇動板を搬出してください。' });
       }
@@ -1041,6 +1046,7 @@
     car.rampArc = car.pathTool.arcOf(pts[2]);   // 道板の上端まで(上段・下段の道が分かれる前の共通部分)
     car.f2FrontArc = car.route.extra.f2front ? car.pathTool.arcOf(resolvePoint(car.route.extra.f2front)) : undefined;
     car.bridgeWallArc = car.route.extra.bridgeWall ? car.pathTool.arcOf(resolvePoint(car.route.extra.bridgeWall)) : undefined;
+    car.anchorWallArc = car.route.extra.anchorWall ? car.pathTool.arcOf(resolvePoint(car.route.extra.anchorWall)) : undefined;
     car.f5EdgeArc = car.route.extra.f5Edge ? car.pathTool.arcOf(resolvePoint(car.route.extra.f5Edge)) : undefined;
   }
   function attachRoute(car, id) {
