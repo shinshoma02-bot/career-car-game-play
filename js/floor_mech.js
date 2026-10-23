@@ -676,11 +676,15 @@
     }
     return false;
   }
+  // スライド板(1番の後端から出る板)に、1番・2番に積んである車の体が当たるか(2026-10-23: 1番の車も見る。以前は2番の車だけだった)
   function slideHitsCar2(offs, t) {
-    var gsn = window.GAME_STATE, o = gsn && gsn.occupied[2];
-    if (!o) return false;
-    var pos = o.floor ? onFloor(o.floor, o.localX, o.localY) : [o.localX, o.localY], x0 = pos[0] - o.leftTireX;
-    return slideHitsBody(x0, x0 + o.w, carTopY(o, pos, 0), pos[1], offs, t);
+    var gsn = window.GAME_STATE; if (!gsn) return false;
+    return [1, 2].some(function (n) {
+      var o = gsn.occupied[n];
+      if (!o) return false;
+      var pos = o.floor ? onFloor(o.floor, o.localX, o.localY) : [o.localX, o.localY], x0 = pos[0] - o.leftTireX;
+      return slideHitsBody(x0, x0 + o.w, carTopY(o, pos, 0), pos[1], offs, t);
+    });
   }
   function toggleSlide() {
     var st = window.GAME_STATE, car = st && st.car;
