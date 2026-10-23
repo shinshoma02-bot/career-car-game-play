@@ -590,20 +590,29 @@
   // ---- 4番扇動板(4-5番間の格納式プレート)----
   var BR_ANCHOR = cfg.bridgePlate.anchor, BRIDGE_STOWED_X = cfg.bridgePlate.stowedX;
   // 開閉の進行度(0=閉/格納、1=開/搬出)。道板と同じく時間経過で進み、描画が止まっていても進む
-  function makeAnim(key, sec, init) {
-    var a = { t: init || 0, last: null };
+  // blocker(t): 今の出かけ具合 t で、車の体に当たっているか。当たったら、板は止まり(0.9秒)、少し戻って、そこで止まる(2026-10-23 ユーザー指示。道板と同じ)
+  function makeAnim(key, sec, init, blocker) {
+    var a = { t: init || 0, last: null, stuck: null };
     function update() {
       var now = performance.now(), dt = a.last === null ? 0 : Math.min(2, (now - a.last) / 1000);
       a.last = now;
       var target = MECH[key] ? 1 : 0, step = dt / sec;
+      if (a.stuck && a.stuck.target !== target) a.stuck = null;   // 向きが変わったら、止まりは解く
+      if (a.stuck) {
+        if (!a.stuck.retracted && now - a.stuck.t0 >= 900) { a.t = Math.max(0, a.stuck.at - 0.12); a.stuck.retracted = true; }
+        return a.t;
+      }
       if (a.t !== target && window.SFX) window.SFX.rampMove();   // 扇動板・スライド板が動いている間のガラガラ(音。A2)
+      if (blocker && a.t !== target && target === 1 && blocker(a.t)) { a.stuck = { t0: now, at: a.t, target: target }; a.last = now; return a.t; }
       a.t = a.t < target ? Math.min(target, a.t + step) : Math.max(target, a.t - step);
       return a.t;
     }
-    update.reset = function (v) { a.t = v; a.last = null; };
+    update.reset = function (v) { a.t = v; a.last = null; a.stuck = null; };
     return update;
   }
-  var bridgeT = makeAnim('bridge', 0.9), flapT = makeAnim('f2Flap', 0.7), slideT = makeAnim('slide', 0.8, 1);
+  // 車の体に当たっている時、スライド板は止まる(板が出ていく途中の位置 t で判定)
+  var slideT = makeAnim('slide', 0.8, 1, function (t) { return slideHitsCar2(curOffs(), t); });
+  var bridgeT = makeAnim('bridge', 0.9), flapT = makeAnim('f2Flap', 0.7);
   // 搬出時の4番扇動板の先端: 5番フロアの今の位置ではなく、5番をスロープにセットした時の前端の高さ(固定)
   function bridgeTip() {
     var offs = curOffs(); offs.F5f = HOOK_OFF; offs.F5r = 0;
