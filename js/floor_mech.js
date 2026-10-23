@@ -607,8 +607,9 @@
   // 開閉の進行度(0=閉/格納、1=開/搬出)。道板と同じく時間経過で進み、描画が止まっていても進む
   // blocker(t): 今の出かけ具合 t で、車の体に当たっているか。当たったら、板は止まり(0.9秒)、少し戻って、そこで止まる(2026-10-23 ユーザー指示。道板と同じ)
   function makeAnim(key, sec, init, blocker) {
-    var a = { t: init || 0, last: null, stuck: null };
+    var a = { t: init || 0, last: null, stuck: null, busy: false };
     function update() {
+      if (a.busy) return a.t;   // blocker の中から板の位置を読む時(再帰しない)
       var now = performance.now(), dt = a.last === null ? 0 : Math.min(2, (now - a.last) / 1000);
       a.last = now;
       var target = MECH[key] ? 1 : 0, step = dt / sec;
@@ -618,7 +619,11 @@
         return a.t;
       }
       if (a.t !== target && window.SFX) window.SFX.rampMove();   // 扇動板・スライド板が動いている間のガラガラ(音。A2)
-      if (blocker && a.t !== target && target === 1 && blocker(a.t)) { a.stuck = { t0: now, at: a.t, target: target }; a.last = now; return a.t; }
+      if (blocker && a.t !== target && target === 1) {
+        a.busy = true; var hit = false;
+        try { hit = blocker(a.t); } finally { a.busy = false; }
+        if (hit) { a.stuck = { t0: now, at: a.t, target: target }; a.last = now; return a.t; }
+      }
       a.t = a.t < target ? Math.min(target, a.t + step) : Math.max(target, a.t - step);
       return a.t;
     }
@@ -627,7 +632,19 @@
   }
   // 車の体に当たっている時、スライド板は止まる(板が出ていく途中の位置 t で判定)
   var slideT = makeAnim('slide', 0.8, 1, function (t) { return slideHitsCar2(curOffs(), t); });
-  var bridgeT = makeAnim('bridge', 0.9), flapT = makeAnim('f2Flap', 0.7);
+  // 車の体に当たっている時、4番扇動板は止まる(板の姿勢は、今の位置で bridgeHitsBody が判定)。2026-10-23
+  function bridgeHitsCar() {
+    var g = window.GAME_STATE; if (!g) return false;
+    var cars = [g.car].concat([1, 2, 3, 4, 5, 6, 7].map(function (n) { return g.occupied && g.occupied[n] && (g.occupied[n].live || g.occupied[n]); }));
+    return cars.some(function (c) {
+      if (!c || c.seated === undefined && !c.img) return false;
+      if (c.seated) return false;   // 積んだ車(固定)は、扇動板の下の車ではない
+      var x0 = c.x - c.leftTireX;
+      return bridgeHitsBody(x0, x0 + c.w, fmTop(c), c.y);
+    });
+  }
+  function fmTop(c) { return carTopY({ img: c.img, prof: c.prof, w: c.w, h: c.h, leftTireX: c.leftTireX }, [c.x, c.y]); }
+  var bridgeT = makeAnim('bridge', 0.9, 0, function () { return bridgeHitsCar(); }), flapT = makeAnim('f2Flap', 0.7);
   // 搬出時の4番扇動板の先端: 5番フロアの今の位置ではなく、5番をスロープにセットした時の前端の高さ(固定)
   function bridgeTip() {
     var offs = curOffs(); offs.F5f = HOOK_OFF; offs.F5r = 0;
