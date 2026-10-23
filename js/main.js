@@ -1650,7 +1650,7 @@
       var rp = (performance.now() - rd.t0) / rd.dur;
       if (rp >= 1) car.ride = null;
       else {
-        var env = Math.exp(-3.4 * rp), dir = rd.kind === 'hole' ? 1 : -1, osc = Math.sin(rp * 13);
+        var env = Math.exp(-3.4 * rp), dir = (rd.kind === 'hole' ? 1 : -1) * (rd.rear ? -1 : 1), osc = Math.sin(rp * 13);   // rd.rear: 後ろのタイヤが先に入る(バック・バック向きの車)時は、傾く向きが逆
         rideDeg = dir * (3 + 11 * rd.sev) * env * osc;
         rideY = -(2 + 9 * rd.sev) * env * Math.abs(Math.sin(rp * 9)) * (rd.kind === 'hole' ? 0.5 : 1);
       }

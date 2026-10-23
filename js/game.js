@@ -117,7 +117,9 @@
   // 輪止め・タイヤストッパ・落し蓋の穴を勢いよく乗り越える: ぶつかるのではなく、乗り上げる衝撃(前が持ち上がり、ガタンと跳ねて、ばねのように揺れが残る)。穴は前が落ち込んでから上がる
   function rideOver(car, speed, kind) {
     var v = Math.abs(speed), sev = Math.max(0, Math.min(1, (v - 300) / 290));   // 乗り越えられる最低の勢い(約350px/秒)から最高速度まで
-    car.ride = { t0: performance.now(), dur: 900 + 700 * sev, sev: sev, kind: kind === 'hole' ? 'hole' : 'chock' };
+    // 先に溝(段差)に入るタイヤ: 前進する普通の向きの車は前のタイヤ。バックで進む車、向きを変えて(バック向きで)積む車は、車の後ろのタイヤ(2026-10-23 ユーザー指示)。後ろのタイヤが先に入る時は、後ろが沈んで(段差なら持ち上がって)、鼻の向きが逆になる
+    var rearFirst = (!!car.flip) !== (car.velocity < 0);
+    car.ride = { t0: performance.now(), dur: 900 + 700 * sev, sev: sev, kind: kind === 'hole' ? 'hole' : 'chock', rear: rearFirst };
     triggerShake(2 + 5 * sev, 350 + 350 * sev);
     if (window.SFX) window.SFX.bump();
     var parts = state.fx.parts || (state.fx.parts = []), now = performance.now();
