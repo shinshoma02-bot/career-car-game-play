@@ -530,8 +530,14 @@
     var fm = window.FLOOR_MECH, F1 = fm.FLOORS.F1;
     if (!F1 || !F1.bottom) return true;
     var x = F1.x1 - 4, sb = fm.onFloor('F1', x, F1.bottom(x))[1];
-    var n = car.prof ? car.prof.length : 0, i0 = 0, hf;
-    if (n) { while (i0 < n - 1 && car.prof[i0] < 0.2) i0++; hf = car.h * car.prof[Math.min(n - 1, i0 + 3)]; } else hf = car.h * 0.5;
+    // 車ごとの形(prof=前から見た輪郭の高さ)。バンパーの先から前タイヤまでの張り出しのうち、いちばん高い所が、縁の下端より高ければ当たる。
+    // 平べったいスポーツカーは低いので通れて、前が切り立った箱バンは当たる(2026-10-23 ユーザー指示)
+    var n = car.prof ? car.prof.length : 0, i0 = 0, i1, hf = 0, c;
+    if (n) {
+      while (i0 < n - 1 && car.prof[i0] < 0.2) i0++;
+      i1 = Math.max(i0 + 1, Math.min(n - 1, Math.floor(car.leftTireX / car.w * n)));
+      for (c = i0; c <= i1; c++) hf = Math.max(hf, car.h * car.prof[c]);
+    } else hf = car.h * 0.5;
     return sb > car.y - hf;
   }
   // 2番の前端→1番の後端の高さの差(正 = 1番の方が高い)。上段の道のときだけ意味がある
@@ -539,6 +545,11 @@
     var fm = window.FLOOR_MECH, st = state.car;
     if (!st || !st.route || !st.route.extra || !st.route.extra.f2front || !st.route.extra.f1rearFloor) return null;
     return resolvePoint(st.route.extra.f2front).y - resolvePoint(st.route.extra.f1rearFloor).y;
+  }
+  // 当たった時の反応: 隙間(4番扇動板が出ていない)は、ぶつかるのではなく、前のタイヤが隙間にハマる(ガタンと沈む)。それ以外は、ぶつかった演出
+  function hitOrFall(car, key, speed) {
+    if (key === 'bridge') { rideOver(car, speed || 350, 'hole'); return; }
+    impact(car, key, speed, contactOpt(car, key));
   }
   function routeProblems(car) {
     if (T6) return window.FLOOR_MECH.routeProblems6b(car);
@@ -583,7 +594,7 @@
       var ax = fm.BR_ANCHOR[0], ay = fm.BR_ANCHOR[1];
       if (!fm.f5Slope() && ax >= bx0 && ax <= bx0 + car.w && car.y > ay && car.y - (car.h || 0) < 577) out.push({ key: 'anchorwall', phys: true, msg: '5番フロアが平らのままでは、4番との境の壁に当たります。5番をスロープにしてから進めてください。' });   // 5番がスロープの間は、壁が無いので当たらない
       if (id === '4' && !fm.bridgeReady() && car.bridgeWallArc !== undefined && car.progress >= car.bridgeWallArc - 1) {
-        out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '4番扇動板が出ていないので、スロープの先(4番との隙間)へは進めません。4番扇動板を搬出してください。' });
+        out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '4番扇動板が出ていないので、スロープの先の隙間にタイヤがハマって進めません。4番扇動板を搬出してください。' });
       }
       // 台車のスライド車軸を伸ばしていないと、6番の横を通れるのは軽自動車(幅1.48m以下)だけ。それ以外(5ナンバー・3ナンバー)は、6番に止まる(積む)分には従来どおりだが、6番を通り過ぎて5・4・7番へは行けない(2026-10-07 ユーザー指示)
       var s6 = cfg.slots['6'];
@@ -1493,7 +1504,7 @@
         // 実物(フロア・4番扇動板・中段フロア・タイヤ)に当たる理由(phys)は、その位置で止まる(通り抜けない)
         if (pressedDir > 0 && !car.missedKeys[p.key]) {
           car.missedKeys[p.key] = true;
-          impact(car, p.key, Math.abs(car.velocity), contactOpt(car, p.key));
+          hitOrFall(car, p.key, Math.abs(car.velocity));
           setStatus('ぶつかった!' + p.msg.split('。')[0] + '。');
         }
         if (p.phys && !blocked) blocked = p;
@@ -1502,7 +1513,7 @@
       else if (pressedDir > 0 && !car.missedKeys[p.key]) {
         car.missedKeys[p.key] = true;
         recordMiss(p.msg.split('。')[0], (p.key === 'ramp' || p.key === 'jack') ? 'minor' : 'major');
-        if (p.phys) impact(car, p.key, Math.abs(car.velocity), contactOpt(car, p.key));
+        if (p.phys) hitOrFall(car, p.key, Math.abs(car.velocity));
       }
       // ノーマル・ハードも、実物に当たる理由(phys)では、その位置で止まる(ミスは上で1回記録)
       if (!state.hints && !state.freeMode && p.phys && !blocked) blocked = p;
