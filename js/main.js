@@ -1650,7 +1650,7 @@
       var rp = (performance.now() - rd.t0) / rd.dur;
       if (rp >= 1) car.ride = null;
       else {
-        var env = Math.exp(-3.4 * rp), dir = (rd.kind === 'hole' ? 1 : -1) * (rd.rear ? -1 : 1), osc = Math.sin(rp * 13);   // rd.rear: 後ろのタイヤが先に入る(バック・バック向きの車)時は、傾く向きが逆
+        var env = Math.exp(-3.4 * rp), dir = (rd.kind === 'hole' ? 1 : -1) * (rd.leftLead === false ? 1 : -1), osc = Math.sin(rp * 13);   // 先に入る側のタイヤが沈む(穴)/持ち上がる(段差)向き。軸は下の描画で、入っていない側のタイヤに置く
         rideDeg = dir * (3 + 11 * rd.sev) * env * osc;
         rideY = -(2 + 9 * rd.sev) * env * Math.abs(Math.sin(rp * 9)) * (rd.kind === 'hole' ? 0.5 : 1);
       }
@@ -1690,7 +1690,9 @@
       if (cabDrop > 0) cabPitch -= Math.atan2(cabDrop, car.wbPx) * 180 / Math.PI;
     }
     ctx.translate(car.x - lunge, car.y + bumpY + sink + fallY + drY + rideY + cabDrop);
-    ctx.rotate((rotDeg + sinkDeg + fallRot + drDeg + rideDeg + cabPitch) * Math.PI / 180);
+    ctx.rotate((rotDeg + sinkDeg + fallRot + drDeg + cabPitch) * Math.PI / 180);
+    // 溝・段差に入った時の傾き: 軸は、入っていない側のタイヤの接地点(左のタイヤが先に入るなら右のタイヤ=+wbPx、右が先なら左のタイヤ=原点)。先に入る側だけが沈む/持ち上がる(2026-10-23 ユーザー指示)
+    if (rideDeg) { var rpv = (rd && rd.leftLead !== false) ? (car.wbPx || 0) : 0; ctx.translate(rpv, 0); ctx.rotate(rideDeg * Math.PI / 180); ctx.translate(-rpv, 0); }
     if (hangDeg) { var hx = acc.hang - car.x; ctx.translate(hx, 0); ctx.rotate(hangDeg * Math.PI / 180); ctx.translate(-hx, 0); }   // 端(hx)を支点に傾く
     // ぶつかった時のグシャッ: 前端を固定して前後に縮み、少し上に膨らんで戻る(減衰する振動)
     var sqz = squashOf(car);
