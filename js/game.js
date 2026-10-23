@@ -298,7 +298,7 @@
     } else {
       pts.push(slotPt('6'));   // 6番の接地点を通る(道板の上端から5番へ一直線だと、6番の位置で線が約4px上になり、車が浮いて止まる)
       pts.push(slotPt('5'));
-      extra.f5Edge = { x: 1560, y: S['5'].deckY };   // 5番フロアの後端(ここから先は5番フロアの上)。5番フロアが平らでない間は、ここから先へ進めない
+      extra.f5Edge = { x: fm.FLOORS.F5.rear.pt[0], y: fm.FLOORS.F5.rear.pt[1] };   // 5番フロアの後端(実際の床の後端。以前は x=1560 の固定で、床の端より55px先の空中で止まっていた)。5番フロアが平らでない間は、ここから先へ進めない
       tg['6'] = slotPt('6'); tg['5'] = slotPt('5');
     }
     var hasFloor = pts.some(function (p) { return !!p.floor; });
