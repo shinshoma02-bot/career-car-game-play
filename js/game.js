@@ -539,9 +539,11 @@
       if (fm.slideT() > 0.02 && fm.slideHitsBody(sx0, sx0 + car.w, fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]), car.y, undefined, fm.slideT())) {
         out.push({ key: 'slide', phys: true, msg: 'スライド板に車の前が当たります。スライド板を格納してください。' });
       }
-      if (car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 30 && (fm.MECH.f2Flap || !fm.f1Connected())) {
-        out.push({ key: 'f1link', msg: fm.MECH.f2Flap ? '2番扇動板が開いているので1番へは通れません。閉じてください。' : '1番へはまだ2番↔1番がつながっていません。フロア昇降パネルでつなげてください。' });
+      // 2番扇動板が開いている: 1番へは通れない(止める)
+      if (car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 30 && fm.MECH.f2Flap) {
+        out.push({ key: 'f1link', msg: '2番扇動板が開いているので1番へは通れません。閉じてください。' });
       }
+      // スライド板を格納したままの1番との隙間は、落とし穴(止めない)。タイヤが溝にハマる衝撃は、通過する時に1回だけ(updateVelocity の slideHole)
     } else {
       // 出している4番扇動板が、下段を走る車の前に当たる(実物の板)
       // 出している4番扇動板は、5番と4番の間の橋(車は板の上に乗って通る。当たりで止めない・2026-10-13)。板の上の車の高さは rideBridge で合わせる
@@ -1480,6 +1482,15 @@
       if (!state.hints && !state.freeMode && p.phys && !blocked) blocked = p;
     });
     Object.keys(car.missedKeys).forEach(function (k) { if (!present[k]) delete car.missedKeys[k]; });
+    // スライド板を格納したままの1番との隙間(落とし穴): 前へ通る時、タイヤが溝にハマって衝撃が1回入る(2026-10-23 ユーザー指示。止めない)
+    if (car.route && car.route.id === 'U' && pressedDir > 0 && car.f2FrontArc !== undefined && window.FLOOR_MECH) {
+      var fmH = window.FLOOR_MECH;
+      if (car.progress < car.f2FrontArc - 80) car.slideHoleDone = false;
+      if (!fmH.MECH.slide && !fmH.MECH.f2Flap && !car.slideHoleDone && car.progress > car.f2FrontArc - 30 && car.progress < car.f2FrontArc + 40) {
+        car.slideHoleDone = true;
+        rideOver(car, Math.abs(car.velocity) || 350, 'hole');
+      }
+    }
     // 当たる寸前の予告(2026-10-23 ユーザー指示): 速く進んでいて、少し先で実物に当たるなら「危ない！」。ぶつかってからでは手遅れなので、先に言う
     if (window.VOICE_GUIDE && pressedDir > 0 && Math.abs(car.velocity) > 150 && !probs.some(function (p) { return p.phys; }) && aheadBlocked(car, Math.abs(car.velocity) * 0.25)) window.VOICE_GUIDE.danger('near');
     scrapeTire(car, dt);

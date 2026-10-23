@@ -675,14 +675,13 @@
     return false;
   }
   // スライド板(1番の後端から出る板)に、1番・2番に積んである車の体が当たるか(2026-10-23: 1番の車も見る。以前は2番の車だけだった)
+  function slideHitsCar2Item(o, offs, t) {
+    var pos = o.floor ? onFloor(o.floor, o.localX, o.localY) : [o.localX, o.localY], x0 = pos[0] - o.leftTireX;
+    return slideHitsBody(x0, x0 + o.w, carTopY(o, pos, 0), pos[1], offs, t);
+  }
   function slideHitsCar2(offs, t) {
     var gsn = window.GAME_STATE; if (!gsn) return false;
-    return [1, 2].some(function (n) {
-      var o = gsn.occupied[n];
-      if (!o) return false;
-      var pos = o.floor ? onFloor(o.floor, o.localX, o.localY) : [o.localX, o.localY], x0 = pos[0] - o.leftTireX;
-      return slideHitsBody(x0, x0 + o.w, carTopY(o, pos, 0), pos[1], offs, t);
-    });
+    return [1, 2].some(function (n) { return !!gsn.occupied[n] && slideHitsCar2Item(gsn.occupied[n], offs, t); });
   }
   function toggleSlide() {
     var st = window.GAME_STATE, car = st && st.car;
@@ -692,6 +691,12 @@
       MECH.slide = false; if (window.SFX) window.SFX.ramp(); onInfo('スライド板を格納した(1番フロアの下へ)');
     } else {
       MECH.slide = true; if (window.SFX) window.SFX.ramp(); onInfo('スライド板を搬出した');
+      // 車の体の中で搬出したら、板が車を突き抜ける(道板と同じ貫通)。その車に「ぶつかった」演出を出す(2026-10-23)
+      var gsn = window.GAME_STATE;
+      [1, 2].forEach(function (n) {
+        var o = gsn && gsn.occupied[n];
+        if (o && gsn.impact && slideHitsCar2Item(o, curOffs(), 1)) gsn.impact(o.live || o, 'slide', 350, undefined);
+      });
     }
   }
 
