@@ -1115,7 +1115,7 @@
     stepPinTarget: stepPinTarget, togglePin: togglePin,
     toggleStopper: toggleStopper, stopperVisible: stopperVisible, barUp: barUp, stopperPos: stopperPos, f5FrontPt: f5FrontPt, leverPose: leverPose, toggleBridge: toggleBridge, f5Slope: f5Slope,
     toggleRamp: toggleRamp, rampUpdate: rampUpdate, rampReady: rampReady, rampT: function () { rampUpdate(); return RAMP.t; },
-    toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, carTiresOn: carTiresOn, bridgeSeg: bridgeSeg, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, bridgeHitsBody: bridgeHitsBody, bridgeSurfaceY: bridgeSurfaceY, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
+    toggleF2Flap: toggleF2Flap, toggleSlide: toggleSlide, carTiresOn: carTiresOn, bridgeSeg: bridgeSeg, bridgeHitsBody: bridgeHitsBody, slideT: slideT, slideReady: slideReady, slideGeom: slideGeom, slideHitsBody: slideHitsBody, bridgeHitsBody: bridgeHitsBody, bridgeSurfaceY: bridgeSurfaceY, SLIDE: SLIDE, F2_FLAP_LEN: F2_FLAP_LEN, flapT: flapT, bridgeT: bridgeT, bridgeReady: bridgeReady, bridgeTip: bridgeTip,
     holdStart: holdStart, holdStop: holdStop,
     atTravel: atTravel, upperConnected: upperConnected, f1Connected: f1Connected,
     cylPin: cylPin, cylLen: cylLen,

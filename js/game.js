@@ -542,10 +542,11 @@
       if (hb) out.push({ key: 'hang', phys: true, msg: '中段フロアが上がっていて通れません。中段フロアを下げてから(格納してから)通ってください。' });
       // (旧)lowFloorBlocked: フロアが絵の高さより下がっていたら、車と重ならなくても通さなかった → 実際の重なり(上の lowroof)だけにした
       // 5番フロアがスロープなのに4番扇動板が出ていない: スロープを上って、上端で、垂れ下がった4番扇動板に当たって止まる
-      // 4番扇動板の付け根の壁(4番と5番の境): 5番フロアが平らの間は、車の体が壁に当たる。5番をスロープにすると壁が無くなるので、通れる
-      if (id === '4' && !fm.f5Slope() && car.anchorWallArc !== undefined && car.progress >= car.anchorWallArc - 1 && car.progress <= car.anchorWallArc + 40) {
-        out.push({ key: 'anchorwall', phys: true, stopAt: car.anchorWallArc, msg: '5番フロアが平らのままでは、4番との境の壁に当たります。5番をスロープにしてから進めてください。' });
-      }
+      // 4番扇動板と、その付け根の壁(4番と5番の境)に、車の体が当たるか(車の位置で見る。道の長さでは見ない)。2026-10-23 ユーザー指示
+      var bx0 = car.x - car.leftTireX, bTop = fm.carTopY({ img: car.img, prof: car.prof, w: car.w, h: car.h, leftTireX: car.leftTireX }, [car.x, car.y]);
+      if (fm.bridgeHitsBody(bx0, bx0 + car.w, bTop, car.y)) out.push({ key: 'bridgebody', phys: true, msg: '4番扇動板に車の体が当たりました。板を格納してから、車の位置を直してください。' });   // 板の上に乗る時は当たらない(bridgeHitsBody)
+      var ax = fm.BR_ANCHOR[0], ay = fm.BR_ANCHOR[1];
+      if (!fm.f5Slope() && ax >= bx0 && ax <= bx0 + car.w && car.y > ay && car.y - (car.h || 0) < 577) out.push({ key: 'anchorwall', phys: true, msg: '5番フロアが平らのままでは、4番との境の壁に当たります。5番をスロープにしてから進めてください。' });   // 5番がスロープの間は、壁が無いので当たらない
       if (id === '4' && !fm.bridgeReady() && car.bridgeWallArc !== undefined && car.progress >= car.bridgeWallArc - 1) {
         out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '4番扇動板が出ていないので、スロープの先(4番との隙間)へは進めません。4番扇動板を搬出してください。' });
       }
