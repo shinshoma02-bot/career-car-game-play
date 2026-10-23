@@ -514,6 +514,15 @@
     return msg;
   }
   state.tireStowBlocker = tireStowBlocker; state.tireStowHit = tireStowHit;
+  // 少し先(L px)の位置に車を置いたら、実物に当たるか(位置は戻す)。当たる寸前の予告に使う
+  function aheadBlocked(car, L) {
+    var sx = car.x, sy = car.y, sp = car.progress;
+    var q = car.pathTool.at(sp + L);
+    car.progress = sp + L; car.x = q.x; car.y = q.y;
+    var hit = routeProblems(car).some(function (p) { return p.phys; });
+    car.progress = sp; car.x = sx; car.y = sy;
+    return hit;
+  }
   function routeProblems(car) {
     if (T6) return window.FLOOR_MECH.routeProblems6b(car);
     var fm = window.FLOOR_MECH, out = [], id = car.route.id;
@@ -1471,6 +1480,8 @@
       if (!state.hints && !state.freeMode && p.phys && !blocked) blocked = p;
     });
     Object.keys(car.missedKeys).forEach(function (k) { if (!present[k]) delete car.missedKeys[k]; });
+    // 当たる寸前の予告(2026-10-23 ユーザー指示): 速く進んでいて、少し先で実物に当たるなら「危ない！」。ぶつかってからでは手遅れなので、先に言う
+    if (window.VOICE_GUIDE && pressedDir > 0 && Math.abs(car.velocity) > 150 && !probs.some(function (p) { return p.phys; }) && aheadBlocked(car, Math.abs(car.velocity) * 0.25)) window.VOICE_GUIDE.danger('near');
     scrapeTire(car, dt);
     if (blocked && blocked.stopAt !== undefined && car.progress > blocked.stopAt) {   // 実物の縁(4番扇動板・5番フロアの端)を少し行き過ぎていたら、縁の位置まで戻す
       car.progress = blocked.stopAt; var pq = car.pathTool.at(car.progress); car.x = pq.x; car.y = pq.y;
