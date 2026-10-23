@@ -561,6 +561,18 @@
     }
     return step <= STEP ? 'pass' : 'fall';
   }
+  // 段階3(2026-10-23): 隙間(穴)に前輪が入る結果を、重力の計算で決める(#physics=1 の時だけ)。
+  // 前輪は、穴の縁の間(幅 W)に落ちる。タイヤ(直径 D)の下が縁に届けば、ハマる(wedge)。届かなければ、穴の底へ落ち込む(fall)
+  function simGap(W, D) {
+    var r = D / 2, G = 2400, DT = 1 / 240, y = 0, vy = 0;   // y: 穴の縁の高さからの、タイヤの中心の沈み(下が正)
+    for (var t = 0; t < 2; t += DT) {
+      vy += G * DT; y += vy * DT;
+      // タイヤが縁に届く: 穴の幅の半分より、タイヤの接地面の半径が大きければ、縁に引っかかって止まる
+      if (y >= 0 && W < D) return 'wedge';
+      if (y > r * 2) return 'fall';
+    }
+    return W < D ? 'wedge' : 'fall';
+  }
   // 2番の前端→1番の後端の高さの差(正 = 1番の方が高い)。上段の道のときだけ意味がある
   function f1JointRise() {
     var fm = window.FLOOR_MECH, st = state.car;
@@ -1552,7 +1564,8 @@
       var gpf = car.progress, gpr = car.progress - (car.wbPx || 0), gpv = car.gapPrev;
       if (gapOpen && gpv) {
         var gv = Math.max(Math.abs(car.velocity), 260), crossF = (gpv.f < gE) !== (gpf < gE), crossR = (gpv.r < gE) !== (gpr < gE);
-        if ((crossF || crossR) && gapW >= tireD && !car.fellGap) {
+        var gRes = PHYS_ENTRY ? simGap(gapW, tireD) : (gapW >= tireD ? 'fall' : 'wedge');
+        if ((crossF || crossR) && gRes === 'fall' && !car.fellGap) {
           car.fellGap = true;
           accident(car, (fmH.MECH.f2Flap && !fmH.MECH.slide ? 'スライド板も2番扇動板も無い大きな穴に' : '穴(幅' + Math.round(gapW / 114 * 100) + 'cm)に') + 'タイヤが落ち込んで、傾いて引っかかってしまいました。', resolvePoint(car.route.extra.f2front).x, -1);   // 地面へは落ちず、穴の縁を支点に、前が沈む向きに傾いて止まる
         } else {
