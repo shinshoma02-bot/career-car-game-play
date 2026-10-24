@@ -709,6 +709,12 @@
       var ax = fm.BR_ANCHOR[0], ay = fm.BR_ANCHOR[1];
       if (!fm.f5Slope() && ax >= bx0 && ax <= bx0 + car.w && car.y > ay && car.y - (car.h || 0) < 577) out.push({ key: 'anchorwall', phys: true, msg: '5番フロアが平らのままでは、4番との境の壁に当たります。5番をスロープにしてから進めてください。' });   // 5番がスロープの間は、壁が無いので当たらない
       if (id === '4' && !fm.bridgeReady() && car.bridgeWallArc !== undefined && car.progress >= car.bridgeWallArc - 1) {
+        // #physics=2: 5番スロープの先端と4番の付け根の間(板が無い隙間)の幅 W と、タイヤの直径 D で決める。W ≥ D なら支えが無く、タイヤが落ちる(事故)。W < D なら、縁に引っかかって止まる(ハマり)
+        var gW4 = Math.abs(cfg.bridgePlate.tipX - fm.BR_ANCHOR[0]), gD4 = 2 * (car.wheelRPx || 30);
+        if (PHYS_MOTION && gW4 >= gD4) {
+          if (!car.fell4) { car.fell4 = true; accident(car, '4番扇動板が出ていない隙間にタイヤが落ち込んで、傾いて引っかかってしまいました。', cfg.bridgePlate.tipX, -1); }
+          return out;
+        }
         out.push({ key: 'bridge', phys: true, stopAt: car.bridgeWallArc, msg: '4番扇動板が出ていないので、スロープの先の隙間にタイヤがハマって進めません。4番扇動板を搬出してください。' });
       }
       // 台車のスライド車軸を伸ばしていないと、6番の横を通れるのは軽自動車(幅1.48m以下)だけ。それ以外(5ナンバー・3ナンバー)は、6番に止まる(積む)分には従来どおりだが、6番を通り過ぎて5・4・7番へは行けない(2026-10-07 ユーザー指示)
