@@ -556,7 +556,27 @@
     var fm = window.FLOOR_MECH, onWin = car.route && car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 80 && car.progress < car.f2FrontArc + 160;
     // 3番の後端(道板との間): 3番が道板から離れている時だけ。後端の先は、道板の斜面(無ければ落ちる)
     var onWin3 = car.route && car.route.id === 'U' && car.f3RearArc !== undefined && !fm.upperConnected() && car.progress > car.f3RearArc - 80 && car.progress < car.f3RearArc + 160;
-    if (!PHYS_MOTION || !(onWin || onWin3) || !car.pathTool) { car.physOn = false; return; }
+    // 5番フロアの後端(Lルート): 5番が平らでない(持ち上がった・スロープ)時は、床の斜面に前輪・後輪が乗る。後端より手前は、今の道の高さ
+    var onWin5 = car.f5EdgeArc !== undefined && car.progress > car.f5EdgeArc - 80 && car.progress < car.f5EdgeArc + 160;
+    if (!PHYS_MOTION || !(onWin || onWin3 || onWin5) || !car.pathTool) { car.physOn = false; return; }
+    if (onWin5 && !onWin && !onWin3) {
+      var fm5 = window.FLOOR_MECH, E5 = car.pathTool.at(car.f5EdgeArc).x;
+      var r5 = fm5.onFloor('F5', fm5.FLOORS.F5.rear.pt[0], fm5.FLOORS.F5.rear.pt[1]), f5 = fm5.onFloor('F5', fm5.FLOORS.F5.front.pt[0], fm5.FLOORS.F5.front.pt[1]);
+      // 床の高さ: 後端より後ろ(手前)は、今の道の高さ(平らな地面と同じ)。床の上は、後端と前端を結ぶ線(持ち上げると斜めになる)
+      var surf5 = function (p) {
+        var x = car.pathTool.at(p).x;
+        if (x <= E5 || f5[0] === r5[0]) return car.pathTool.at(p).y;
+        return r5[1] + (x - r5[0]) * (f5[1] - r5[1]) / (f5[0] - r5[0]);
+      };
+      var rearP5 = car.pathTool.at(car.progress - (car.wbPx || 0));
+      if (!car.physOn) { car.physOn = true; car.physFY = car.y; car.physRY = rearP5.y; car.physFVy = 0; car.physRVy = 0; }
+      var fr5 = car.physFY, rr5 = car.physRY, sF5 = surf5(car.progress), sR5 = surf5(car.progress - (car.wbPx || 0));
+      car.physFVy += PHYS_G * dt; fr5 += car.physFVy * dt; if (fr5 >= sF5) { fr5 = sF5; car.physFVy = 0; }
+      car.physRVy += PHYS_G * dt; rr5 += car.physRVy * dt; if (rr5 >= sR5) { rr5 = sR5; car.physRVy = 0; }
+      car.physFY = fr5; car.physRY = rr5; car.y = fr5;
+      car.physFrontX = car.x; car.physRearX = rearP5.x;
+      return;
+    }
     if (onWin3 && !onWin) {
       // 3番の後端 → 道板の斜面: 床の高さは、後端より後ろは3番の後端の高さ、道板の上は斜面の線(cfg.ramp の top→bottom)、その間の空中は支えが無い
       var E3 = car.pathTool.at(car.f3RearArc).x, RT = cfg.ramp.top, RB = cfg.ramp.bottom;
@@ -702,7 +722,7 @@
         }
       }
       // 5番フロアが平らでない(持ち上がっている途中など)のに、5番フロアの後端から先へ進もうとした(実際の5番フロアの縁で止まる)
-      if (id === 'L' && !fm.atTravel('F5') && car.f5EdgeArc !== undefined && car.progress >= car.f5EdgeArc - 1) out.push({ key: 'f5flat', phys: true, stopAt: car.f5EdgeArc, msg: '5番フロアが平らになっていません。5番フロアを平らに戻すか、スロープにして4番扇動板を出してください。' });
+      if (id === 'L' && !PHYS_MOTION && !fm.atTravel('F5') && car.f5EdgeArc !== undefined && car.progress >= car.f5EdgeArc - 1) out.push({ key: 'f5flat', phys: true, stopAt: car.f5EdgeArc, msg: '5番フロアが平らになっていません。5番フロアを平らに戻すか、スロープにして4番扇動板を出してください。' });
     }
     return out;
   }
