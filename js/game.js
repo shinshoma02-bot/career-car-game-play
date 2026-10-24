@@ -548,9 +548,9 @@
     return sb > car.y - f1OverhangPx(car);
   }
   // 段階2(2026-10-23): 1番の入口を、重力で動かした計算で決める。URL に #physics=1 を付けた時だけ。通常の遊び方は、今の規則のまま
-  var PHYS_ENTRY = /[#&]physics=[12]/.test(location.hash || '');
+  var PHYS_ENTRY = /[#&](physics=[12]|stage=test)(&|$)/.test(location.hash || '');   // stage=test(検証用の入口)は、物理の動きを最初から入れる
   // 車の動き自体を重力で動かす(#physics=2)。今は、1番の入口(2番の前端の前後)の前輪・後輪だけ。接地の高さを、重力と床の高さから毎フレーム計算する
-  var PHYS_MOTION = /[#&]physics=2/.test(location.hash || '');
+  var PHYS_MOTION = /[#&](physics=2|stage=test)(&|$)/.test(location.hash || '');
   var PHYS_G = 2400;
   function physMotion(car, dt) {
     var fm = window.FLOOR_MECH, onWin = car.route && car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 80 && car.progress < car.f2FrontArc + 160;
