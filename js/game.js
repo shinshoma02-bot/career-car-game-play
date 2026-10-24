@@ -557,9 +557,19 @@
     if (!PHYS_MOTION || !onWin || !car.pathTool) { car.physOn = false; return; }
     var J = car.pathTool.at(car.f2FrontArc).x;
     var rearP = car.pathTool.at(car.progress - (car.wbPx || 0));
-    function surf(x) {   // 床の上面(画面の y)。2番の前端より左は2番、右は1番
+    // 隙間(2番扇動板が開いている/スライド板が格納)の中: 穴の縁に、タイヤが引っかかる高さ。幅 W・タイヤ直径 D。W ≥ D なら支えが無く、落ちる(Infinity)
+    var gapW = (fm.MECH.f2Flap ? fm.F2_FLAP_LEN : 0) + (!fm.MECH.slide ? fm.SLIDE.len : 0), gapOn = gapW > 0 && car.route.id === 'U' && f1JointRise() !== null && Math.abs(f1JointRise()) <= 14;
+    var gapX = car.pathTool.at(car.f2FrontArc - 30).x, gapD = 2 * (car.wheelRPx || 30);
+    function surfPlain(x) {   // 床の上面(画面の y)。2番の前端より左は2番、右は1番
       var a = fm.onFloor(x < J ? 'F2' : 'F1', x < J ? fm.FLOORS.F2.front.pt[0] : fm.FLOORS.F1.rear.pt[0], x < J ? fm.FLOORS.F2.front.pt[1] : fm.FLOORS.F1.rear.pt[1]);
       return a[1];
+    }
+    function surf(x) {
+      if (!gapOn || Math.abs(x - gapX) > gapW / 2) return surfPlain(x);
+      if (gapW >= gapD) return Infinity;   // 穴が直径より広い: 支えが無く、落ちる(落下・事故は既存の判定)
+      // 穴の縁(両側の床)の高さの平均。タイヤの円が縁の角に届く高さ: 縁より s だけ上に中心があり、接地は中心より r 下(画面は下が正)
+      var r = gapD / 2, edgeY = (surfPlain(gapX - gapW / 2 - 2) + surfPlain(gapX + gapW / 2 + 2)) / 2;
+      return edgeY + (r - Math.sqrt(r * r - (gapW / 2) * (gapW / 2)));
     }
     if (!car.physOn) { car.physOn = true; car.physFY = car.y; car.physRY = rearP.y; car.physFVy = 0; car.physRVy = 0; }
     var front = car.physFY, rear = car.physRY, sF = surf(car.x), sR = surf(rearP.x);
@@ -1597,7 +1607,7 @@
         if ((crossF || crossR) && gRes === 'fall' && !car.fellGap) {
           car.fellGap = true;
           accident(car, (fmH.MECH.f2Flap && !fmH.MECH.slide ? 'スライド板も2番扇動板も無い大きな穴に' : '穴(幅' + Math.round(gapW / 114 * 100) + 'cm)に') + 'タイヤが落ち込んで、傾いて引っかかってしまいました。', resolvePoint(car.route.extra.f2front).x, -1);   // 地面へは落ちず、穴の縁を支点に、前が沈む向きに傾いて止まる
-        } else {
+        } else if (!PHYS_MOTION) {   // #physics=2 の時は、引っかかる動きを physMotion(重力)で決める。ここで別に傾けると二重になる
           if (crossF) rideOver(car, gv, 'hole', 'L');   // 前のタイヤ(画面の左)
           if (crossR) rideOver(car, gv, 'hole', 'R');   // 後ろのタイヤ(画面の右)
         }
