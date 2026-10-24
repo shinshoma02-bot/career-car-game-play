@@ -554,7 +554,27 @@
   var PHYS_G = 2400;
   function physMotion(car, dt) {
     var fm = window.FLOOR_MECH, onWin = car.route && car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc - 80 && car.progress < car.f2FrontArc + 160;
-    if (!PHYS_MOTION || !onWin || !car.pathTool) { car.physOn = false; return; }
+    // 3番の後端(道板との間): 3番が道板から離れている時だけ。後端の先は、道板の斜面(無ければ落ちる)
+    var onWin3 = car.route && car.route.id === 'U' && car.f3RearArc !== undefined && !fm.upperConnected() && car.progress > car.f3RearArc - 80 && car.progress < car.f3RearArc + 160;
+    if (!PHYS_MOTION || !(onWin || onWin3) || !car.pathTool) { car.physOn = false; return; }
+    if (onWin3 && !onWin) {
+      // 3番の後端 → 道板の斜面: 床の高さは、後端より後ろは3番の後端の高さ、道板の上は斜面の線(cfg.ramp の top→bottom)、その間の空中は支えが無い
+      var E3 = car.pathTool.at(car.f3RearArc).x, RT = cfg.ramp.top, RB = cfg.ramp.bottom;
+      var surf3 = function (x) {
+        if (x <= E3) return fm.onFloor('F3', fm.FLOORS.F3.rear.pt[0], fm.FLOORS.F3.rear.pt[1])[1];
+        if (x < RT[0] || !fm.rampReady()) return Infinity;
+        if (x <= RB[0]) return RT[1] + (x - RT[0]) * (RB[1] - RT[1]) / (RB[0] - RT[0]);
+        return cfg.ramp.groundY;
+      };
+      var rearP3 = car.pathTool.at(car.progress - (car.wbPx || 0));
+      if (!car.physOn) { car.physOn = true; car.physFY = car.y; car.physRY = rearP3.y; car.physFVy = 0; car.physRVy = 0; }
+      var fr3 = car.physFY, rr3 = car.physRY, sF3 = surf3(car.x), sR3 = surf3(rearP3.x);
+      car.physFVy += PHYS_G * dt; fr3 += car.physFVy * dt; if (fr3 >= sF3) { fr3 = sF3; car.physFVy = 0; }
+      car.physRVy += PHYS_G * dt; rr3 += car.physRVy * dt; if (rr3 >= sR3) { rr3 = sR3; car.physRVy = 0; }
+      car.physFY = fr3; car.physRY = rr3; car.y = fr3;
+      car.physFrontX = car.x; car.physRearX = rearP3.x;
+      return;
+    }
     var J = car.pathTool.at(car.f2FrontArc).x;
     var rearP = car.pathTool.at(car.progress - (car.wbPx || 0));
     // 隙間(2番扇動板が開いている/スライド板が格納)の中: 穴の縁に、タイヤが引っかかる高さ。幅 W・タイヤ直径 D。W ≥ D なら支えが無く、落ちる(Infinity)
@@ -648,7 +668,7 @@
         out.push({ key: 'f1rise', phys: true, stopAt: car.f2FrontArc, msg: '1番フロアの方が高く、車は上れません。2番と1番の高さをそろえてから進めてください。' });
       }
       // #physics=1: 3番の後端が道板から離れている(床を上げた)時は、車がその位置で止まる(事故にしない)(2026-10-23 ご指摘)
-      if (PHYS_ENTRY && car.route.id === 'U' && car.f3RearArc !== undefined && !fm.upperConnected() && car.progress > car.f3RearArc - 40 && car.progress < car.f3RearArc + 40) {
+      if (PHYS_ENTRY && !PHYS_MOTION && car.route.id === 'U' && car.f3RearArc !== undefined && !fm.upperConnected() && car.progress > car.f3RearArc - 40 && car.progress < car.f3RearArc + 40) {
         out.push({ key: 'f3lift', phys: true, msg: '3番フロアが道板から離れているので、車はここで止まります。フロアを道板につなぎ直してください。' });
       }
       // 2番扇動板が開いている: 1番へは通れない(止める)
@@ -1742,6 +1762,9 @@
     // 3番フロアが道板から離れている(上げている)のに、車が3番の後端より後ろ(道板との間の空中)へ出たら、車が落ちる事故
     if (car.route.id === 'U' && car.f3RearArc !== undefined && !window.FLOOR_MECH.upperConnected() && car.progress - (car.wbPx || 0) < car.f3RearArc - 2 && car.progress > 1) {
       // #physics=1 の時は、3番の後端と道板の高さで、重力の計算(simEntry)が決める: 通る(道板へ滑り降りる)/ぶつかる / 落ちる
+      // #physics=2: 3番の後端の先は、physMotion の重力の動き(道板へ滑る/空中で落ちる)で決める。落ちた(画面の下へ抜けた)時だけ事故
+      if (PHYS_MOTION) { if (car.physOn && (car.physFY > 700 || car.physRY > 700)) { edgeBreak(car, car.pts[3].x, '3番フロア'); return false; } }
+      else {
       var r3 = PHYS_ENTRY ? (function () {
         var fm3 = window.FLOOR_MECH, yR = fm3.onFloor('F3', fm3.FLOORS.F3.rear.pt[0], fm3.FLOORS.F3.rear.pt[1])[1];
         return simEntry(yR, cfg.ramp.top[1], f1OverhangPx(car));
@@ -1749,6 +1772,7 @@
       if (r3 === 'pass') { /* 道板へ滑り降りて通る(事故にしない) */ }
       else if (PHYS_ENTRY) { /* #physics=1: 3番が道板から離れても事故にしない。routeProblems の f3lift で、その位置に止める(ご指摘) */ }
       else { edgeBreak(car, car.pts[3].x, '3番フロア'); return false; }   // 後ろのタイヤが後端を越えたら(先頭が越えるのを待たない)
+      }
     }
     // 2番の前端の先で、1番が14px以上低い(道が無い): 車の前が端を越えたら、落ちる(事故)
     if (car.route.id === 'U' && car.f2FrontArc !== undefined && car.progress > car.f2FrontArc + 8) {
