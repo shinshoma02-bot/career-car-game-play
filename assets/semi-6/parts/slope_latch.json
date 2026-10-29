@@ -1,0 +1,69 @@
+{
+ "note": "5番フロアのスロープの留め(make_slope_latch.py)。ステージ座標。今使うのは v2(第3版: pin・bar・bar_up)",
+ "pinAt": [
+  1003.0,
+  457.0
+ ],
+ "f5FrontLatched": [
+  1005.0,
+  451.0
+ ],
+ "f5DegLatched": 6.73,
+ "v2": {
+  "note": "第3版(2026-10-15 実車写真)。柱には pin だけ。5番の側面に赤い玉付きの棒と、下のばね。5番がストッパー(4番の高さ)まで上がると、ばねで棒が勝手に下がって爪が掛かる。玉を上げると外れる。bracket・lever・lever_up・hook は使わない",
+  "pin": {
+   "size": [
+    10,
+    10
+   ],
+   "pinLocal": [
+    5,
+    5
+   ],
+   "file": "parts/slope_latch_pin.png",
+   "at": [
+    998.0,
+    452.0
+   ],
+   "what": "柱のピン。左上を at に置く(動かない)。5番より奥(5番の前に描く)"
+  },
+  "bar": {
+   "size": [
+    66,
+    40
+   ],
+   "origin": [
+    10,
+    26
+   ],
+   "pivotLocal": [
+    -4.0,
+    1.5
+   ],
+   "upDeg": 0,
+   "file": "parts/slope_latch_bar.png",
+   "what": "掛かる側(普段)。5番の前端の点に原点を合わせ、5番の角度で回し、drawImage(img, -origin[0], -origin[1])。5番の後に描く"
+  },
+  "bar_up": {
+   "size": [
+    66,
+    40
+   ],
+   "origin": [
+    10,
+    26
+   ],
+   "pivotLocal": [
+    -4.0,
+    1.5
+   ],
+   "upDeg": 14,
+   "file": "parts/slope_latch_bar_up.png",
+   "what": "取っ手を上げた(外す)。描き方は bar と同じ"
+  },
+  "tapLocal": [
+   38.0,
+   -1.0
+  ]
+ }
+}

@@ -1,0 +1,544 @@
+{
+ "btn_plate": {
+  "size": [
+   96,
+   44
+  ],
+  "slice": [
+   14,
+   14,
+   14,
+   14
+  ],
+  "textArea": [
+   16,
+   6,
+   84,
+   35
+  ],
+  "note": "9分割(上・右・下・左 14px は伸ばさない)。文字は textArea の中央に重ねる"
+ },
+ "btn_plate_pressed": {
+  "size": [
+   96,
+   44
+  ],
+  "slice": [
+   14,
+   14,
+   14,
+   14
+  ],
+  "textArea": [
+   17,
+   7,
+   85,
+   36
+  ],
+  "note": "9分割(上・右・下・左 14px は伸ばさない)。文字は textArea の中央に重ねる"
+ },
+ "btn_plate_disabled": {
+  "size": [
+   96,
+   44
+  ],
+  "slice": [
+   14,
+   14,
+   14,
+   14
+  ],
+  "textArea": [
+   16,
+   6,
+   84,
+   35
+  ],
+  "note": "9分割(上・右・下・左 14px は伸ばさない)。文字は textArea の中央に重ねる"
+ },
+ "btn_plate_go": {
+  "size": [
+   96,
+   44
+  ],
+  "slice": [
+   14,
+   14,
+   14,
+   14
+  ],
+  "textArea": [
+   16,
+   6,
+   84,
+   35
+  ],
+  "note": "9分割(上・右・下・左 14px は伸ばさない)。文字は textArea の中央に重ねる"
+ },
+ "btn_plate_go_pressed": {
+  "size": [
+   96,
+   44
+  ],
+  "slice": [
+   14,
+   14,
+   14,
+   14
+  ],
+  "textArea": [
+   17,
+   7,
+   85,
+   36
+  ],
+  "note": "9分割(上・右・下・左 14px は伸ばさない)。文字は textArea の中央に重ねる"
+ },
+ "btn_plate_warn": {
+  "size": [
+   96,
+   44
+  ],
+  "slice": [
+   14,
+   14,
+   14,
+   14
+  ],
+  "textArea": [
+   16,
+   6,
+   84,
+   35
+  ],
+  "note": "9分割(上・右・下・左 14px は伸ばさない)。文字は textArea の中央に重ねる"
+ },
+ "btn_plate_warn_pressed": {
+  "size": [
+   96,
+   44
+  ],
+  "slice": [
+   14,
+   14,
+   14,
+   14
+  ],
+  "textArea": [
+   17,
+   7,
+   85,
+   36
+  ],
+  "note": "9分割(上・右・下・左 14px は伸ばさない)。文字は textArea の中央に重ねる"
+ },
+ "slot_1": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_1_selected": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_1_pressed": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_2": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_2_selected": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_2_pressed": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_3": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_3_selected": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_3_pressed": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_4": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_4_selected": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_4_pressed": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_5": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_5_selected": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_5_pressed": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_6": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_6_selected": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_6_pressed": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_mid": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_mid_selected": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "slot_mid_pressed": {
+  "size": [
+   40,
+   40
+  ],
+  "pivot": [
+   20,
+   20
+  ]
+ },
+ "btn_drive_fwd": {
+  "size": [
+   72,
+   72
+  ],
+  "pivot": [
+   36,
+   36
+  ]
+ },
+ "btn_drive_fwd_pressed": {
+  "size": [
+   72,
+   72
+  ],
+  "pivot": [
+   36,
+   36
+  ]
+ },
+ "btn_drive_back": {
+  "size": [
+   72,
+   72
+  ],
+  "pivot": [
+   36,
+   36
+  ]
+ },
+ "btn_drive_back_pressed": {
+  "size": [
+   72,
+   72
+  ],
+  "pivot": [
+   36,
+   36
+  ]
+ },
+ "ic_ramp": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_bridge": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_flap2": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_stopper": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_chock": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_lid": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_orient": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_close": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_help": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_drawer": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_front": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "ic_rear": {
+  "size": [
+   48,
+   48
+  ],
+  "pivot": [
+   24,
+   24
+  ]
+ },
+ "hud_bar": {
+  "size": [
+   160,
+   52
+  ],
+  "slice": [
+   0,
+   24,
+   6,
+   24
+  ],
+  "note": "上の情報欄の背景。9分割(左右24px・下6pxは伸ばさない)。下の縁に黄黒の縞"
+ },
+ "meter_box": {
+  "size": [
+   64,
+   30
+  ],
+  "slice": [
+   8,
+   8,
+   8,
+   8
+  ],
+  "note": "数字の窓。文字は明るい緑 #7dfcd0 か黄 #ffd34d を推奨"
+ },
+ "panel_bg": {
+  "size": [
+   160,
+   96
+  ],
+  "slice": [
+   12,
+   16,
+   8,
+   16
+  ],
+  "note": "下の操作パネル・引き出しの背景。9分割"
+ }
+}

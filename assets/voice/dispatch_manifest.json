@@ -1,0 +1,19 @@
+{
+ "早いな、助かる。悪い、荷物変えるわ。": "assets/voice/voice_dispatch_found_fast_1.mp3",
+ "おっ、もう気づいたか。すまん、荷物変えるわ。": "assets/voice/voice_dispatch_found_fast_2.mp3",
+ "さすがだな。こっちのミスだ、荷物変えるわ。": "assets/voice/voice_dispatch_found_fast_3.mp3",
+ "悪い、荷物変えるわ。": "assets/voice/voice_dispatch_found_mid_1.mp3",
+ "あー、その組み合わせは無理だったな。別の荷物に替えるわ。": "assets/voice/voice_dispatch_found_mid_2.mp3",
+ "すまん、積めない荷物を回してた。替えるから待っててくれ。": "assets/voice/voice_dispatch_found_mid_3.mp3",
+ "やっと気づいたか…。悪い、荷物変えるわ。": "assets/voice/voice_dispatch_found_slow_1.mp3",
+ "遅いぞ、もっと早く言ってくれ。まあ悪かった、荷物変えるわ。": "assets/voice/voice_dispatch_found_slow_2.mp3",
+ "ずいぶん悩んだな。すまん、積めない荷物だった。変えるわ。": "assets/voice/voice_dispatch_found_slow_3.mp3",
+ "もっとちゃんと考えろ!積めるわい!": "assets/voice/voice_dispatch_wrong_1.mp3",
+ "何言ってんだ、それは積める荷物だ。よく見て考えろ!": "assets/voice/voice_dispatch_wrong_2.mp3",
+ "ちゃんと確認したのか?積めるって。つべこべ言わずに積め!": "assets/voice/voice_dispatch_wrong_3.mp3",
+ "積めない荷物なんか回すか。もう一回、頭使って並べ方を考えろ!": "assets/voice/voice_dispatch_wrong_4.mp3",
+ "悪い、積めない荷物だった。でも気づけよ!": "assets/voice/voice_dispatch_missed_1.mp3",
+ "すまん、荷物のミスだ。…けど、いつまで悩んでるんだ。気づけよ!": "assets/voice/voice_dispatch_missed_2.mp3",
+ "積めない荷物を回した、悪かった。だが、自分でも気づいてくれ。": "assets/voice/voice_dispatch_missed_3.mp3",
+ "こっちのミスで積めない荷物だった。だがな、早めに連絡くれ!": "assets/voice/voice_dispatch_missed_4.mp3"
+}

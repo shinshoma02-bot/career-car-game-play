@@ -1,0 +1,194 @@
+{
+  "floors": {
+    "floor_f1": {
+      "file": "parts/floor_f1.png",
+      "kind": "floor",
+      "home": [
+        354,
+        276
+      ],
+      "pivot": [
+        2,
+        29
+      ],
+      "pivot2": [
+        496,
+        5
+      ],
+      "note": "pivot=前のヒンジ(356,305)、pivot2=後ろの吊り点(850,281)。滑車・シリンダーは別素材(ゲーム描画)"
+    },
+    "floor_f2": {
+      "file": "parts/floor_f2.png",
+      "kind": "floor",
+      "home": [
+        881,
+        306
+      ],
+      "pivot": [
+        4,
+        8
+      ],
+      "pivot2": [
+        639,
+        12
+      ],
+      "linkPin": [
+        589,
+        34
+      ],
+      "note": "pivot=前端ヒンジ、pivot2=継ぎ目(MID)。継ぎ目のヒンジは3番側に描いた。linkPin=下の金具のピン(3番前の機構のリンクの上端)"
+    },
+    "floor_f3": {
+      "file": "parts/floor_f3.png",
+      "kind": "floor",
+      "home": [
+        1514,
+        304
+      ],
+      "pivot": [
+        6,
+        14
+      ],
+      "pivot2": [
+        426,
+        8
+      ],
+      "tailEnd": [
+        496,
+        8
+      ],
+      "note": "pivot=継ぎ目(MID)のヒンジ、pivot2=棚の後端 x=1940。そこから薄い板が x=2010 まで延びる(tailEnd)"
+    },
+    "floor_f5": {
+      "file": "parts/floor_f5.png",
+      "kind": "floor",
+      "home": [
+        935,
+        507
+      ],
+      "pivot": [
+        3,
+        3
+      ],
+      "pivot2": [
+        570,
+        3
+      ],
+      "note": "pivot=前端(持ち上がる側)、pivot2=後端"
+    }
+  },
+  "cylinders": {
+    "cyl_barrel": {
+      "file": "parts/cyl_barrel.png",
+      "size": [
+        123,
+        24
+      ],
+      "pivot": [
+        11,
+        12
+      ],
+      "tile": [
+        22,
+        97
+      ],
+      "len": 100,
+      "thick": 12,
+      "tipAt": [
+        111,
+        12
+      ],
+      "kind": "cylinder-barrel"
+    },
+    "cyl_rod": {
+      "file": "parts/cyl_rod.png",
+      "size": [
+        111,
+        11
+      ],
+      "pivot": [
+        4,
+        6
+      ],
+      "tile": [
+        11,
+        95
+      ],
+      "len": 100,
+      "thick": 5,
+      "tipAt": [
+        104,
+        6
+      ],
+      "kind": "cylinder-rod",
+      "note": "根元(左端)は外筒の口金の中に入る。先端の目玉が棚側の取付点"
+    },
+    "cyl2_barrel": {
+      "file": "parts/cyl2_barrel.png",
+      "size": [
+        83,
+        24
+      ],
+      "pivot": [
+        11,
+        12
+      ],
+      "tile": [
+        22,
+        57
+      ],
+      "len": 60,
+      "thick": 12,
+      "tipAt": [
+        71,
+        12
+      ],
+      "kind": "cylinder-barrel"
+    },
+    "cyl2_stage1": {
+      "file": "parts/cyl2_stage1.png",
+      "size": [
+        64,
+        14
+      ],
+      "pivot": [
+        1,
+        7
+      ],
+      "tile": [
+        9,
+        50
+      ],
+      "len": 60,
+      "thick": 8,
+      "tipAt": [
+        61,
+        7
+      ],
+      "kind": "cylinder-stage1",
+      "note": "外筒の口金から出る。伸びきったら先端の口金からロッドが出る"
+    },
+    "cyl2_rod": {
+      "file": "parts/cyl2_rod.png",
+      "size": [
+        71,
+        11
+      ],
+      "pivot": [
+        4,
+        6
+      ],
+      "tile": [
+        11,
+        55
+      ],
+      "len": 60,
+      "thick": 5,
+      "tipAt": [
+        64,
+        6
+      ],
+      "kind": "cylinder-rod"
+    }
+  }
+}
