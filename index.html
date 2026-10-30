@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<script>window.EDITION = "lite"; window.TITLE_URL = "index.html";</script>
+<script>!function(){var o=location.hostname;"shinshoma02-bot.github.io"!==o&&"localhost"!==o&&"127.0.0.1"!==o&&location.replace("https://shinshoma02-bot.github.io/career-car-game-play/")}();
+</script>
+<script>window.EDITION="lite",window.TITLE_URL="index.html";
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script src="js/i18n_en.js?v=178S.2.0.0"></script>
@@ -11,11 +14,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
-  /* スマホ操作: 長押しの選択・コピー・画像メニュー・ダブルタップ拡大・タップ時の青い枠を出さない */
+  
   html, body, button, img, canvas, div, span { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
-  img, canvas { -webkit-user-drag: none; }  /* メイン画面: 夕暮れの道を走るキャリアカー(ヘッドだけ右から見えている)+左にゲームモード。
-     モード → 難易度 → トレーラーが左へ走り去ってゲーム画面(index.html#mode=..&diff=..)へ */
+  img, canvas { -webkit-user-drag: none; }  
   :root {
     --accent: #33b891;
     --accent-deep: #1f8a6b;
@@ -25,23 +27,23 @@
     --panel-hi: rgba(28, 44, 46, .92);
     --line: rgba(255, 255, 255, .14);
     --road: #2b3036;
-    --h: min(28vh, 24vw);                 /* トレーラーの高さ */
-    --rig-w: calc(var(--h) * 1034 / 201);  /* rig.png の縦横比 */
-    --road-top: 74%;                       /* 車輪が乗る路面の高さ */
+    --h: min(28vh, 24vw);                 
+    --rig-w: calc(var(--h) * 1034 / 201);  
+    --road-top: 74%;                       
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: #10161c; color: var(--ink);
     font-family: "Noto Sans JP", "Hiragino Sans", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
   .disp { font-family: "Mochiy Pop One", "Noto Sans JP", sans-serif; }
 
-  /* ---------- 背景 ---------- */
+  
   .scene { position: fixed; inset: 0; overflow: hidden;
     background: linear-gradient(#22324a 0%, #3d4f6b 28%, #c98a6b 58%, #f0c27f 70%, #f6d9a0 74%); }
   .sun { position: absolute; left: 58%; top: 50%; width: 15vh; height: 15vh; border-radius: 50%;
     background: radial-gradient(#fff3cf 0 40%, #ffd98a 60%, rgba(255, 200, 120, 0) 72%); filter: blur(.5px); }
   .layer { position: absolute; left: 0; width: 200%; background-repeat: repeat-x; background-size: 50% 100%;
     animation: scroll linear infinite; }
-  /* 中央分離帯のガードレール(手前・速い) */
+  
   .rail { bottom: calc(100% - var(--road-top) + .3vh); height: 2.6vh; animation-duration: 3.2s;
     background-image:
       linear-gradient(#cfd6db 0 22%, transparent 22% 48%, #aab3ba 48% 66%, transparent 66%),
@@ -52,21 +54,20 @@
   .road .lane { position: absolute; left: 0; width: 200%; top: 62%; height: 1.1vh; animation: scroll .9s linear infinite;
     background: repeating-linear-gradient(90deg, #e9e3cf 0 7vh, transparent 7vh 16vh); }
   .road .edge { position: absolute; left: 0; right: 0; top: 4%; height: .5vh; background: #e9e3cf; opacity: .8; }
-  @keyframes scroll { from { transform: translateX(-50%); } to { transform: translateX(0); } }   /* 車は左へ進むので景色は右へ */
+  @keyframes scroll { from { transform: translateX(-50%); } to { transform: translateX(0); } }   
 
-  /* ---------- トレーラー ---------- */
+  
   .rig { position: absolute; height: var(--h); width: var(--rig-w);
-    left: calc(100% - var(--rig-w) * .40);                 /* ヘッド(左の約4割)だけが右端から見える */
-    top: calc(var(--road-top) + 7vh - var(--h)); will-change: transform; }   /* 手前の車線を走る */
+    left: calc(100% - var(--rig-w) * .40);                 
+    top: calc(var(--road-top) + 7vh - var(--h)); will-change: transform; }   
   .rig .shadow { position: absolute; left: 1%; right: 0; bottom: -4%; height: 9%;
     background: radial-gradient(closest-side, rgba(0, 0, 0, .45), transparent); }
   .rig .body { position: absolute; inset: 0; width: 100%; height: 100%; animation: bob .42s ease-in-out infinite alternate; }
   @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-.35%); } }
-  /* 車輪: 外枠(位置と大きさだけ。左上の角で置く)+中の画像(回すだけ)。
-     translate/rotate の個別プロパティや translate(-50%) は端末によって効き方が違い、車輪が車体からずれたため使わない */
+  
   .rig .wheel { position: absolute; }
   .rig .wheel img { display: block; width: 100%; height: 100%; animation: spin .55s linear infinite; transform-origin: 50% 50%; }
-  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }   /* 左へ進む = 反時計回り */
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }   
   .rig.depart { transition: transform 1.7s cubic-bezier(.55, 0, .85, .35); transform: translateX(calc(-100vw - var(--rig-w) * .65)); }
   .rig.depart .wheel img { animation-duration: .18s; }
   .scene.fast .layer, .scene.fast .lane { animation-duration: .5s; }
@@ -74,7 +75,7 @@
   .scene.fast .buildings { animation-duration: 12s; }
   .scene.fast .houses { animation-duration: 5s; }
 
-  /* ---------- メニュー(左の空き枠) ---------- */
+  
   .menu { position: fixed; z-index: 2; left: max(3vw, env(safe-area-inset-left)); top: 4vh;
     width: min(440px, 46vw); max-height: calc(var(--road-top) - 6vh); display: flex; flex-direction: column; gap: 1.6vh;
     transition: opacity .45s, transform .45s; }
@@ -103,7 +104,7 @@
     color: var(--ink); border: 1px solid var(--line); background: rgba(255, 255, 255, .06); }
   .back:hover, .back:focus-visible { border-color: var(--accent); }
 
-  /* 縦長の画面: メニューを広げ、トレーラーは下に */
+  
   @media (max-aspect-ratio: 4/5) {
     :root { --h: 15vh; --road-top: 82%; }
     .menu { width: auto; right: max(4vw, env(safe-area-inset-right)); }
@@ -114,12 +115,11 @@
     .rig.depart { transition: none; }
   }
 
-  /* ---- D28 背景(時間帯・雨) assets/ui/scenery/title_scenery_example.css ---- */
-/* メイン画面(title.html)の新しい背景の組み込み例。DEV_HANDOFF_MEMO.md の D28・D29 を参照。make_example_css.py で作った。
-   .scene に時間帯 t-dusk / t-sunrise / t-day / t-night のどれか1つと、雨なら w-rain を付ける(付け方は title_scenery_example.js) */
+  
+
 :root { --road-h: 26vh; --rd-ph: 50vh; --rd-p: 83.3vh; --rd-oy: 24.1vh; --rd-dur: 3.23s; }
 @media (max-aspect-ratio: 4/5) { :root { --road-h: 18vh; --rd-ph: 36vh; --rd-p: 117.8vh; --rd-oy: 18vh; --rd-dur: 3.84s; } }
-/* 景色の層: 1枚の幅 --tw = 高さ x 絵の縦横比。横に並べて translateX(-tw) → 0 でずらす(車は左へ進むので景色は右へ) */
+
 .sl { position: absolute; left: 0; width: calc(100% + var(--tw)); background-repeat: repeat-x; background-size: var(--tw) 100%;
   animation: slide linear infinite; will-change: transform; }
 @keyframes slide { from { transform: translateX(calc(-1 * var(--tw))); } to { transform: translateX(0); } }
@@ -127,9 +127,7 @@
 .mid   { bottom: calc(100% - var(--road-top) + 6vh);   height: 16vh;  --tw: calc(16vh * 6144 / 320);  animation-duration: 88s; }
 .near  { bottom: calc(100% - var(--road-top) + 1.2vh); height: 19vh;  --tw: calc(19vh * 8192 / 256);  animation-duration: 60s; }
 .grail { bottom: calc(100% - var(--road-top) - .6vh);  height: 3.4vh; --tw: calc(3.4vh * 1024 / 96); animation-duration: .79s; }
-/* 道路: 真上から見た絵(road_*.webp 3072x1280 = 横20m x 奥行き8.33m)を、奥へ60度傾けて置く。奥は小さくゆっくり、手前は大きく速く流れる。
-   消える線(地平線)は路面の上端から 24vh 上(縦長画面は 50vh)。トレーラーのタイヤ(路面の上端から7vh下)は絵の上から約43%の行=第1車線の手前寄りに乗る。
-   数値の出し方: R=路面の高さ, V=地平線までの高さ, 傾き60度, ph=絵の高さ → perspective = ph*sin60*(R+V)/R, origin = perspective*cot60 - V。速さはタイヤの回転(.55秒)に合わせた */
+
 .road3d { position: absolute; left: 0; right: 0; top: var(--road-top); height: var(--road-h); overflow: hidden;
   perspective: var(--rd-p); perspective-origin: 50% var(--rd-oy); }
 .road3d .strip { position: absolute; left: 0; top: 0; height: var(--rd-ph); --tw: calc(var(--rd-ph) * 2.4); width: calc(100% + var(--tw));
@@ -148,7 +146,7 @@
 .scene.t-night .stars { opacity: .9; } .scene.t-night.w-rain .stars { opacity: 0; }
 .scene.fast .sl { animation-duration: .4s; } .scene.fast .far { animation-duration: 60s; } .scene.fast .mid { animation-duration: 18s; } .scene.fast .near { animation-duration: 8s; }
 .scene.fast .road3d .strip { animation-duration: 1s; }
-/* トラック(rig.png は昼の明るさ)を時間帯・雨に合わせて暗くする。夜はヘッドライトの光 */
+
 .scene.t-sunrise .rig .body, .scene.t-sunrise .rig .wheel img { filter: brightness(.93); }
 .scene.w-rain .rig .body, .scene.w-rain .rig .wheel img { filter: brightness(.82) saturate(.85); }
 .scene.t-night .rig .body, .scene.t-night .rig .wheel img { filter: brightness(.5) saturate(.8); }
@@ -157,7 +155,7 @@
 .scene.t-night .rig::after { content: ""; position: absolute; right: 88%; top: 90%; width: 60vh; height: 16%; pointer-events: none;
   background: radial-gradient(closest-side, rgba(255, 230, 170, .30), rgba(255, 230, 170, 0)); }
 @media (prefers-reduced-motion: reduce) { .sl, .road3d .strip, .rain { animation: none; } }
-/* dusk */
+
 .scene.t-dusk { background: linear-gradient(#22324a 0%, #3d4f6b 28%, #c98a6b 58%, #f0c27f 70%, #f6d9a0 74%); }
 .scene.t-dusk.w-rain { background: linear-gradient(#2a2f3a 0%, #4a4f5c 35%, #7d7470 62%, #9a8c80 74%); }
 .scene.t-dusk .sun { left: 58%; top: 41%; width: 15vh; height: 15vh; background: radial-gradient(#fff3cf 0 40%, #ffd98a 60%, rgba(255, 200, 120, 0) 72%); }
@@ -167,7 +165,7 @@
 .scene.t-dusk .grail { background-image: url(assets/ui/scenery/guardrail_dusk.webp?v=1); }
 .scene.t-dusk .road3d .strip { background-image: url(assets/ui/scenery/road_dusk.webp?v=2); }
 .scene.t-dusk.w-rain .road3d .strip { background-image: url(assets/ui/scenery/road_dusk_wet.webp?v=2); }
-/* sunrise */
+
 .scene.t-sunrise { background: linear-gradient(#34436a 0%, #6f7aa3 30%, #d6a3aa 58%, #f3c8a6 70%, #f8e2c4 74%); }
 .scene.t-sunrise.w-rain { background: linear-gradient(#3b4150 0%, #5d6272 35%, #8f8890 62%, #ab9f9e 74%); }
 .scene.t-sunrise .sun { left: 50%; top: 42%; width: 14vh; height: 14vh; background: radial-gradient(#fff6e6 0 38%, #ffd2b0 58%, rgba(255, 190, 170, 0) 72%); }
@@ -177,7 +175,7 @@
 .scene.t-sunrise .grail { background-image: url(assets/ui/scenery/guardrail_sunrise.webp?v=1); }
 .scene.t-sunrise .road3d .strip { background-image: url(assets/ui/scenery/road_sunrise.webp?v=2); }
 .scene.t-sunrise.w-rain .road3d .strip { background-image: url(assets/ui/scenery/road_sunrise_wet.webp?v=2); }
-/* day */
+
 .scene.t-day { background: linear-gradient(#3f78bd 0%, #6fa3d6 32%, #a9cae6 60%, #d3e3f0 74%); }
 .scene.t-day.w-rain { background: linear-gradient(#5d6873 0%, #7f8a95 35%, #a4adb5 62%, #bcc3c9 74%); }
 .scene.t-day .sun { left: 72%; top: 9%; width: 11vh; height: 11vh; background: radial-gradient(#ffffff 0 34%, rgba(255, 252, 235, .7) 50%, rgba(255, 255, 255, 0) 72%); }
@@ -187,7 +185,7 @@
 .scene.t-day .grail { background-image: url(assets/ui/scenery/guardrail_day.webp?v=1); }
 .scene.t-day .road3d .strip { background-image: url(assets/ui/scenery/road_day.webp?v=2); }
 .scene.t-day.w-rain .road3d .strip { background-image: url(assets/ui/scenery/road_day_wet.webp?v=2); }
-/* night */
+
 .scene.t-night { background: linear-gradient(#050913 0%, #0b1428 40%, #1a2541 62%, #2b3655 74%); }
 .scene.t-night.w-rain { background: linear-gradient(#07090f 0%, #0f141d 40%, #1b212c 62%, #262d3a 74%); }
 .scene.t-night .sun { left: 70%; top: 12%; width: 7vh; height: 7vh; background: radial-gradient(circle at 42% 40%, #fbf6e4 0 52%, #e9e2c8 62%, rgba(240, 235, 210, 0) 72%); box-shadow: 0 0 6vh rgba(220, 225, 255, .25); }
@@ -198,21 +196,13 @@
 .scene.t-night .road3d .strip { background-image: url(assets/ui/scenery/road_night.webp?v=2); }
 .scene.t-night.w-rain .road3d .strip { background-image: url(assets/ui/scenery/road_night_wet.webp?v=2); }
 
-/* ---- 2026-10-07 道路・景色の継ぎ目で一瞬白く(背景が透けて)見える対策 ----
-   (1) 路面の下に暗い路面色を敷く: タイルの継ぎ目・端のサブピクセルのすき間・画像の読み込み前に、空の明るい色ではなく路面の色が見えるようにする
-   (2) backface-visibility と translate3d で、継ぎ目(ループの折り返し)で GPU のレイヤーが作り直されないようにする
-   (3) 画像を読み込み終えてからアニメーションを始める(.ready が付くまでは路面・景色を出さない。3秒で打ち切り) */
+
 .road3d { background: #3b4046; backface-visibility: hidden; }
 .road3d .strip { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-/* ---- 2026-10-08 景色の層は background-position でずらす(巨大レイヤーをやめる) ----
-   従来は「画面幅+1枚分」の巨大な横長レイヤーを translateX でループしていた。近景は1枚が約5000px(スマホ縦)で、スマホのGPUのテクスチャ上限を超え、ループの折り返しで白/黒に塗られていた。
-   今は層を画面幅のままにして、背景の位置(background-position-x)だけを -tw → 0 でずらす(見た目と速さは同じ。-tw と 0 は同じ絵の位置なので継ぎ目なし) */
+
 .sl { width: 100%; will-change: auto; animation-name: slidebg; }
 @keyframes slidebg { from { background-position-x: calc(-1 * var(--tw)); } to { background-position-x: 0; } }
-/* ---- 2026-10-08 道路: 折り返しの無い方式 ----
-   従来は「画面幅+1枚分」の3D変形したレイヤーを、1周(約3秒)ごとに translateX(-tw→0) で折り返していた。実機(iPhone)で、折り返しのたびに3Dレイヤーが作り直されて、一瞬白/黒になる。
-   今は、レイヤーは動かさず(3D変形は固定)、背景の位置(background-position-x)を 0 → tw×600 まで一方向にずらす(600周分=約30分に1回しか折り返さない。絵は繰り返し)。
-   左右が足りなくならないよう、レイヤーは画面の2倍の幅で左に半分ずらして置く(奥の行は縮んで映るので、画面の外側まで絵が要る) */
+
 .road3d .strip { left: -50%; width: 200%; animation-name: road3dbg; animation-duration: calc(var(--rd-dur) * 600); transform: rotateX(60deg); }
 .scene.fast .road3d .strip { animation-duration: 600s; }
 @keyframes road3dbg { from { transform: rotateX(60deg); background-position-x: 0; } to { transform: rotateX(60deg); background-position-x: calc(var(--tw) * 600); } }
@@ -222,23 +212,20 @@
 .scene.ready .sl, .scene.ready .road3d { opacity: 1; }
 .scene.ready.w-rain .far { opacity: .35; } .scene.ready.w-rain .mid { opacity: .85; }
 
-  /* ---- D29 枠なしメニュー assets/ui/title_menu_example.css ---- */
-/* メイン画面(title.html)のタイトル・メニューを、背景に溶けこむ「枠なし」のデザインにする例。DEV_HANDOFF_MEMO.md の D29 を参照。
-   title.html の <style> の最後(背景の例 title_scenery_example.css の後)に足すだけで効く。HTML の変更は1か所だけ:
-   Google Fonts の Noto Sans JP に太さ 900 を足す(wght@500;700 → wght@500;700;900)。
-   読みやすさ: 黒い箱の代わりに、画面の左側だけを背景になじむ暗いグラデーションで沈め、文字に影を付ける。 */
+  
 
-/* ---- 文字の後ろの暗がり(メニューと一緒に消える。時間帯で色味を変える) ---- */
+
+
 .menu::before { content: ""; position: fixed; z-index: -1; left: 0; top: 0; bottom: 0; width: 62vw; pointer-events: none;
   background: linear-gradient(90deg, rgba(6, 10, 18, .66) 0%, rgba(6, 10, 18, .44) 32%, rgba(6, 10, 18, .14) 50%, rgba(6, 10, 18, 0) 62%); }
 .scene.t-day ~ .menu::before { background: linear-gradient(90deg, rgba(10, 28, 52, .62) 0%, rgba(10, 28, 52, .40) 32%, rgba(10, 28, 52, .12) 50%, rgba(10, 28, 52, 0) 62%); }
 .scene.t-sunrise ~ .menu::before { background: linear-gradient(90deg, rgba(24, 18, 40, .62) 0%, rgba(24, 18, 40, .40) 32%, rgba(24, 18, 40, .12) 50%, rgba(24, 18, 40, 0) 62%); }
 
-/* ---- タイトル ---- */
+
 .menu { top: 7vh; gap: 0; width: min(460px, 42vw); }
 .logo { white-space: nowrap; font-family: "Noto Sans JP", sans-serif; font-weight: 900; font-size: clamp(24px, min(6.4vh, 9.4vw), 62px); line-height: 1.05; letter-spacing: .06em;
   color: #fff; text-shadow: 0 2px 14px rgba(0, 0, 0, .45), 0 1px 2px rgba(0, 0, 0, .35); }
-/* 英語(js/i18n.js): 題が長いので、画面の幅に収まるまで小さくして、必要なら折り返す */
+
 html[lang="en"] .logo { white-space: normal; font-size: clamp(22px, min(5.2vh, 6.4vw), 52px); letter-spacing: 0; overflow-wrap: anywhere; }
 html[lang="en"] .sub { letter-spacing: .08em; }
 html[lang="en"] .panel h2 { letter-spacing: .2em; }
@@ -247,7 +234,7 @@ html[lang="en"] .panel h2 { letter-spacing: .2em; }
   color: rgba(255, 255, 255, .88); text-shadow: 0 1px 6px rgba(0, 0, 0, .65); }
 .sub::before { content: ""; flex: none; width: 2.6em; height: 2px; background: var(--accent); box-shadow: 0 0 6px rgba(51, 184, 145, .6); }
 
-/* ---- モード・難易度の一覧(箱をなくし、細い線で区切る) ---- */
+
 .panel { background: none; border: none; border-radius: 0; padding: 0; gap: 0; backdrop-filter: none; -webkit-backdrop-filter: none; overflow: visible; counter-reset: item; }
 .panel h2 { margin: 0 0 1.2vh; font-size: clamp(10px, 1.5vh, 12px); font-weight: 700; letter-spacing: .38em; color: rgba(255, 255, 255, .72); text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
 .card { counter-increment: item; position: relative; gap: clamp(12px, 2.2vh, 20px); padding: clamp(10px, 1.8vh, 18px) 4px clamp(10px, 1.8vh, 18px) 16px;
@@ -258,10 +245,10 @@ html[lang="en"] .panel h2 { letter-spacing: .2em; }
 .card::before { content: ""; position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px; border-radius: 2px; background: var(--accent);
   transform: scaleY(0); transition: transform .22s ease; }
 .card:hover, .card:focus-visible { border-color: rgba(255, 255, 255, .20); background: linear-gradient(90deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0) 85%); }
-.card:hover > span, .card:focus-visible > span { transform: translateX(6px); }   /* 区切り線は動かさず、中の文字だけ右へ */
+.card:hover > span, .card:focus-visible > span { transform: translateX(6px); }   
 .card:hover::before, .card:focus-visible::before { transform: scaleY(1); }
 .card:active { background: linear-gradient(90deg, rgba(51, 184, 145, .22), rgba(51, 184, 145, 0) 85%); }
-/* 絵文字のアイコンをやめて、細い番号(01 02 03)にする */
+
 .card .ico { width: auto; height: auto; border-radius: 0; background: none; font-size: 0; display: block; align-self: start; padding-top: .35em; }
 .card .ico::before { content: counter(item, decimal-leading-zero); font-size: clamp(12px, 1.9vh, 16px); font-weight: 700; letter-spacing: .08em; color: #7fe0c0; text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
 .card.easy .ico, .card.normal .ico, .card.hard .ico { background: none; }
@@ -274,7 +261,7 @@ html[lang="en"] .panel h2 { letter-spacing: .2em; }
   color: rgba(255, 255, 255, .82); text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
 .back:hover, .back:focus-visible { color: #7fe0c0; }
 
-/* ---- 縦長の画面: 暗がりは上から ---- */
+
 @media (max-aspect-ratio: 4/5) {
   .menu { top: 5vh; width: auto; }
   .menu::before, .scene.t-day ~ .menu::before, .scene.t-sunrise ~ .menu::before { width: 100vw; height: 78vh; bottom: auto;
@@ -282,7 +269,7 @@ html[lang="en"] .panel h2 { letter-spacing: .2em; }
   .sub { margin-bottom: 3.2vh; }
 }
 
-/* ---- 高さの低い画面(スマホ横向き): 余白を詰めて、道路にかからないようにする ---- */
+
 @media (max-height: 480px) and (min-aspect-ratio: 4/5) {
   .menu { top: 4vh; }
   .sub { margin: .8vh 0 2.4vh; }
@@ -293,14 +280,7 @@ html[lang="en"] .panel h2 { letter-spacing: .2em; }
 
 
 </style>
-<script>
-  // 長押しメニュー(画像を保存/コピー)・ピンチ/ダブルタップ拡大を無効化
-  document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); }); });
-  document.addEventListener('selectstart', function (e) { e.preventDefault(); });
-  // 画像の読み込みに失敗したら、間隔を空けて最大4回やり直す(回線が不安定でもトレーラーが出るように)
-  window.addEventListener('error', function (e) { var i = e.target; if (!i || i.tagName !== 'IMG') return; var n = (+i.dataset.retry || 0) + 1; if (n > 4) return; i.dataset.retry = n; var s = i.getAttribute('src').replace(/[?&]r=\d+$/, ''); setTimeout(function () { i.src = s + (s.indexOf('?') < 0 ? '?' : '&') + 'r=' + n; }, 400 * n); }, true);
-  document.addEventListener('dragstart', function (e) { e.preventDefault(); });
+<script>document.addEventListener("contextmenu",function(e){e.preventDefault()}),["gesturestart","gesturechange","gestureend"].forEach(function(e){document.addEventListener(e,function(e){e.preventDefault()})}),document.addEventListener("selectstart",function(e){e.preventDefault()}),window.addEventListener("error",function(e){var t=e.target;if(t&&"IMG"===t.tagName){var n=(+t.dataset.retry||0)+1;if(!(n>4)){t.dataset.retry=n;var r=t.getAttribute("src").replace(/[?&]r=\d+$/,"");setTimeout(function(){t.src=r+(r.indexOf("?")<0?"?":"&")+"r="+n},400*n)}}},!0),document.addEventListener("dragstart",function(e){e.preventDefault()});
 </script></head>
 <body>
 <div class="scene" id="scene" aria-hidden="true">
@@ -312,16 +292,7 @@ html[lang="en"] .panel h2 { letter-spacing: .2em; }
   </div>
   <div class="rain"></div><div class="rain r2"></div>
 </div>
-<script>
-// メイン画面の時間帯と天気を、開くたびにランダムに決める例(DEV_HANDOFF_MEMO.md D28)。
-// title.html の <body> の中、.scene の後で読む。.scene に t-<時間帯> と、雨なら w-rain を付けるだけ。
-(function () {
-  var scene = document.getElementById('scene'); if (!scene) return;
-  // 出やすさ: 夕焼け3・昼3・夜2・朝日2。雨は4回に1回くらい
-  var times = ['dusk', 'dusk', 'dusk', 'day', 'day', 'day', 'night', 'night', 'sunrise', 'sunrise'];
-  scene.classList.add('t-' + times[Math.floor(Math.random() * times.length)]);
-  if (Math.random() < 0.25) scene.classList.add('w-rain');
-})();
+<script>!function(){var a=document.getElementById("scene");if(a){var d=["dusk","dusk","dusk","day","day","day","night","night","sunrise","sunrise"];a.classList.add("t-"+d[Math.floor(Math.random()*d.length)]),Math.random()<.25&&a.classList.add("w-rain")}}();
 </script>
 
 <main class="menu" id="menu">
@@ -358,129 +329,15 @@ html[lang="en"] .panel h2 { letter-spacing: .2em; }
 <script src="js/sound.js?v=279.1.70"></script>
 <script src="js/voice_guide.js?v=279.1.106"></script>
 <script src="js/settings.js?v=178S.2.0.0"></script>
-<script src="js/feedback_config.js?v=202S.2.0.10"></script>
-<script src="js/news_data.js?v=202S.2.0.10"></script>
-<script src="js/guide.js?v=202S.2.0.10"></script>
-<script>document.getElementById("guideBtn").addEventListener("click", function () { window.GUIDE.open(); });</script>
-<script>
-(function () {
-  // 車輪の位置は assets/ui/rig.json(make_title_assets.py が出力)と同じ値
-  var RIG = { w: 1034, h: 201, wheels: [
-    { k: 'front', cx: 134.75, cy: 170.25, size: 60.5 },
-    { k: 'drive', cx: 367.75, cy: 170.25, size: 60.5 },
-    { k: 'trailer', cx: 933.5, cy: 168.5, size: 59 } ] };
-  var GAME_URL = 'play.html';
-  // トレーラーの一覧(ここだけ直せば選択肢・ランダム選択が変わる)。modes に入っているモードで使える。
-  //   sim = 選択画面に出る(自分で選ぶ)。time/real = 使えるものからランダムに選ばれる(tutorial は semi-6 固定でここは使わない)。
-  //   semi-6b を time/real でも使えるようにする時は、modes に 'time', 'real' を足すだけ。
-  var TRAILERS = [
-    { id: 'semi-6',  name: 'セミトレ(6台+宙段フロア)', desc: '従来のキャリアカー。6台+宙段フロアに積む', modes: ['sim', 'time', 'real'] },
-    { id: 'semi-6b', name: 'ロルフォ Blizzard J1(6台)', desc: '新型トレーラー(開発中)', modes: ['sim'] }
-  ];
-  function pickTrailer(m) {
-    var c = TRAILERS.filter(function (t) { return t.modes.indexOf(m) >= 0; });
-    return (c.length ? c[Math.floor(Math.random() * c.length)] : TRAILERS[0]).id;
-  }
-  window.TITLE_TRAILERS = TRAILERS; window.pickTrailer = pickTrailer;   // 確認用
-  var NAMES = { tutorial: 'チュートリアル', time: 'スコアアタック', real: 'リアルモード', sim: 'シミュレーション' };
-  var $ = function (id) { return document.getElementById(id); };
-  var rig = $('rig'), menu = $('menu'), scene = $('scene');
-
-  RIG.wheels.forEach(function (w) {
-    var box = document.createElement('div');
-    box.className = 'wheel';
-    box.style.left = ((w.cx - w.size / 2) / RIG.w * 100) + '%';
-    box.style.top = ((w.cy - w.size / 2) / RIG.h * 100) + '%';
-    box.style.width = (w.size / RIG.w * 100) + '%';
-    box.style.height = (w.size / RIG.h * 100) + '%';
-    var img = document.createElement('img');
-    img.alt = ''; img.src = 'assets/ui/wheel_' + w.k + '.png';
-    box.appendChild(img);
-    rig.appendChild(box);
-  });
-
-  // 景色・路面の画像を先に読み込んでから動かす(読み込み前の白い瞬間を出さない)
-  (function () {
-    var urls = [], seen = {};
-    ['.far', '.mid', '.near', '.grail', '.road3d .strip'].forEach(function (sel) {
-      var el = scene.querySelector(sel); if (!el) return;
-      var m = /url\(["']?([^"')]+)["']?\)/.exec(getComputedStyle(el).backgroundImage || '');
-      if (m && !seen[m[1]]) { seen[m[1]] = 1; urls.push(m[1]); }
-    });
-    var left = urls.length, fin = false;
-    function ok() { if (fin) return; fin = true; scene.classList.add('ready'); }
-    if (!left) { ok(); return; }
-    urls.forEach(function (u) { var i = new Image(); i.onload = i.onerror = function () { if (--left <= 0) ok(); }; i.src = u; if (i.decode) i.decode().then(function () {}, function () {}); });
-    setTimeout(ok, 3000);
-  })();
-
-  var mode = null, leaving = false, trailer = 'semi-6';
-  var PANELS = ['mode', 'diff', 'ts', 'trailer'], cur = 'mode';
-  function show(panel) {
-    cur = panel;
-    PANELS.forEach(function (p) { $(p + 'Panel').hidden = p !== panel; });
-    var first = document.querySelector('#' + panel + 'Panel .card, #' + panel + 'Panel .back');
-    if (first) first.focus({ preventScroll: true });
-  }
-  function go(m, d, t) {
-    trailer = t || 'semi-6';   // t が無い(チュートリアル)時は trailer= を付けない = semi-6
-    if (leaving) return;
-    leaving = true;
-    var url = GAME_URL + '?r=' + Date.now() + '#mode=' + m + (d ? '&diff=' + d : '') + (t ? '&trailer=' + trailer : '');
-    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) { location.href = url; return; }
-    menu.classList.add('leave');
-    scene.classList.add('fast');
-    rig.classList.add('depart');
-    var done = false;
-    function next() { if (!done) { done = true; location.href = url; } }
-    rig.addEventListener('transitionend', next, { once: true });
-    setTimeout(next, 2200);                                  // 念のため
-  }
-
-  // トレーラー選択画面(シミュレーション用)。一覧から作る
-  TRAILERS.filter(function (t) { return t.modes.indexOf('sim') >= 0; }).forEach(function (t) {
-    var b = document.createElement('button');
-    b.className = 'card'; b.setAttribute('data-trailer', t.id);
-    b.innerHTML = '<span class="ico"></span><span><b></b><small></small></span><span class="go">›</span>';
-    b.querySelector('b').textContent = t.name; b.querySelector('small').textContent = t.desc;
-    b.addEventListener('click', function () { go('sim', null, t.id); });
-    $('trailerPanel').appendChild(b);
-  });
-  Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
-    b.addEventListener('click', function () {
-      mode = b.getAttribute('data-mode');
-      if (mode === 'tutsim') { show('ts'); return; }
-      $('diffTitle').textContent = NAMES[mode] + ' の難易度';
-      show('diff');
-    });
-  });
-  Array.prototype.forEach.call(document.querySelectorAll('[data-ts]'), function (b) {
-    b.addEventListener('click', function () {
-      if (b.getAttribute('data-ts') === 'tutorial') go('tutorial');   // チュートリアルは semi-6 固定・難易度なし
-      else show('trailer');
-    });
-  });
-  Array.prototype.forEach.call(document.querySelectorAll('[data-diff]'), function (b) {
-    b.addEventListener('click', function () { go(mode, b.getAttribute('data-diff'), pickTrailer(mode)); });   // タイムアタック・リアルはトレーラーをランダムに選ぶ
-  });
-  function back() { var b = document.querySelector('#' + cur + 'Panel [data-back]'); if (b) show(b.getAttribute('data-back')); }
-  Array.prototype.forEach.call(document.querySelectorAll('[data-back]'), function (b) { b.addEventListener('click', back); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') back(); });
-
-  // ゲームから「戻る」で帰ってきた時(ページが保存されていた場合)は元の状態に戻す
-  window.addEventListener('pageshow', function (e) {
-    if (!e.persisted) return;
-    leaving = false;
-    menu.classList.remove('leave'); scene.classList.remove('fast'); rig.classList.remove('depart');
-    show('mode');
-  });
-})();
+<script src="js/feedback_config.js?v=203S.2.0.10"></script>
+<script src="js/news_data.js?v=203S.2.0.10"></script>
+<script src="js/guide.js?v=203S.2.0.10"></script>
+<script>document.getElementById("guideBtn").addEventListener("click",function(){window.GUIDE.open()});
 </script>
-<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 202S.2.0.10</div>
-<script>(function () {
-  var m = /^#guide(?:-(news|status|play|score|terms|credits|contact))?$/.exec(location.hash);
-  if (m && window.GUIDE) window.GUIDE.open(m[1] || 'news');
-})();</script>
+<script>!function(){var e={w:1034,h:201,wheels:[{k:"front",cx:134.75,cy:170.25,size:60.5},{k:"drive",cx:367.75,cy:170.25,size:60.5},{k:"trailer",cx:933.5,cy:168.5,size:59}]},t=[{id:"semi-6",name:"セミトレ(6台+宙段フロア)",desc:"従来のキャリアカー。6台+宙段フロアに積む",modes:["sim","time","real"]},{id:"semi-6b",name:"ロルフォ Blizzard J1(6台)",desc:"新型トレーラー(開発中)",modes:["sim"]}];function n(e){var n=t.filter(function(t){return t.modes.indexOf(e)>=0});return(n.length?n[Math.floor(Math.random()*n.length)]:t[0]).id}window.TITLE_TRAILERS=t,window.pickTrailer=n;var a={tutorial:"チュートリアル",time:"スコアアタック",real:"リアルモード",sim:"シミュレーション"},r=function(e){return document.getElementById(e)},i=r("rig"),c=r("menu"),o=r("scene");e.wheels.forEach(function(t){var n=document.createElement("div");n.className="wheel",n.style.left=(t.cx-t.size/2)/e.w*100+"%",n.style.top=(t.cy-t.size/2)/e.h*100+"%",n.style.width=t.size/e.w*100+"%",n.style.height=t.size/e.h*100+"%";var a=document.createElement("img");a.alt="",a.src="assets/ui/wheel_"+t.k+".png",n.appendChild(a),i.appendChild(n)}),function(){var e=[],t={};[".far",".mid",".near",".grail",".road3d .strip"].forEach(function(n){var a=o.querySelector(n);if(a){var r=/url\(["']?([^"')]+)["']?\)/.exec(getComputedStyle(a).backgroundImage||"");r&&!t[r[1]]&&(t[r[1]]=1,e.push(r[1]))}});var n=e.length,a=!1;function r(){a||(a=!0,o.classList.add("ready"))}n?(e.forEach(function(e){var t=new Image;t.onload=t.onerror=function(){--n<=0&&r()},t.src=e,t.decode&&t.decode().then(function(){},function(){})}),setTimeout(r,3e3)):r()}();var d=null,l=!1,s="semi-6",u=["mode","diff","ts","trailer"],f="mode";function m(e){f=e,u.forEach(function(t){r(t+"Panel").hidden=t!==e});var t=document.querySelector("#"+e+"Panel .card, #"+e+"Panel .back");t&&t.focus({preventScroll:!0})}function h(e,t,n){if(s=n||"semi-6",!l){l=!0;var a="play.html?r="+Date.now()+"#mode="+e+(t?"&diff="+t:"")+(n?"&trailer="+s:"");if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)location.href=a;else{c.classList.add("leave"),o.classList.add("fast"),i.classList.add("depart");var r=!1;i.addEventListener("transitionend",d,{once:!0}),setTimeout(d,2200)}}function d(){r||(r=!0,location.href=a)}}function p(){var e=document.querySelector("#"+f+"Panel [data-back]");e&&m(e.getAttribute("data-back"))}t.filter(function(e){return e.modes.indexOf("sim")>=0}).forEach(function(e){var t=document.createElement("button");t.className="card",t.setAttribute("data-trailer",e.id),t.innerHTML='<span class="ico"></span><span><b></b><small></small></span><span class="go">›</span>',t.querySelector("b").textContent=e.name,t.querySelector("small").textContent=e.desc,t.addEventListener("click",function(){h("sim",null,e.id)}),r("trailerPanel").appendChild(t)}),Array.prototype.forEach.call(document.querySelectorAll("[data-mode]"),function(e){e.addEventListener("click",function(){"tutsim"!==(d=e.getAttribute("data-mode"))?(r("diffTitle").textContent=a[d]+" の難易度",m("diff")):m("ts")})}),Array.prototype.forEach.call(document.querySelectorAll("[data-ts]"),function(e){e.addEventListener("click",function(){"tutorial"===e.getAttribute("data-ts")?h("tutorial"):m("trailer")})}),Array.prototype.forEach.call(document.querySelectorAll("[data-diff]"),function(e){e.addEventListener("click",function(){h(d,e.getAttribute("data-diff"),n(d))})}),Array.prototype.forEach.call(document.querySelectorAll("[data-back]"),function(e){e.addEventListener("click",p)}),document.addEventListener("keydown",function(e){"Escape"===e.key&&p()}),window.addEventListener("pageshow",function(e){e.persisted&&(l=!1,c.classList.remove("leave"),o.classList.remove("fast"),i.classList.remove("depart"),m("mode"))})}();
+</script>
+<div id="buildTag" style="position:fixed;right:8px;bottom:6px;font:11px/1 sans-serif;color:rgba(255,255,255,.55);text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5;pointer-events:none">ビルド 203S.2.0.10</div>
+<script>!function(){var e=/^#guide(?:-(news|status|play|score|terms|credits|contact))?$/.exec(location.hash);e&&window.GUIDE&&window.GUIDE.open(e[1]||"news")}();
+</script>
 </body>
 </html>
