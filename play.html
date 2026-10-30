@@ -7,9 +7,9 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="js/i18n_en.js?v=206S.2.0.11"></script>
-<script src="js/i18n_en_game.js?v=206S.2.0.11"></script>
-<script src="js/i18n.js?v=206S.2.0.11"></script>
+<script src="js/i18n_en.js?v=207S.2.0.11"></script>
+<script src="js/i18n_en_game.js?v=207S.2.0.11"></script>
+<script src="js/i18n.js?v=207S.2.0.11"></script>
 <title>僕らは陸送屋</title>
 <style>
   
@@ -321,18 +321,18 @@
     color: #1b1f24; font-size: 13px; font-weight: bold; line-height: 1.2; text-align: center;
     background: none;
     border: 14px solid transparent; border-width: 14px; margin: 0;
-    border-image: url(assets/common/ui/btn_plate.png?v=206S.2.0.11) 14 fill / 14px stretch;
+    border-image: url(assets/common/ui/btn_plate.png?v=207S.2.0.11) 14 fill / 14px stretch;
     border-radius: 0;
     text-shadow: 0 1px 0 rgba(255,255,255,.35);
   }
-  .plate:active, #floorPanel .mechRow button:active, #chockPanel button:active, #btnOrient:active, #btnOrientCar:active, #deckDrawerHandle:active { border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=206S.2.0.11); padding-top: 2px; }
-  #floorPanel .mechRow button.on, #chockPanel button.on, #btnOrientCar { border-image-source: url(assets/common/ui/btn_plate_go.png?v=206S.2.0.11); }
-  #floorPanel .mechRow button.on:active, #btnOrientCar:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=206S.2.0.11); }
-  #btnLid { border-image-source: url(assets/common/ui/btn_plate_warn.png?v=206S.2.0.11); }
-  #btnLid:active { border-image-source: url(assets/common/ui/btn_plate_warn_pressed.png?v=206S.2.0.11); }
-  #floorPanel .mechRow button.go { border-image-source: url(assets/common/ui/btn_plate_go.png?v=206S.2.0.11); }
-  #floorPanel .mechRow button.go:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=206S.2.0.11); }
-  #chockPanel button:disabled, #btnOrient:disabled { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=206S.2.0.11); opacity: 1; color: #6b7078; text-shadow: none; }
+  .plate:active, #floorPanel .mechRow button:active, #chockPanel button:active, #btnOrient:active, #btnOrientCar:active, #deckDrawerHandle:active { border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=207S.2.0.11); padding-top: 2px; }
+  #floorPanel .mechRow button.on, #chockPanel button.on, #btnOrientCar { border-image-source: url(assets/common/ui/btn_plate_go.png?v=207S.2.0.11); }
+  #floorPanel .mechRow button.on:active, #btnOrientCar:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=207S.2.0.11); }
+  #btnLid { border-image-source: url(assets/common/ui/btn_plate_warn.png?v=207S.2.0.11); }
+  #btnLid:active { border-image-source: url(assets/common/ui/btn_plate_warn_pressed.png?v=207S.2.0.11); }
+  #floorPanel .mechRow button.go { border-image-source: url(assets/common/ui/btn_plate_go.png?v=207S.2.0.11); }
+  #floorPanel .mechRow button.go:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=207S.2.0.11); }
+  #chockPanel button:disabled, #btnOrient:disabled { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=207S.2.0.11); opacity: 1; color: #6b7078; text-shadow: none; }
   #floorPanel .mechRow button::before, #chockPanel #btnLid::before, #chockPanel #btnChockSet::before, #chockPanel #btnChockFront::before, #chockPanel #btnChockRear::before, #btnOrient::before, #btnOrientCar::before, #deckDrawerHandle::before {
     content: ''; flex: none; width: 26px; height: 26px; background-position: center; background-size: contain; background-repeat: no-repeat;
   }
@@ -344,16 +344,16 @@
   #mechPop .mechPopBtn { display: block; width: 100%; min-height: 40px; margin: 4px 0; padding: 8px 10px; font-size: 15px; text-align: left; color: #e8f1ea; background: #223540; border: 1px solid #3e5a66; border-radius: 7px; cursor: pointer; }
   #mechPop .mechPopBtn:active { background: #2c4652; }
   #mechPop .mechPopBtn.on { background: #2d6a2d; border-color: #4a4; color: #fff; }
-  #btnRamp::before { background-image: url(assets/common/ui/ic_ramp.png?v=206S.2.0.11); }
-  #btnBridge::before { background-image: url(assets/common/ui/ic_bridge.png?v=206S.2.0.11); }
-  #btnSlide::before { background-image: url(assets/common/ui/ic_slide.png?v=206S.2.0.11); }
-  #btnF2Flap::before { background-image: url(assets/common/ui/ic_flap2.png?v=206S.2.0.11); }
-  #btnLid::before { background-image: url(assets/common/ui/ic_lid.png?v=206S.2.0.11); }
-  #btnChockSet::before { background-image: url(assets/common/ui/ic_chock.png?v=206S.2.0.11); }
-  #btnChockFront::before { background-image: url(assets/common/ui/ic_front.png?v=206S.2.0.11); }
-  #btnChockRear::before { background-image: url(assets/common/ui/ic_rear.png?v=206S.2.0.11); }
-  #btnOrient::before, #btnOrientCar::before { background-image: url(assets/common/ui/ic_orient.png?v=206S.2.0.11); }
-  #deckDrawerHandle::before { background-image: url(assets/common/ui/ic_drawer.png?v=206S.2.0.11); }
+  #btnRamp::before { background-image: url(assets/common/ui/ic_ramp.png?v=207S.2.0.11); }
+  #btnBridge::before { background-image: url(assets/common/ui/ic_bridge.png?v=207S.2.0.11); }
+  #btnSlide::before { background-image: url(assets/common/ui/ic_slide.png?v=207S.2.0.11); }
+  #btnF2Flap::before { background-image: url(assets/common/ui/ic_flap2.png?v=207S.2.0.11); }
+  #btnLid::before { background-image: url(assets/common/ui/ic_lid.png?v=207S.2.0.11); }
+  #btnChockSet::before { background-image: url(assets/common/ui/ic_chock.png?v=207S.2.0.11); }
+  #btnChockFront::before { background-image: url(assets/common/ui/ic_front.png?v=207S.2.0.11); }
+  #btnChockRear::before { background-image: url(assets/common/ui/ic_rear.png?v=207S.2.0.11); }
+  #btnOrient::before, #btnOrientCar::before { background-image: url(assets/common/ui/ic_orient.png?v=207S.2.0.11); }
+  #deckDrawerHandle::before { background-image: url(assets/common/ui/ic_drawer.png?v=207S.2.0.11); }
   #chockPanel #btnChockFront, #chockPanel #btnChockRear { font-size: 0; padding: 0 4px; min-width: 56px; }   
   #chockPanel #btnChockFront::after { content: '前へ'; font-size: 12px; }
   #chockPanel #btnChockRear::after { content: '後ろへ'; font-size: 12px; }
@@ -364,57 +364,57 @@
   
   #slotSel button { box-sizing: border-box; width: 46px; height: 46px; min-width: 0; padding: 0; border: 0; border-radius: 0; font-size: 0; color: transparent; background: center / contain no-repeat; }
   #slotSel button.on { background-color: transparent; border: 0; }
-  #slotSel button[data-slot="1"] { background-image: url(assets/common/ui/slot_1.png?v=206S.2.0.11); } #slotSel button[data-slot="1"].on { background-image: url(assets/common/ui/slot_1_selected.png?v=214); }
-  #slotSel button[data-slot="2"] { background-image: url(assets/common/ui/slot_2.png?v=206S.2.0.11); } #slotSel button[data-slot="2"].on { background-image: url(assets/common/ui/slot_2_selected.png?v=214); }
-  #slotSel button[data-slot="3"] { background-image: url(assets/common/ui/slot_3.png?v=206S.2.0.11); } #slotSel button[data-slot="3"].on { background-image: url(assets/common/ui/slot_3_selected.png?v=214); }
-  #slotSel button[data-slot="4"] { background-image: url(assets/common/ui/slot_4.png?v=206S.2.0.11); } #slotSel button[data-slot="4"].on { background-image: url(assets/common/ui/slot_4_selected.png?v=214); }
-  #slotSel button[data-slot="5"] { background-image: url(assets/common/ui/slot_5.png?v=206S.2.0.11); } #slotSel button[data-slot="5"].on { background-image: url(assets/common/ui/slot_5_selected.png?v=214); }
-  #slotSel button[data-slot="6"] { background-image: url(assets/common/ui/slot_6.png?v=206S.2.0.11); } #slotSel button[data-slot="6"].on { background-image: url(assets/common/ui/slot_6_selected.png?v=214); }
-  #slotSel button[data-slot="7"] { background-image: url(assets/common/ui/slot_mid.png?v=206S.2.0.11); } #slotSel button[data-slot="7"].on { background-image: url(assets/common/ui/slot_mid_selected.png?v=214); }
+  #slotSel button[data-slot="1"] { background-image: url(assets/common/ui/slot_1.png?v=207S.2.0.11); } #slotSel button[data-slot="1"].on { background-image: url(assets/common/ui/slot_1_selected.png?v=214); }
+  #slotSel button[data-slot="2"] { background-image: url(assets/common/ui/slot_2.png?v=207S.2.0.11); } #slotSel button[data-slot="2"].on { background-image: url(assets/common/ui/slot_2_selected.png?v=214); }
+  #slotSel button[data-slot="3"] { background-image: url(assets/common/ui/slot_3.png?v=207S.2.0.11); } #slotSel button[data-slot="3"].on { background-image: url(assets/common/ui/slot_3_selected.png?v=214); }
+  #slotSel button[data-slot="4"] { background-image: url(assets/common/ui/slot_4.png?v=207S.2.0.11); } #slotSel button[data-slot="4"].on { background-image: url(assets/common/ui/slot_4_selected.png?v=214); }
+  #slotSel button[data-slot="5"] { background-image: url(assets/common/ui/slot_5.png?v=207S.2.0.11); } #slotSel button[data-slot="5"].on { background-image: url(assets/common/ui/slot_5_selected.png?v=214); }
+  #slotSel button[data-slot="6"] { background-image: url(assets/common/ui/slot_6.png?v=207S.2.0.11); } #slotSel button[data-slot="6"].on { background-image: url(assets/common/ui/slot_6_selected.png?v=214); }
+  #slotSel button[data-slot="7"] { background-image: url(assets/common/ui/slot_mid.png?v=207S.2.0.11); } #slotSel button[data-slot="7"].on { background-image: url(assets/common/ui/slot_mid_selected.png?v=214); }
   #slotSel button:active { filter: brightness(.85); }
 
   
   #arrowGroup { background: none; border: 0; padding: 0; gap: 14px; }
   #arrowGroup .arrowBtn { width: 76px; height: 76px; border: 0; border-radius: 0; background-color: transparent; background-position: center; background-size: contain; background-repeat: no-repeat; font-size: 0; color: transparent; }
-  #btnLeft { background-image: url(assets/common/ui/btn_drive_fwd.png?v=206S.2.0.11); }
-  #btnRight { background-image: url(assets/common/ui/btn_drive_back.png?v=206S.2.0.11); }
-  #btnLeft:active, #btnLeft.down { background-image: url(assets/common/ui/btn_drive_fwd_pressed.png?v=206S.2.0.11); background-color: transparent; }
-  #btnRight:active, #btnRight.down { background-image: url(assets/common/ui/btn_drive_back_pressed.png?v=206S.2.0.11); background-color: transparent; }
+  #btnLeft { background-image: url(assets/common/ui/btn_drive_fwd.png?v=207S.2.0.11); }
+  #btnRight { background-image: url(assets/common/ui/btn_drive_back.png?v=207S.2.0.11); }
+  #btnLeft:active, #btnLeft.down { background-image: url(assets/common/ui/btn_drive_fwd_pressed.png?v=207S.2.0.11); background-color: transparent; }
+  #btnRight:active, #btnRight.down { background-image: url(assets/common/ui/btn_drive_back_pressed.png?v=207S.2.0.11); background-color: transparent; }
   body { padding-bottom: 104px; }
 
   
-  #modeBar { box-sizing: border-box; background: none; border: solid transparent; border-width: 0 24px 6px 24px; border-image: url(assets/common/ui/hud_bar.png?v=206S.2.0.11) 0 24 6 24 fill / 0 24px 6px 24px stretch; padding: 8px 0 4px; gap: 8px; color: #dfe8f2; min-height: 56px; align-items: center; }
+  #modeBar { box-sizing: border-box; background: none; border: solid transparent; border-width: 0 24px 6px 24px; border-image: url(assets/common/ui/hud_bar.png?v=207S.2.0.11) 0 24 6 24 fill / 0 24px 6px 24px stretch; padding: 8px 0 4px; gap: 8px; color: #dfe8f2; min-height: 56px; align-items: center; }
   #modeBar #modeBarName { flex: 1 1 100%; font-size: 14px; }
-  #modeBar > span:not(#modeBarName):not(#missCount) { box-sizing: border-box; border: 8px solid transparent; border-image: url(assets/common/ui/meter_box.png?v=206S.2.0.11) 8 fill / 8px stretch; padding: 0 2px; min-width: 56px; text-align: center; font-size: 13px; color: #7dfcd0; font-weight: bold; line-height: 1.1; }
+  #modeBar > span:not(#modeBarName):not(#missCount) { box-sizing: border-box; border: 8px solid transparent; border-image: url(assets/common/ui/meter_box.png?v=207S.2.0.11) 8 fill / 8px stretch; padding: 0 2px; min-width: 56px; text-align: center; font-size: 13px; color: #7dfcd0; font-weight: bold; line-height: 1.1; }
   #modeBar #modeBarScore { margin-left: auto; color: #ffd34d; }
   #modeBar #missCount { margin-left: 4px; font-size: 14px; }
   #toolbar { display: none; }
   body.debug #toolbar { display: flex; }
   #status { display: none; }
   body.debug #status { display: block; }
-  #floorPanel, #chockPanel, #controls { box-sizing: border-box; background: none; border: solid transparent; border-width: 12px 16px 8px 16px; border-image: url(assets/common/ui/panel_bg.png?v=206S.2.0.11) 12 16 8 16 fill / 12px 16px 8px 16px stretch; margin-top: 2px; }
+  #floorPanel, #chockPanel, #controls { box-sizing: border-box; background: none; border: solid transparent; border-width: 12px 16px 8px 16px; border-image: url(assets/common/ui/panel_bg.png?v=207S.2.0.11) 12 16 8 16 fill / 12px 16px 8px 16px stretch; margin-top: 2px; }
 
   
   #swHint { display: none !important; }
   #swHint.show { display: block !important; }
   #btnHelp, #btnSwClose { box-sizing: border-box; width: 36px; height: 36px; padding: 0; margin-left: 8px; vertical-align: middle; border: 0; background: center / contain no-repeat; font-size: 0; color: transparent; cursor: pointer; }
-  #btnHelp { background-image: url(assets/common/ui/ic_help.png?v=206S.2.0.11); }
-  #floorPanel #btnSwClose { width: 36px; height: 36px; padding: 0; margin-left: 4px; border: 0; background: center / contain no-repeat url(assets/common/ui/ic_close.png?v=206S.2.0.11); font-size: 0; }
+  #btnHelp { background-image: url(assets/common/ui/ic_help.png?v=207S.2.0.11); }
+  #floorPanel #btnSwClose { width: 36px; height: 36px; padding: 0; margin-left: 4px; border: 0; background: center / contain no-repeat url(assets/common/ui/ic_close.png?v=207S.2.0.11); font-size: 0; }
   #deckDrawerHandle { width: 100%; justify-content: flex-start; }
   #deckDrawerHandle .cnt { margin-left: auto; font-weight: normal; }
   #deckDrawer { display: none; }
   #deckDrawer.open { display: block; margin-top: 6px; }
 
   
-  #floorPanel .mechRow button.na, #floorPanel .mechRow button.na:active { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=206S.2.0.11); color: #6b7078; text-shadow: none; padding-top: 0; }
+  #floorPanel .mechRow button.na, #floorPanel .mechRow button.na:active { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=207S.2.0.11); color: #6b7078; text-shadow: none; padding-top: 0; }
   #floorPanel .mechRow button.na::before { opacity: .45; }
 
   
-  .modeBtn { box-sizing: border-box; background: none; border: 14px solid transparent; border-image: url(assets/common/ui/btn_plate.png?v=206S.2.0.11) 14 fill / 14px stretch; border-radius: 0; color: #1b1f24; text-shadow: 0 1px 0 rgba(255,255,255,.35); padding: 4px 8px; min-height: 52px; }
+  .modeBtn { box-sizing: border-box; background: none; border: 14px solid transparent; border-image: url(assets/common/ui/btn_plate.png?v=207S.2.0.11) 14 fill / 14px stretch; border-radius: 0; color: #1b1f24; text-shadow: 0 1px 0 rgba(255,255,255,.35); padding: 4px 8px; min-height: 52px; }
   .modeBtn small { color: #3a4048; }
-  .modeBtn:active { background: none; border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=206S.2.0.11); }
-  #btnRetry.modeBtn { border-image-source: url(assets/common/ui/btn_plate_go.png?v=206S.2.0.11); }
-  #btnRetry.modeBtn:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=206S.2.0.11); }
+  .modeBtn:active { background: none; border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=207S.2.0.11); }
+  #btnRetry.modeBtn { border-image-source: url(assets/common/ui/btn_plate_go.png?v=207S.2.0.11); }
+  #btnRetry.modeBtn:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=207S.2.0.11); }
 
   
   @media (max-width: 700px), (orientation: landscape) and (max-height: 520px) {
@@ -556,21 +556,21 @@
     .dispatchSpeech { font-size: 16px; line-height: 1.5; padding: 10px; }
   }
   
-  #resultOverlay { background: linear-gradient(rgba(0, 0, 0, .55), rgba(0, 0, 0, .8)), url(assets/common/screens/result_bg.png?v=206S.2.0.11) center / cover no-repeat; }
+  #resultOverlay { background: linear-gradient(rgba(0, 0, 0, .55), rgba(0, 0, 0, .8)), url(assets/common/screens/result_bg.png?v=207S.2.0.11) center / cover no-repeat; }
 
   
-  body.tutorial #tutPanel { background: none; border: solid transparent; border-width: 12px 16px 8px 16px; border-image: url(assets/common/ui/panel_bg.png?v=206S.2.0.11) 12 16 8 16 fill / 12px 16px 8px 16px stretch; padding: 0 2px 2px; margin-top: 2px; color: #dfe8f2; }
+  body.tutorial #tutPanel { background: none; border: solid transparent; border-width: 12px 16px 8px 16px; border-image: url(assets/common/ui/panel_bg.png?v=207S.2.0.11) 12 16 8 16 fill / 12px 16px 8px 16px stretch; padding: 0 2px 2px; margin-top: 2px; color: #dfe8f2; }
   body.tutorial #tutPanel .tutChap { color: #7dfcd0; }
   body.tutorial #tutPanel .tutDots i { background: #5d6b78; } body.tutorial #tutPanel .tutDots i.on { background: #7dfcd0; } body.tutorial #tutPanel .tutDots i.cur { background: #ffd34d; }
   body.tutorial #tutPanel .tutTitle { color: #fff; }
   body.tutorial #tutPanel .tutSub { color: #ffe9a8; }
-  body.tutorial #tutPanel button { box-sizing: border-box; background: none; border: solid transparent; border-width: 12px; border-image: url(assets/common/ui/btn_plate.png?v=206S.2.0.11) 14 fill / 12px stretch; border-radius: 0; color: #1b1f24; font-weight: bold; text-shadow: 0 1px 0 rgba(255,255,255,.35); min-height: 44px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; }
-  body.tutorial #tutPanel button:active { background: none; border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=206S.2.0.11); padding-top: 2px; }
-  body.tutorial #tutPanel button.tutMain { background: none; border-image-source: url(assets/common/ui/btn_plate_go.png?v=206S.2.0.11); font-weight: bold; color: #0d2a1c; }
-  body.tutorial #tutPanel button.tutMain:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=206S.2.0.11); }
-  body.tutorial #tutPanel button.tutMain.wait { border-image-source: url(assets/common/ui/btn_plate.png?v=206S.2.0.11); color: #1b1f24; }
-  body.tutorial #tutPanel button.tutMain.wait:active { border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=206S.2.0.11); }
-  body.tutorial #tutPanel button:disabled { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=206S.2.0.11); color: #6b7078; text-shadow: none; opacity: 1; }
+  body.tutorial #tutPanel button { box-sizing: border-box; background: none; border: solid transparent; border-width: 12px; border-image: url(assets/common/ui/btn_plate.png?v=207S.2.0.11) 14 fill / 12px stretch; border-radius: 0; color: #1b1f24; font-weight: bold; text-shadow: 0 1px 0 rgba(255,255,255,.35); min-height: 44px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; }
+  body.tutorial #tutPanel button:active { background: none; border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=207S.2.0.11); padding-top: 2px; }
+  body.tutorial #tutPanel button.tutMain { background: none; border-image-source: url(assets/common/ui/btn_plate_go.png?v=207S.2.0.11); font-weight: bold; color: #0d2a1c; }
+  body.tutorial #tutPanel button.tutMain:active { border-image-source: url(assets/common/ui/btn_plate_go_pressed.png?v=207S.2.0.11); }
+  body.tutorial #tutPanel button.tutMain.wait { border-image-source: url(assets/common/ui/btn_plate.png?v=207S.2.0.11); color: #1b1f24; }
+  body.tutorial #tutPanel button.tutMain.wait:active { border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=207S.2.0.11); }
+  body.tutorial #tutPanel button:disabled { border-image-source: url(assets/common/ui/btn_plate_disabled.png?v=207S.2.0.11); color: #6b7078; text-shadow: none; opacity: 1; }
   body.tutorial #tutPanel button.tutEnd, body.tutorial #tutPanel button.tutPrev { font-size: 11px; padding: 0 3px; }
   body.tutorial #tutPanel button.tutFold { border-width: 9px; border-image-width: 9px; min-height: 34px; padding: 0 4px; font-size: 11px; }
   @media (min-width: 900px) { body.tutorial #tutPanel { border-left: solid transparent; border-top: solid transparent; border-width: 12px 16px 8px 16px; } }
@@ -579,12 +579,12 @@
     body.tutorial #tutPanel button { border-width: 9px; border-image-width: 9px; min-height: 38px; font-size: 12px; }
     body.tutorial #tutPanel button.tutFold { border-width: 7px; border-image-width: 7px; min-height: 30px; }
   }
-  #mechPop { background: none; border: solid transparent; border-width: 12px 16px 8px 16px; border-image: url(assets/common/ui/panel_bg.png?v=206S.2.0.11) 12 16 8 16 fill / 12px 16px 8px 16px stretch; padding: 2px; box-shadow: none; border-radius: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+  #mechPop { background: none; border: solid transparent; border-width: 12px 16px 8px 16px; border-image: url(assets/common/ui/panel_bg.png?v=207S.2.0.11) 12 16 8 16 fill / 12px 16px 8px 16px stretch; padding: 2px; box-shadow: none; border-radius: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
   #mechPop .mechPopTitle { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: bold; color: #7dfcd0; margin: 0 2px 4px; }
   #mechPop .mechPopTitle img { width: 22px; height: 22px; }
-  #mechPop .mechPopBtn { box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 46px; margin: 2px 0; padding: 0 6px 0 2px; font-size: 15px; font-weight: bold; text-align: left; color: #1b1f24; text-shadow: 0 1px 0 rgba(255,255,255,.35); background: none; border: solid transparent; border-width: 14px; border-image: url(assets/common/ui/btn_plate.png?v=206S.2.0.11) 14 fill / 14px stretch; border-radius: 0; }
-  #mechPop .mechPopBtn:active { background: none; border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=206S.2.0.11); padding-top: 2px; }
-  #mechPop .mechPopBtn.on { background: none; border-image-source: url(assets/common/ui/btn_plate_go.png?v=206S.2.0.11); color: #0d2a1c; }
+  #mechPop .mechPopBtn { box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 46px; margin: 2px 0; padding: 0 6px 0 2px; font-size: 15px; font-weight: bold; text-align: left; color: #1b1f24; text-shadow: 0 1px 0 rgba(255,255,255,.35); background: none; border: solid transparent; border-width: 14px; border-image: url(assets/common/ui/btn_plate.png?v=207S.2.0.11) 14 fill / 14px stretch; border-radius: 0; }
+  #mechPop .mechPopBtn:active { background: none; border-image-source: url(assets/common/ui/btn_plate_pressed.png?v=207S.2.0.11); padding-top: 2px; }
+  #mechPop .mechPopBtn.on { background: none; border-image-source: url(assets/common/ui/btn_plate_go.png?v=207S.2.0.11); color: #0d2a1c; }
   #mechPop .mechPopBtn img { width: 30px; height: 30px; flex: none; }
   
   .pinBtn.float { background: #7a5a1a !important; border-color: #ffd34d !important; color: #fff2c9 !important; }
@@ -714,8 +714,8 @@
   </div>
 </div>
 
-<script src="js/settings.js?v=206S.2.0.11"></script>
-<script>!function(){/[#&]trailer=(semi-6b?)(?:&|$)/.exec(location.hash);var i=window.TRAILER_ID="semi-6";("semi-6b"===i?["symbols","trailer_config_semi6b","sound","car_library","car_dims","car_tires","floor_mech_6b","loadable_6b","main","mech_popup","game","floor_controls_6b","modes","dispatch","ui_layout","ui_hide"]:["symbols","trailer_config","trailer_assets","sound","car_library","car_dims","car_tires","floor_mech","loadable","main","mech_popup","voice_guide","game","floor_controls","modes","tutorial","dispatch","ui_layout","ui_hide","test_stage"]).forEach(function(i){document.write('<script src="js/'+i+'.js?v=206S.2.0.11"><\/script>')})}();
+<script src="js/settings.js?v=207S.2.0.11"></script>
+<script>!function(){/[#&]trailer=(semi-6b?)(?:&|$)/.exec(location.hash);var i=window.TRAILER_ID="semi-6";("semi-6b"===i?["symbols","trailer_config_semi6b","sound","car_library","car_dims","car_tires","floor_mech_6b","loadable_6b","main","mech_popup","game","floor_controls_6b","modes","dispatch","ui_layout","ui_hide"]:["symbols","trailer_config","trailer_assets","sound","car_library","car_dims","car_tires","floor_mech","loadable","main","mech_popup","voice_guide","game","floor_controls","modes","tutorial","dispatch","ui_layout","ui_hide","test_stage"]).forEach(function(i){document.write('<script src="js/'+i+'.js?v=207S.2.0.11"><\/script>')})}();
 </script>
 </body>
 </html>
