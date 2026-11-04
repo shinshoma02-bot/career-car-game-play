@@ -1,0 +1,1 @@
+window.REVIEWS_DATA=[];
